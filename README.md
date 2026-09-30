@@ -14,7 +14,13 @@ kept as plain text and reported as a warning.
 ```sh
 python3 path/to/tex2html                 # main.tex -> slides.html
 python3 path/to/tex2html main.tex -o talk.html
+python3 path/to/tex2html --pack talk.zip # also: zip for the presenting computer
 ```
+
+`--pack` (default name: the HTML file's name with `.zip`) collects the deck,
+`html/` and exactly the images and animation frames the slides use into a zip
+that unpacks to one folder; open `slides.html` inside it. Sources, the `.bib`,
+PDFs and unused figures are left out.
 
 Run it in the folder with your `main.tex`. Each run also installs into that
 project:
@@ -45,7 +51,7 @@ Open `slides.html` and use:
 | P | play / pause the animation on the slide |
 | H | help |
 
-Copy the whole project folder to the presenting computer (figures, `html/`).
+Copy the `--pack` zip (or the whole project folder) to the presenting computer.
 Ctrl+P → Save as PDF gives a static backup, one page per slide.
 
 ## Supported LaTeX
@@ -77,6 +83,7 @@ defined in the document, `\alert<…>`.
 | `commands.py`, `environments.py`, `animation.py`, `overlays.py` | LaTeX commands, environments, animations, overlay specs |
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
+| `pack.py` | `--pack`: zip of the deck and the files it uses |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 2 (Apache-2.0, see `vendor/mathjax/COPYRIGHT`) |
 | `latex/titletemplates.sty` | the beamer templates |
 
