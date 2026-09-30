@@ -1,0 +1,536 @@
+% titletemplates.sty -- title slide templates for beamer
+%
+% Template 1 : \SeminarTitleFrame    (thesis / extension seminar)
+% Template 2 : \ConferenceTitleFrame (conference talk, two authors)
+% Content    : ordinary  \begin{frame}{Title}{Subtitle} ... \end{frame}
+%              get a blue title bar and a footer automatically.
+%
+% Fill the fields with the setter macros (see main.tex) before \begin{document}.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{titletemplates}
+
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\RequirePackage{pifont}
+\RequirePackage{etoolbox}
+
+% ---------------------------------------------------------------- colours
+\definecolor{bannerblue}{RGB}{31,73,125}
+\definecolor{bannertext}{RGB}{255,255,255}
+
+% ---------------------------------------------------------------- fields
+% Placeholders shown until the real values are set.
+\newcommand{\@ttTitle}{[Presentation Title]}
+\newcommand{\@ttSeminar}{[Seminar Name]}
+\newcommand{\@ttDegree}{[Degree Name]}
+\newcommand{\@ttPresenter}{[Presenter Name]}
+\newcommand{\@ttRollNo}{[Roll Number]}
+\newcommand{\@ttSupervisor}{[Supervisor Name]}
+\newcommand{\@ttDepartment}{[Department Name]}
+\newcommand{\@ttInstitute}{[Institute Name]}
+\newcommand{\@ttLogo}{figures/logo}
+\newcommand{\@ttAuthorOne}{[Author 1]}
+\newcommand{\@ttAuthorTwo}{[Author 2]}
+\newcommand{\@ttConference}{[Conference Name]}
+\newcommand{\@ttShortTitle}{[Short Title]}
+\newcommand{\@ttFootAuthor}{[Presenter Name]}
+
+\newcommand{\SetTitle}[1]{\renewcommand{\@ttTitle}{#1}}
+\newcommand{\SetSeminar}[1]{\renewcommand{\@ttSeminar}{#1}}
+\newcommand{\SetDegree}[1]{\renewcommand{\@ttDegree}{#1}}
+\newcommand{\SetPresenter}[1]{\renewcommand{\@ttPresenter}{#1}}
+\newcommand{\SetRollNo}[1]{\renewcommand{\@ttRollNo}{#1}}
+\newcommand{\SetSupervisor}[1]{\renewcommand{\@ttSupervisor}{#1}}
+\newcommand{\SetDepartment}[1]{\renewcommand{\@ttDepartment}{#1}}
+\newcommand{\SetInstitute}[1]{\renewcommand{\@ttInstitute}{#1}}
+\newcommand{\SetLogo}[1]{\renewcommand{\@ttLogo}{#1}}
+\newcommand{\SetAuthorOne}[1]{\renewcommand{\@ttAuthorOne}{#1}}
+\newcommand{\SetAuthorTwo}[1]{\renewcommand{\@ttAuthorTwo}{#1}}
+\newcommand{\SetConference}[1]{\renewcommand{\@ttConference}{#1}}
+\newcommand{\SetShortTitle}[1]{\renewcommand{\@ttShortTitle}{#1}}
+\newcommand{\SetFootAuthor}[1]{\renewcommand{\@ttFootAuthor}{#1}}
+
+% ---------------------------------------------------------------- pieces
+% Full-width blue banner carrying the title, pinned to the top edge of the
+% page; the same vertical space is reserved in the frame body below it.
+\newsavebox{\@ttBannerBox}
+\newlength{\@ttBannerHt}
+\newcommand{\@ttBanner}[1]{%
+  \sbox{\@ttBannerBox}{%
+    \tikz\node[fill=bannerblue, text=bannertext, minimum width=\paperwidth,
+               text width=0.92\paperwidth, align=center, outer sep=0pt,
+               inner ysep=#1, font=\LARGE\bfseries] {\@ttTitle};}%
+  \setlength{\@ttBannerHt}{\ht\@ttBannerBox}%
+  \addtolength{\@ttBannerHt}{\dp\@ttBannerBox}%
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=north, inner sep=0pt, outer sep=0pt]
+      at (current page.north) {\usebox{\@ttBannerBox}};
+  \end{tikzpicture}%
+  \par\vspace*{\dimexpr\@ttBannerHt-\baselineskip\relax}%
+}
+
+% Logo, or a dashed placeholder box if the file does not exist yet.
+\newcommand{\@ttLogoBox}[1]{%
+  \IfFileExists{\@ttLogo.pdf}{\includegraphics[height=#1]{\@ttLogo}}{%
+  \IfFileExists{\@ttLogo.png}{\includegraphics[height=#1]{\@ttLogo}}{%
+  \IfFileExists{\@ttLogo.jpg}{\includegraphics[height=#1]{\@ttLogo}}{%
+    \tikz\node[draw=gray, dashed, minimum width=#1, minimum height=#1,
+               font=\scriptsize\color{gray}]{Logo};}}}%
+}
+
+% ---------------------------------------------------------------- Template 1
+\newcommand{\SeminarTitleFrame}{%
+  {\setbeamertemplate{headline}{}%
+   \setbeamertemplate{footline}{}%
+   \begin{frame}[plain,t]
+     \@ttBanner{8pt}
+     \vfill
+     \centering
+     \small
+     \@ttSeminar\\
+     presented for the degree of\\
+     \textbf{\@ttDegree}\\[0.4em]
+     Presented by,\\
+     \textbf{\@ttPresenter}\\
+     \textbf{\@ttRollNo}\\
+     Under the guidance of\\
+     \textbf{\@ttSupervisor}\\[0.4em]
+     \@ttLogoBox{1.3cm}\\[0.2em]
+     \@ttDepartment\\
+     \@ttInstitute
+     \vspace*{0.4em}
+   \end{frame}}%
+}
+
+% ---------------------------------------------------------------- Template 2
+\newcommand{\ConferenceTitleFrame}{%
+  {\setbeamertemplate{headline}{}%
+   \setbeamertemplate{footline}{}%
+   \begin{frame}[plain,t]
+     \@ttBanner{18pt}
+     \vfill
+     \centering
+     \begin{minipage}[t]{0.45\textwidth}
+       \centering\large\textbf{\@ttAuthorOne}
+     \end{minipage}%
+     \hfill
+     \begin{minipage}[t]{0.45\textwidth}
+       \centering\large\textbf{\@ttAuthorTwo}
+     \end{minipage}
+     \vfill
+     {\color{bannerblue}\rule{0.6\textwidth}{0.6pt}}\\[0.8em]
+     {\large\itshape \@ttConference}
+     \vfill\vfill
+   \end{frame}}%
+}
+
+% ---------------------------------------------------------------- Content
+% Title area at the top of every ordinary frame.
+%   \TitleBarOn / \TitleBarOff   blue bar with white title  /  plain
+%                                underlined black title (no bar)
+%   \SetTitleHeight{<length>}    height of the title area (and the bar);
+%                                grows by itself if a title needs more room
+%   \SectionNameOn / \SectionNameOff
+%                                current section name at the top right
+% All of these may also be used mid-document; they affect later frames.
+\newif\if@ttbar       \@ttbartrue
+\newif\if@ttsecname   \@ttsecnametrue
+\newlength{\@ttTitleHt}  \setlength{\@ttTitleHt}{1.1cm}
+\newcommand{\TitleBarOn}{\@ttbartrue}
+\newcommand{\TitleBarOff}{\@ttbarfalse}
+\newcommand{\SectionNameOn}{\@ttsecnametrue}
+\newcommand{\SectionNameOff}{\@ttsecnamefalse}
+\newcommand{\SetTitleHeight}[1]{\setlength{\@ttTitleHt}{#1}}
+
+\newsavebox{\@ttTmpBox}
+\newlength{\@ttRuleWd}
+\newsavebox{\@ttSecBox}
+\newsavebox{\@ttTitleBox}
+\newlength{\@ttAreaHt}
+\newlength{\@ttTitleWd}
+\setbeamertemplate{frametitle}{%
+  % section name (only after the first \section)
+  \sbox{\@ttSecBox}{}%
+  \if@ttsecname\ifnum\c@section>0
+    \sbox{\@ttSecBox}{\usebeamerfont{section name}%
+      \if@ttbar\color{bannertext!85!bannerblue}\else\color{bannerblue}\fi
+      \insertsectionhead}%
+    % long section names wrap, right-aligned, within 30% of the slide width
+    \ifdim\wd\@ttSecBox>0.3\paperwidth
+      \sbox{\@ttSecBox}{\parbox{0.3\paperwidth}{\raggedleft
+        \usebeamerfont{section name}%
+        \if@ttbar\color{bannertext!85!bannerblue}\else\color{bannerblue}\fi
+        \insertsectionhead\par}}%
+    \fi
+  \fi\fi
+  % the title gets whatever width the section name leaves free
+  \setlength{\@ttTitleWd}{\dimexpr\paperwidth-0.8cm\relax}%
+  \ifdim\wd\@ttSecBox>0pt
+    \addtolength{\@ttTitleWd}{-\wd\@ttSecBox}%
+    \addtolength{\@ttTitleWd}{-0.6cm}%
+  \fi
+  % title (+ subtitle) block
+  \sbox{\@ttTitleBox}{\parbox{\@ttTitleWd}{\raggedright
+    \usebeamerfont{frametitle}%
+    \if@ttbar\color{bannertext}\insertframetitle
+    \else
+      % underline: a rule as wide as the title (or the full title width
+      % when the title wraps onto several lines)
+      \sbox{\@ttTmpBox}{\insertframetitle}%
+      \setlength{\@ttRuleWd}{\wd\@ttTmpBox}%
+      \ifdim\@ttRuleWd>\@ttTitleWd \setlength{\@ttRuleWd}{\@ttTitleWd}\fi
+      \color{black}\insertframetitle\par\nointerlineskip
+      \vspace{1.5pt}\rule{\@ttRuleWd}{0.8pt}%
+    \fi\par
+    \ifx\insertframesubtitle\@empty\else
+      {\usebeamerfont{framesubtitle}%
+       \if@ttbar\color{bannertext!80!bannerblue}\else\color{darkgray}\fi
+       \insertframesubtitle\par}%
+    \fi}}%
+  % area height = requested height, grown if the title needs more room
+  \setlength{\@ttAreaHt}{\@ttTitleHt}%
+  \ifdim\dimexpr\ht\@ttTitleBox+\dp\@ttTitleBox+0.3cm\relax>\@ttAreaHt
+    \setlength{\@ttAreaHt}{\dimexpr\ht\@ttTitleBox+\dp\@ttTitleBox+0.3cm\relax}%
+  \fi
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth,sep=0pt]{}%
+  \begin{tikzpicture}[inner sep=0pt, outer sep=0pt]
+    \useasboundingbox (0,0) rectangle (\paperwidth,-\@ttAreaHt);
+    \if@ttbar
+      \fill[bannerblue] (0,0) rectangle (\paperwidth,-\@ttAreaHt);
+    \fi
+    \node[anchor=west] at (0.4cm,-0.5\@ttAreaHt) {\usebox{\@ttTitleBox}};
+    \node[anchor=east] at (\paperwidth-0.4cm,-0.5\@ttAreaHt)
+      {\usebox{\@ttSecBox}};
+  \end{tikzpicture}%
+  \end{beamercolorbox}%
+  \par\vspace{0.3em}%
+}
+\setbeamerfont{frametitle}{size=\Large, series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\small, series=\mdseries, shape=\itshape}
+\setbeamerfont{section name}{size=\small, shape=\itshape}
+
+% Footer: presenter | short title | slide number, under a thin blue rule.
+%   \FooterOn          full footer (default)
+%   \FooterNumberOnly  no rule or text, just the slide number at bottom right
+%   \FooterOff         no footer at all
+% Like the title options, these may be used mid-document.
+\newcommand{\@ttFootMode}{full}
+\newcommand{\FooterOn}{\renewcommand{\@ttFootMode}{full}}
+\newcommand{\FooterNumberOnly}{\renewcommand{\@ttFootMode}{number}}
+\newcommand{\FooterOff}{\renewcommand{\@ttFootMode}{off}}
+\newcommand{\@ttFootFull}{full}
+\newcommand{\@ttFootNumber}{number}
+
+\setbeamertemplate{footline}{%
+  \ifx\@ttFootMode\@ttFootFull
+    {\color{bannerblue}\rule{\paperwidth}{0.5pt}}\par\nointerlineskip
+    \vspace{0.4ex}%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.2ex,dp=1ex,
+                           leftskip=0.4cm,rightskip=0.4cm]{footline}%
+      \usebeamerfont{footline}%
+      \@ttFootAuthor\hfill\@ttShortTitle\hfill
+      \insertframenumber\,/\,\inserttotalframenumber
+    \end{beamercolorbox}%
+  \else\ifx\@ttFootMode\@ttFootNumber
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.2ex,dp=1.4ex,
+                           leftskip=0.4cm,rightskip=0.4cm]{footline}%
+      \usebeamerfont{footline}\hfill\insertframenumber
+    \end{beamercolorbox}%
+  \fi\fi
+}
+\setbeamercolor{footline}{fg=bannerblue}
+\setbeamerfont{footline}{size=\scriptsize}
+
+% Body styling to match the banner colour.
+\setbeamercolor{structure}{fg=bannerblue}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{enumerate items}[default]
+\setbeamercolor{block title}{fg=bannertext, bg=bannerblue}
+\setbeamercolor{block body}{bg=bannerblue!6}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+
+% Overview (table of contents): bold entries with a shadowed-square bullet,
+% evenly spaced (beamer puts \vfill between entries; \strut keeps every
+% entry the same height), in black like the reference slide.
+\setbeamertemplate{section in toc}{%
+  \leavevmode\hspace*{1.2em}%
+  {\color{bannerblue}\ding{113}}\hspace{0.6em}%
+  \textbf{\inserttocsection}\strut
+}
+\setbeamertemplate{subsection in toc}{}
+\setbeamerfont{section in toc}{size=\large}
+\setbeamercolor{section in toc}{fg=black}
+
+%   \OverviewFrame[<title>]   -- default title "Overview"
+\newcommand{\OverviewFrame}[1][Overview]{%
+  \begin{frame}[t]{#1}
+    \vspace*{0.8em}%
+    \tableofcontents
+  \end{frame}%
+}
+
+%   \ThankYouFrame[<text>]    -- closing slide, default "Thank You"
+\newcommand{\ThankYouFrame}[1][Thank You]{%
+  {\setbeamertemplate{footline}{}%
+   \begin{frame}[plain]
+     \centering
+     {\Huge\bfseries\color{bannerblue}#1}\\[1em]
+     {\large Questions?}
+   \end{frame}}%
+}
+
+% References.
+%   \ReferencesFrame[<title>]  -- default title "References"
+% Needs biblatex loaded in the preamble (see main.tex). Long lists continue
+% on extra slides automatically, titled "<title> (cont.)". Only cited entries
+% are listed; add \nocite{*} to list everything in the .bib file.
+\setbeamertemplate{bibliography item}{\insertbiblabel}
+\setbeamercolor{bibliography item}{fg=bannerblue}
+\setbeamercolor{bibliography entry author}{fg=black}
+\setbeamercolor{bibliography entry title}{fg=black}
+\setbeamercolor{bibliography entry location}{fg=darkgray}
+\setbeamercolor{bibliography entry note}{fg=darkgray}
+\setbeamertemplate{frametitle continuation}{(cont.)}
+\newcommand{\ReferencesFrame}[1][References]{%
+  {\@ttsecnamefalse   % not part of any section
+   \begin{frame}[t,allowframebreaks]{#1}
+     \footnotesize
+     \printbibliography[heading=none]
+   \end{frame}}%
+}
+
+% Dashed box standing in for a figure that has not been added yet:
+%   \FigurePlaceholder[<width>]{<height>}{<label>}
+\newcommand{\FigurePlaceholder}[3][\linewidth]{%
+  \tikz\node[draw=gray, dashed, minimum width=#1, minimum height=#2,
+             outer sep=0pt, font=\small\color{gray}]{#3};%
+}
+
+% ---------------------------------------------------------------- Rows
+%   \begin{rows}
+%     \begin{row}{0.4}  ... \end{row}    % 40% of the slide body height
+%     \begin{row}[t]{0.6} ... \end{row}  % content at the top (c: centre, b: bottom)
+%   \end{rows}
+% The body is the space between the title area and the footer. A row can
+% hold columns (grid layout) and take an overlay spec: \begin{row}<2->{0.6}.
+% beamer typesets the body before the title, so the title's height is taken
+% from \SetTitleHeight (a title that grows past it makes the rows overflow).
+\newdimen\@ttBodyHt
+\newcommand{\@ttRowsFudge}{0.6em}       % beamer's own space around the body
+
+\newenvironment{rows}{%
+  \par
+  \global\@ttBodyHt=\dimexpr\textheight-\@ttRowsFudge\relax
+  \ifx\insertframetitle\@empty\else
+    \global\advance\@ttBodyHt by -\dimexpr\@ttTitleHt+0.3em\relax
+  \fi
+  \nointerlineskip
+}{\par}
+
+\newenvironment<>{row}[2][c]{%
+  \begin{actionenv}#3%
+  \par\nointerlineskip
+  \begin{lrbox}{\@ttCellBox}%
+  \begin{minipage}[t][#2\@ttBodyHt][#1]{\textwidth}%
+}{%
+  \end{minipage}\end{lrbox}%
+  \leavevmode\@ttPutCell{row}%
+  \par\end{actionenv}%
+}
+
+% ---------------------------------------------------------------- Dividers
+%   \showdividers / \hidedividers   dashed outlines (with their size) around
+%                                   every row and column, as an editing aid.
+% Like the other switches they work in the preamble or between frames. The
+% outlines are drawn over the content, so the layout is identical either way.
+\definecolor{dividercolor}{RGB}{211,54,130}
+\newif\if@ttdividers
+\newcommand{\showdividers}{\@ttdividerstrue}
+\newcommand{\hidedividers}{\@ttdividersfalse}
+\newsavebox{\@ttCellBox}
+
+% Output \@ttCellBox; with dividers on, outline it and label it with its
+% share of the text width (col) or of the body height (row).
+\newcommand{\@ttPutCell}[1]{%
+  \if@ttdividers
+    \rlap{\begin{tikzpicture}[overlay, inner sep=1pt]
+      \draw[dividercolor, densely dashed, line width=0.6pt]
+        (0,-\dp\@ttCellBox) rectangle (\wd\@ttCellBox,\ht\@ttCellBox);
+      \ifstrequal{#1}{row}%                       % row labels top right,
+        {\def\@ttAnchor{north east}\def\@ttX{\wd\@ttCellBox}}%   % column labels
+        {\def\@ttAnchor{north west}\def\@ttX{0pt}}%              % top left
+      \node[anchor=\@ttAnchor, font=\tiny\sffamily, text=dividercolor,
+            fill=white, fill opacity=0.8, text opacity=1]
+        at (\@ttX,\ht\@ttCellBox) {#1\ \@ttCellPercent{#1}\%};
+    \end{tikzpicture}}%
+  \fi
+  \usebox{\@ttCellBox}%
+}
+\newcommand{\@ttCellPercent}[1]{%
+  \ifstrequal{#1}{row}%
+    {\the\numexpr 100*(\ht\@ttCellBox+\dp\@ttCellBox)/(\@ttBodyHt/100)/100\relax}%
+    {\the\numexpr 100*\wd\@ttCellBox/(\textwidth/100)/100\relax}%
+}
+
+% beamer's column environment (beamerbaseframecomponents.sty), with its
+% minipage collected in a box so that \@ttPutCell can outline it
+\renewenvironment<>{beamer@columnenv}[2][\beamer@colmode]{%
+  \beamer@colclose\def\beamer@colclose{}%
+  \begin{actionenv}#3%
+    \setkeys{beamer@col}{#1}%
+    \begin{lrbox}{\@ttCellBox}%
+    \begin{minipage}[\beamer@colalign]{#2}%
+      \leavevmode\raggedright\beamer@colheadskip\ignorespaces}
+  {\end{minipage}\end{lrbox}\@ttPutCell{col}\hfill\end{actionenv}\@ignoretrue}
+\let\endcolumn\endbeamer@columnenv
+
+% ---------------------------------------------------------------- Research progress
+%   \begin{progress}                    % [nolegend] hides the legend
+%     \task[done]{Literature review}{Jan 2022 -- Jun 2022}
+%     \task[ongoing]{Flexible cylinder with grooves}{2023 -- now}
+%     \task<2->[planned]{Thesis writing}{2025}   % <spec>: reveal on a later step
+%   \end{progress}
+% A vertical timeline: dates | status marker on a line | task. Status:
+% done (default), ongoing, planned. Needs two runs (latexmk does this) to draw
+% the connecting line.
+\definecolor{statusdone}{RGB}{46,125,50}
+\definecolor{statusongoing}{RGB}{230,145,0}
+\definecolor{statusplanned}{RGB}{150,150,150}
+\newcounter{@ttprog}                     % progress environments so far
+\newcounter{@tttask}                     % tasks in the current one
+\newif\if@ttlegend
+\newlength{\@ttWhenWd}
+
+\newcommand{\@ttMarker@done}{%
+  \fill[statusdone] (0,0) circle (0.55em);
+  \node[text=white, font=\tiny] at (0,0) {\ding{51}};}
+\newcommand{\@ttMarker@ongoing}{%
+  \fill[white] (0,0) circle (0.55em);
+  \fill[statusongoing] (0,0) -- (90:0.55em) arc (90:270:0.55em) -- cycle;
+  \draw[statusongoing, line width=0.9pt] (0,0) circle (0.5em);}
+\newcommand{\@ttMarker@planned}{%
+  \fill[white] (0,0) circle (0.55em);
+  \draw[statusplanned, line width=0.9pt] (0,0) circle (0.5em);}
+\newcommand{\@ttLegendMarker}[1]{%
+  \tikz[baseline=-0.6ex, scale=0.8]{\csname @ttMarker@#1\endcsname}}
+
+\newenvironment{progress}[1][]{%
+  \stepcounter{@ttprog}\setcounter{@tttask}{0}%
+  \ifstrequal{#1}{nolegend}{\@ttlegendfalse}{\@ttlegendtrue}%
+  \setlength{\@ttWhenWd}{0.22\linewidth}%
+  \par\vspace{0.3em}%
+}{%
+  \if@ttlegend
+    \par\vspace{0.8em}\hspace*{\@ttWhenWd}\hspace{0.5em}%
+    {\footnotesize
+     \@ttLegendMarker{done}~Done\quad
+     \@ttLegendMarker{ongoing}~Ongoing\quad
+     \@ttLegendMarker{planned}~Planned}%
+  \fi
+  \par
+}
+
+% \task[status]{title}{when}; with beamer's <> the overlay spec is #4
+\newcommand<>{\task}[3][done]{%
+  \stepcounter{@tttask}%
+  \par\noindent
+  \uncover#4{%
+    \makebox[\@ttWhenWd][r]{\small\color{darkgray}#3}\hspace{0.5em}%
+    \begin{tikzpicture}[remember picture, baseline=-0.6ex]
+      \coordinate (tt-p\the\value{@ttprog}-t\the\value{@tttask}) at (0,0);
+      \ifcsname @ttMarker@#1\endcsname\csname @ttMarker@#1\endcsname
+      \else\csname @ttMarker@planned\endcsname\fi
+      \ifnum\value{@tttask}>1                  % line up to the previous task
+        \draw[overlay, gray!50, line width=1pt]
+          ([yshift=-0.55em]tt-p\the\value{@ttprog}-t\the\numexpr\value{@tttask}-1\relax)
+          -- (0,0.55em);
+      \fi
+    \end{tikzpicture}\hspace{0.6em}%
+    \parbox[t]{\dimexpr\linewidth-\@ttWhenWd-3.5em\relax}{\strut#2\strut}%
+  }\par\vspace{0.55em}%
+}
+
+% ---------------------------------------------------------------- Literature review
+%   \begin{litreview}                           % [0.3] width of the left column
+%     \study{key1,key2}{What these studies found.}
+%     \study<2->{key3}{...}                     % <spec>: reveal on a later step
+%     \studytext{Author (2024)}{...}            % left text given directly
+%   \end{litreview}
+% Two columns separated by thick rules: bold "Author et al. (Year)" for each
+% key (from the .bib; 2 authors: "A & B"), centred, and the summary. Needs
+% biblatex; the studies are cited, so they appear on the References slide.
+\RequirePackage{array}
+\newlength{\@ttLitLeft}
+\newcommand{\@ttLitRule}{\noalign{\color{black}\hrule height 1.1pt}}
+\newcommand{\@ttLitPad}{\rule{0pt}{2em}}        % space above the text in a row
+
+\newenvironment{litreview}[1][0.3]{%
+  \par\noindent
+  \setlength{\@ttLitLeft}{\dimexpr#1\linewidth-2\tabcolsep\relax}%
+  \small
+  \begin{tabular}{@{}>{\centering\arraybackslash}m{\@ttLitLeft}
+                     >{\raggedright\arraybackslash}%
+                     m{\dimexpr\linewidth-\@ttLitLeft-2\tabcolsep\relax}@{}}
+  \@ttLitRule
+}{%
+  \end{tabular}\par
+}
+
+% one "Author et al. (Year)" line per key (\@centercr: \\ would end the row)
+\newcommand{\@ttLitCite}[1]{%
+  \@ttLitSep\def\@ttLitSep{\@centercr}%
+  \AtNextCite{\defcounter{maxnames}{2}\defcounter{minnames}{1}%
+              \renewcommand*{\finalnamedelim}{\addspace\&\space}}%
+  \citeauthor{#1}~(\citeyear{#1})}
+\newcommand{\@ttLitRow}[3]{%          #1 overlay spec, #2 left, #3 summary
+  \uncover#1{\@ttLitPad\textbf{#2}}\vspace{0.9em} &
+  \uncover#1{\@ttLitPad#3}\vspace{0.9em} \\
+  \@ttLitRule}
+\newcommand<>{\study}[2]{%
+  \@ttLitRow{#3}{\def\@ttLitSep{}\forcsvlist{\@ttLitCite}{#1}}{#2}}
+\newcommand<>{\studytext}[2]{\@ttLitRow{#3}{#1}{#2}}
+
+% ---------------------------------------------------------------- Publications
+%   \begin{publications}
+%     \pubsection{Journal articles}
+%     \pub[published]{bibkey}                 % entry from the .bib file
+%     \pubtext[preparation]{Authors. Title.}  % not in the .bib file (yet)
+%   \end{publications}
+% Status badges: published, accepted, review, submitted, preparation.
+% Needs biblatex. The entries are cited in their own refsection, so they are
+% not added to the References slide.
+\definecolor{pubpublished}{RGB}{46,125,50}
+\definecolor{pubaccepted}{RGB}{0,121,107}
+\definecolor{pubreview}{RGB}{230,145,0}
+\definecolor{pubsubmitted}{RGB}{31,73,125}
+\definecolor{pubpreparation}{RGB}{130,130,130}
+\newcommand{\@ttPubLabel@published}{Published}
+\newcommand{\@ttPubLabel@accepted}{Accepted}
+\newcommand{\@ttPubLabel@review}{Under review}
+\newcommand{\@ttPubLabel@submitted}{Submitted}
+\newcommand{\@ttPubLabel@preparation}{In preparation}
+
+\newcommand{\@ttPubBadge}[1]{%
+  \ifcsname @ttPubLabel@#1\endcsname
+    \tikz[baseline=(b.base)]\node(b)[fill=pub#1, text=white, rounded corners=2pt,
+      inner xsep=3pt, inner ysep=1.5pt, font=\scriptsize\sffamily]
+      {\csname @ttPubLabel@#1\endcsname};%
+  \fi}
+
+\newenvironment{publications}{%
+  \par\begin{refsection}%
+  \begin{list}{}{\leftmargin=0pt\itemindent=0pt\labelwidth=0pt\labelsep=0pt
+                 \itemsep=0.45em\parsep=0pt\topsep=0.2em}%
+  \small
+}{%
+  \end{list}\end{refsection}\par
+}
+\newcommand{\pubsection}[1]{%
+  \item[]\vspace{0.4em}{\normalsize\bfseries\color{bannerblue}#1}}
+\newcommand{\pub}[2][]{\item[]\@ttPubBadge{#1}\ \fullcite{#2}}
+\newcommand{\pubtext}[2][]{\item[]\@ttPubBadge{#1}\ #2}
+
+\endinput

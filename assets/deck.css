@@ -1,0 +1,359 @@
+/* deck.css -- styles for slides.html (HTML version of the beamer deck).
+ *
+ * Slides are drawn on a fixed 1280 x 720 (16:9) canvas that deck.js scales to
+ * fit the window, so layouts look the same on any screen or projector.
+ * Text sizes are for beamer's 11pt and are multiplied by --fs, so the class
+ * option (\documentclass[8pt]{beamer}, ...) scales all text as in the PDF.
+ */
+
+:root {
+  --blue:        rgb(31, 73, 125);     /* bannerblue in titletemplates.sty */
+  --blue-soft:   rgba(31, 73, 125, 0.06);
+  --on-blue:     #fff;
+  --text:        #000;
+  --muted:       #555;
+  --title-h:     88px;                 /* title area / bar height (config: titleHeight) */
+  --fs:          1;                    /* text scale: class font size / 11pt (config: fontSize) */
+  --pad-x:       32px;                 /* left/right slide margin */
+  --serif: "Times New Roman", "TeX Gyre Termes", "Nimbus Roman", "Liberation Serif",
+           Times, serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; height: 100%;
+  background: #1b1b1b;                 /* letterbox around the slide */
+  overflow: hidden;
+}
+
+.deck {
+  position: absolute; top: 0; left: 0;
+  width: 1280px; height: 720px;
+  transform-origin: 0 0;
+  font-family: var(--serif);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ slide */
+.slide {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column;
+  background: #fff;
+  font-size: calc(30px * var(--fs)); line-height: 1.3;
+  overflow: hidden;
+}
+.slide.active { display: flex; }
+
+/* ------------------------------------------------------------ title bar */
+.titlebar {
+  flex: none;
+  display: flex; align-items: center; gap: 24px;
+  min-height: var(--title-h);          /* grows if the title needs more room */
+  padding: 10px var(--pad-x);
+}
+.titlebar .titles { flex: 1; min-width: 0; }
+.titlebar h2 {
+  margin: 0; font-size: calc(44px * var(--fs)); line-height: 1.12; font-weight: bold;
+}
+.titlebar h3 {
+  margin: 2px 0 0; font-size: calc(24px * var(--fs)); font-weight: normal; font-style: italic;
+}
+.titlebar .secname {
+  flex: none; max-width: 30%;
+  text-align: right; font-size: calc(24px * var(--fs)); font-style: italic; line-height: 1.15;
+}
+
+.slide.bar-on  .titlebar          { background: var(--blue); color: var(--on-blue); }
+.slide.bar-on  .titlebar h3       { color: rgba(255, 255, 255, 0.82); }
+.slide.bar-on  .titlebar .secname { color: rgba(255, 255, 255, 0.88); }
+.slide.bar-off .titlebar h2 span  {                 /* underlined black title */
+  text-decoration: underline; text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.slide.bar-off .titlebar h3       { color: var(--muted); }
+.slide.bar-off .titlebar .secname { color: var(--blue); }
+
+/* ------------------------------------------------------------ body */
+.slide .body {
+  flex: 1; min-height: 0;
+  padding: 18px var(--pad-x) 10px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.slide .body.top { justify-content: flex-start; }   /* <section data-align="top"> */
+
+.body ul, .body ol { margin: 0.2em 0; padding-left: 1.6em; }
+.body li { margin: 0.25em 0; }
+.body ul { list-style: none; }
+.body ul > li { position: relative; }
+.body ul > li::before {                /* blue round bullet */
+  content: ""; position: absolute; left: -1.05em; top: 0.5em;
+  width: 0.36em; height: 0.36em; border-radius: 50%; background: var(--blue);
+}
+.body ul ul { font-size: 0.85em; }
+.body ul ul > li::before { width: 0.3em; height: 0.3em; }
+.body ol li::marker { color: var(--blue); }
+
+/* pieces produced by tools/tex2html.py */
+.body .p { margin: 0.15em 0; }
+.center { text-align: center; }
+.center img { display: inline-block; }
+.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1%; }
+.row > * { min-width: 0; }
+.minipage { display: inline-block; vertical-align: top; }
+.tab { border-collapse: collapse; margin: 0.4em auto; font-size: 0.85em; }
+.tab td { padding: 4px 14px; }
+.tab tr.rule td { border-top: 1.5px solid var(--text); }
+.tab tr[data-bottom] td { border-bottom: 1.5px solid var(--text); }
+.footnote { display: block; font-size: 0.6em; color: var(--muted); }
+
+/* rows (\begin{rows} / \begin{row}{0.4}): fill the body height */
+.rows {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.row-cell {
+  min-height: 0;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.row-cell[data-pos="t"] { justify-content: flex-start; }
+.row-cell[data-pos="b"] { justify-content: flex-end; }
+.slide .body:has(> .rows) { padding-bottom: 6px; }
+
+/* dividers (\showdividers): dashed outlines + size labels, editing aid */
+.slide.dividers .col, .slide.dividers .row-cell {
+  position: relative;
+  outline: 1.5px dashed rgb(211, 54, 130); outline-offset: -1px;
+}
+.slide.dividers .col::before, .slide.dividers .row-cell::before {
+  position: absolute; top: 1px; z-index: 5;
+  font: 13px/1.2 sans-serif; color: rgb(211, 54, 130);
+  background: rgba(255, 255, 255, 0.85); padding: 0 3px;
+  pointer-events: none;
+}
+.slide.dividers .col::before      { content: "col " attr(data-size); left: 1px; }
+.slide.dividers .row-cell::before { content: "row " attr(data-size); right: 1px; }
+
+/* block (beamer \begin{block}) */
+.block { margin: 0.6em 0; border-radius: 8px; overflow: hidden; }
+.block > .block-title {
+  background: var(--blue); color: var(--on-blue); padding: 4px 14px;
+}
+.block > .block-body { background: var(--blue-soft); padding: 8px 14px; }
+
+/* columns */
+.columns { display: flex; gap: 4%; align-items: flex-start; }
+.columns > .col { flex: 1; min-width: 0; }
+.columns.center { align-items: center; }
+
+/* figures */
+figure { margin: 0; text-align: center; }
+figure img { max-width: 100%; display: block; margin: 0 auto; }
+figcaption { font-size: calc(24px * var(--fs)); margin-top: 6px; }
+.figure-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 300px;
+  border: 2px dashed #999; color: #999; font-size: calc(24px * var(--fs));
+}
+.caption { font-size: calc(24px * var(--fs)); text-align: center; margin-top: 12px; }
+
+/* speaker notes (\note): only shown in the presenter view (S) */
+aside.note { display: none !important; }
+
+/* research progress (\begin{progress}, \task[status]{title}{when}) */
+.progress { --when-w: 22%; }
+.task {
+  position: relative;
+  display: grid; grid-template-columns: var(--when-w) 1.1em 1fr;
+  column-gap: 0.6em; align-items: start;
+  padding-bottom: 0.55em;
+}
+.task .when { text-align: right; color: #444; font-size: 0.85em; padding-top: 0.12em; }
+.marker {
+  display: inline-block; box-sizing: border-box;
+  width: 1.1em; height: 1.1em; border-radius: 50%;
+  position: relative; z-index: 1; margin-top: 0.1em;
+}
+[data-status="done"] > .marker    { background: rgb(46, 125, 50); }
+[data-status="done"] > .marker::before {
+  content: "✓"; color: #fff; font: bold 0.7em/1.6 sans-serif;
+  position: absolute; inset: 0; text-align: center;
+}
+[data-status="ongoing"] > .marker {
+  border: 0.13em solid rgb(230, 145, 0);
+  background: linear-gradient(90deg, rgb(230, 145, 0) 50%, #fff 50%);
+}
+[data-status="planned"] > .marker { border: 0.13em solid rgb(150, 150, 150); background: #fff; }
+/* line from each marker down to the next one (hidden when the next task is) */
+.task::after {
+  content: ""; position: absolute; z-index: 0;
+  left: calc(var(--when-w) + 0.6em + 0.55em - 1px); width: 2px;
+  top: 1.2em; bottom: -0.1em; background: rgba(0, 0, 0, 0.2);
+}
+.task:not(:has(+ .task))::after,                  /* last task: no line */
+.task:has(+ .task[style*="hidden"])::after { display: none; }
+.progress-legend {
+  margin: 0.6em 0 0 calc(var(--when-w) + 0.6em);
+  display: flex; gap: 1.2em; font-size: 0.7em; align-items: center;
+}
+.progress-legend > span { display: inline-flex; align-items: center; gap: 0.35em; }
+.progress-legend .marker { margin-top: 0; }
+
+/* literature review table (\begin{litreview}, \study{keys}{summary}) */
+.litreview {
+  width: 100%; border-collapse: collapse; font-size: 0.91em; line-height: 1.3;
+  table-layout: fixed;                     /* keep the left column at --lit-left */
+  border-top: 3px solid #000;
+}
+.litreview td {
+  border-bottom: 3px solid #000; vertical-align: middle;
+  padding: 0.75em 0.6em 0.8em;
+}
+.litreview td.lit-who {
+  /* like beamer: the column's cell padding comes out of its share */
+  width: calc(var(--lit-left, 30%) - 34px); text-align: center; font-weight: bold;
+}
+.litreview td.lit-who cite { font-style: normal; }
+
+/* publications (\begin{publications}, \pub[status]{key}, \pubtext, \pubsection) */
+.publications { font-size: 0.85em; }
+.publications .p { margin: 0; }
+.pub-section { font-weight: bold; color: var(--blue); font-size: 1.1em; margin: 0.5em 0 0.2em; }
+.pub { margin: 0.3em 0; }
+.pub-badge {
+  display: inline-block; color: #fff; border-radius: 3px;
+  font: 0.7em/1.5 sans-serif; padding: 0 0.45em; margin-right: 0.45em;
+  vertical-align: 0.15em;
+}
+.pub-badge[data-status="published"]   { background: rgb(46, 125, 50); }
+.pub-badge[data-status="accepted"]    { background: rgb(0, 121, 107); }
+.pub-badge[data-status="review"]      { background: rgb(230, 145, 0); }
+.pub-badge[data-status="submitted"]   { background: var(--blue); }
+.pub-badge[data-status="preparation"] { background: rgb(130, 130, 130); }
+.pub-badge[data-status="published"]::after   { content: "Published"; }
+.pub-badge[data-status="accepted"]::after    { content: "Accepted"; }
+.pub-badge[data-status="review"]::after      { content: "Under review"; }
+.pub-badge[data-status="submitted"]::after   { content: "Submitted"; }
+.pub-badge[data-status="preparation"]::after { content: "In preparation"; }
+
+/* citations */
+cite { font-style: normal; }
+cite a { color: var(--blue); text-decoration: none; }
+
+/* ------------------------------------------------------------ footer */
+.footer {
+  flex: none;
+  display: flex; justify-content: space-between; align-items: center;
+  height: 34px; padding: 0 var(--pad-x);
+  font-size: calc(18px * var(--fs)); color: var(--blue);
+}
+.footer.full   { border-top: 1.5px solid var(--blue); }
+.footer.number { justify-content: flex-end; color: var(--text); }
+.footer > span { flex: 1; }
+.footer > span:nth-child(2) { text-align: center; }
+.footer > span:last-child  { text-align: right; }
+
+/* ------------------------------------------------------------ title slides */
+.banner {
+  flex: none;
+  background: var(--blue); color: var(--on-blue);
+  text-align: center; font-weight: bold; font-size: calc(50px * var(--fs)); line-height: 1.2;
+  padding: 16px 5%;
+}
+.seminar .banner   { padding: 16px 5%; }
+.conference .banner { padding: 44px 5%; }
+
+.seminar .info {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; text-align: center; font-size: calc(26px * var(--fs)); line-height: 1.3;
+}
+.seminar .info .gap   { height: 12px; }
+.seminar .logo        { height: 120px; margin: 10px 0 6px; }
+.logo-placeholder {
+  width: 120px; height: 120px; margin: 10px auto 6px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed #999; color: #999; font-size: calc(18px * var(--fs));
+}
+
+.conference .info {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  align-items: center; gap: 36px; padding-bottom: 80px;
+}
+.conference .authors {
+  display: flex; justify-content: space-around; width: 100%;
+  font-size: calc(32px * var(--fs)); font-weight: bold;
+}
+.conference .rule { width: 60%; border-top: 1.5px solid var(--blue); }
+.conference .venue { font-size: calc(32px * var(--fs)); font-style: italic; }
+
+/* ------------------------------------------------------------ overview */
+.overview-list {
+  list-style: none !important; margin: 0; padding-left: 60px !important;
+  display: flex; flex-direction: column; justify-content: space-evenly;
+  height: 100%;
+}
+.overview-list li { font-weight: bold; font-size: calc(32px * var(--fs)); margin: 0; }
+.overview-list li::before {            /* shadowed square, like pifont \ding{113} */
+  content: "" !important; display: inline-block; position: static !important;
+  width: 0.55em !important; height: 0.55em !important; border-radius: 0 !important;
+  background: #fff !important;
+  border: 2px solid var(--blue); box-shadow: 3px 3px 0 var(--blue);
+  margin-right: 0.7em; vertical-align: 0.02em;
+}
+
+/* ------------------------------------------------------------ references */
+.references {
+  list-style: none; margin: 0; padding: 0; font-size: calc(22px * var(--fs)); line-height: 1.3;
+}
+.references li { display: flex; gap: 14px; margin: 0 0 10px; }
+.references .label { color: var(--blue); flex: none; min-width: 2.2em; }
+
+/* ------------------------------------------------------------ thank you */
+.thanks-box {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.thanks-box .big { font-size: calc(80px * var(--fs)); font-weight: bold; color: var(--blue); }
+.thanks-box .small { font-size: calc(32px * var(--fs)); margin-top: 16px; }
+
+/* ------------------------------------------------------------ animation player */
+.anim { display: flex; flex-direction: column; align-items: stretch; }
+.anim .panels { display: flex; gap: 2%; justify-content: center; }
+.anim .panels figure { flex: 1; min-width: 0; }
+.anim .panels figcaption { margin: 0 0 6px; }       /* labels sit above */
+.anim .panels img { width: 100%; cursor: pointer; }
+
+.anim-controls {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 8px; font-size: 18px; color: var(--blue);
+  user-select: none;
+}
+.anim-controls button {
+  font: inherit; color: var(--blue); background: #fff;
+  border: 1.5px solid var(--blue); border-radius: 4px;
+  min-width: 34px; height: 30px; padding: 0 6px; cursor: pointer;
+}
+.anim-controls button:hover { background: var(--blue-soft); }
+.anim-controls input[type=range] { width: 320px; accent-color: var(--blue); }
+.anim-controls .readout { min-width: 110px; text-align: center; }
+
+/* ------------------------------------------------------------ HUD */
+.hud {
+  position: fixed; right: 12px; bottom: 10px; z-index: 10;
+  font: 13px/1.4 sans-serif; color: #ccc; background: rgba(0,0,0,0.6);
+  padding: 8px 12px; border-radius: 6px; display: none; white-space: pre;
+}
+.hud.show { display: block; }
+
+/* ------------------------------------------------------------ print / PDF */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  html, body { background: #fff; overflow: visible; height: auto; }
+  .deck { position: static; transform: none !important; height: auto; }
+  .slide {
+    position: relative; display: flex !important;
+    width: 1280px; height: 720px; break-after: page;
+  }
+  .anim-controls, .hud { display: none !important; }
+  /* steps: deck.js shows each slide at its last step before printing */
+}

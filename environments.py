@@ -1,0 +1,161 @@
+"""LaTeX environments (\\begin{...} ... \\end{...}) -- mixin for Converter."""
+import html
+import re
+
+from .log import warn
+from .parsing import read_arg, read_opt, split_items
+from .units import length_css
+from .vocabulary import MATH_ENVS, PARA
+
+LISTS = ("itemize", "enumerate", "description")
+BLOCKS = ("block", "alertblock", "exampleblock")
+TABLES = ("tabular", "tabular*", "array")
+
+
+class EnvironmentsMixin:
+    def environment(self, env, body):
+        """Convert \\begin{env} body \\end{env}. Block-level results are
+        wrapped in PARA markers so they start on their own line."""
+        if env in LISTS:
+            return self.env_list(env, body)
+        if env in BLOCKS:
+            title, j = read_arg(body, 0)
+            return PARA + ('<div class="block"><div class="block-title">%s</div>'
+                           '<div class="block-body">%s</div></div>'
+                           % (self.inline(title), self.flow(body[j:]))) + PARA
+        if env == "columns":
+            opt, j = read_opt(body, 0)
+            align = " center" if opt and "c" in opt and "T" not in opt else ""
+            return PARA + '<div class="columns%s">%s</div>' % (
+                align, self.inline(body[j:]).replace(PARA, "")) + PARA
+        if env == "column":
+            _, j = read_opt(body, 0)
+            w, j = read_arg(body, j)
+            css = length_css(w)
+            return '<div class="col" data-size="%s" style="flex:0 0 %s">%s</div>' % (
+                css, css, self.flow(body[j:]))
+        if env == "rows":
+            return PARA + '<div class="rows">%s</div>' % (
+                self.inline(body).replace(PARA, "")) + PARA
+        if env == "row":
+            pos, j = read_opt(body, 0)
+            frac, j = read_arg(body, j)
+            size = "%g%%" % (float(frac) * 100)
+            return '<div class="row-cell" data-size="%s" data-pos="%s" style="flex:0 0 %s">%s</div>' % (
+                size, (pos or "c").strip(), size, self.flow(body[j:]))
+        if env == "minipage":
+            _, j = read_opt(body, 0)
+            _, j = read_opt(body, j)
+            _, j = read_opt(body, j)
+            w, j = read_arg(body, j)
+            return '<div class="minipage" style="width:%s">%s</div>' % (
+                length_css(w), self.flow(body[j:]))
+        if env in ("center", "figure", "figure*"):
+            _, j = read_opt(body, 0)
+            return PARA + '<div class="center">%s</div>' % self.flow(body[j:]) + PARA
+        if env in MATH_ENVS:
+            return PARA + html.escape("\\begin{%s}%s\\end{%s}" % (env, body, env),
+                                      quote=False) + PARA
+        if env in TABLES:
+            return self.env_tabular(env, body)
+        if env == "table":
+            _, j = read_opt(body, 0)
+            return PARA + self.flow(body[j:]) + PARA
+        if env == "progress":
+            return self.env_progress(body)
+        if env == "litreview":
+            return self.env_litreview(body)
+        if env == "publications":                  # \pub.. commands: commands.py
+            return PARA + '<div class="publications">%s</div>' % (
+                self.blocks(self.inline(body))) + PARA
+        if env == "animateinline":
+            return self.animation(body)
+        warn("unknown environment {%s} (kept its content)" % env)
+        return self.inline(body)
+
+    def env_list(self, env, body):
+        """itemize / enumerate / description -> <ul> / <ol>. Overlay specs:
+        \\item<2->, \\item<+->, or one for all items: \\begin{itemize}[<+->]."""
+        tag = "ol" if env == "enumerate" else "ul"
+        opt, j = read_opt(body, 0)
+        default = opt[1:-1] if opt and opt.startswith("<") and opt.endswith(">") else None
+        lis = []
+        for it in split_items(body[j:]):
+            spec, k = self.read_spec(it, 0)
+            label, k = read_opt(it, k)
+            if spec is None:
+                spec, k = self.read_spec(it, k)         # \item[label]<spec>
+            if spec is None and default:
+                spec = self.resolve_spec(default)
+            content = self.inline(it[k:])
+            content = self.blocks(content) if PARA in content else content.strip()
+            if label:
+                content = "<b>%s</b> %s" % (self.inline(label), content)
+            lis.append("<li%s>%s</li>" % (self.spec_attr(spec), content))
+        return PARA + "<%s>%s</%s>" % (tag, "".join(lis), tag) + PARA
+
+    def env_progress(self, body):
+        """Research-progress timeline: \\task<spec>[status]{title}{when}."""
+        opt, j = read_opt(body, 0)
+        tasks = []
+        for it in split_items(body[j:], "task"):
+            spec, k = self.read_spec(it, 0)
+            status, k = read_opt(it, k)
+            title, k = read_arg(it, k)
+            when, k = read_arg(it, k)
+            status = (status or "done").strip()
+            if status not in ("done", "ongoing", "planned"):
+                warn("\\task[%s]: status should be done, ongoing or planned" % status)
+            tasks.append('<div class="task" data-status="%s"%s><span class="when">%s</span>'
+                         '<span class="marker"></span><span class="what">%s</span></div>'
+                         % (status, self.spec_attr(spec), self.inline(when).strip(),
+                            self.inline(title).strip()))
+        legend = "" if (opt or "").strip() == "nolegend" else (
+            '<div class="progress-legend">' + "".join(
+                '<span data-status="%s"><span class="marker"></span>%s</span>' % (st, label)
+                for st, label in (("done", "Done"), ("ongoing", "Ongoing"),
+                                  ("planned", "Planned"))) + "</div>")
+        return PARA + '<div class="progress">%s%s</div>' % ("".join(tasks), legend) + PARA
+
+    def env_litreview(self, body):
+        """Literature table: \\study<spec>{keys}{summary} / \\studytext{who}{summary}.
+        Each key becomes an author-year citation, filled in by deck.js."""
+        opt, j = read_opt(body, 0)
+        body = body[j:]
+        left = "%g%%" % (float(opt) * 100) if opt else "30%"
+        marks = list(re.finditer(r"\\(studytext|study)\b", body))
+        rows = []
+        for n, m in enumerate(marks):
+            seg = body[m.end():marks[n + 1].start() if n + 1 < len(marks) else len(body)]
+            spec, k = self.read_spec(seg, 0)
+            who, k = read_arg(seg, k)
+            what, k = read_arg(seg, k)
+            if m.group(1) == "study":
+                who = "<br>".join('<cite data-ref="%s" data-style="authoryear"></cite>'
+                                  % html.escape(key.strip())
+                                  for key in who.split(",") if key.strip())
+            else:
+                who = self.inline(who).strip()
+            rows.append('<tr%s><td class="lit-who">%s</td><td class="lit-what">%s</td></tr>'
+                        % (self.spec_attr(spec), who, self.inline(what).strip()))
+        return PARA + '<table class="litreview" style="--lit-left:%s">%s</table>' % (
+            left, "".join(rows)) + PARA
+
+    def env_tabular(self, env, body):
+        """tabular -> <table>; \\hline / booktabs rules become borders."""
+        if env == "tabular*":
+            _, j = read_arg(body, 0)
+            body = body[j:]
+        _, j = read_arg(body, 0)                       # column spec
+        trs = []
+        for r in re.split(r"\\\\(?:\[[^\]]*\])?", body[j:]):
+            hline = "\\hline" in r or "\\toprule" in r or "\\midrule" in r
+            r = re.sub(r"\\(hline|toprule|midrule|bottomrule|cline\{[^}]*\})", "", r)
+            if not r.strip():
+                if hline and trs:                      # closing rule under the last row
+                    trs[-1] = trs[-1].replace("<tr", '<tr data-bottom="1"', 1)
+                continue
+            cells = re.split(r"(?<!\\)&", r)
+            trs.append("<tr%s>%s</tr>" % (' class="rule"' if hline else "",
+                       "".join("<td>%s</td>" % self.inline(c).strip() for c in cells)))
+        return PARA + '<table class="tab">%s</table>' % "".join(trs) + PARA

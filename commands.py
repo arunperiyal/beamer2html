@@ -1,0 +1,210 @@
+"""LaTeX commands (\\name ...) -- mixin for Converter."""
+import html
+import re
+
+from .images import resolve_image
+from .log import warn
+from .parsing import find_end, keyvals, read_arg, read_opt
+from .units import length_css
+from .vocabulary import (CENTER, COLORS, DECLS, HFILL, IGNORE, PARA, PAUSE,
+                         SIZES, TEXT_SYMBOLS, WRAPS)
+
+from .overlays import OVERLAY_CMDS
+
+CITE_CMDS = ("cite", "citep", "citet", "parencite", "footcite", "autocite")
+PUB_STATUSES = ("published", "accepted", "review", "submitted", "preparation")
+
+
+class CommandsMixin:
+    def command(self, name, s, i):
+        """Convert the command `name` whose arguments start at s[i].
+        Returns (html, new index, number of <span> opened until group end)."""
+        if name in self.macros:
+            return self.inline(self.macros[name]), i, 0
+        if len(name) == 1 and not name.isalpha():
+            return self.symbol(name, s, i)
+
+        if name == "begin":
+            env, i = read_arg(s, i)
+            start = i
+            end, after = find_end(s, start, env)
+            spec, k = self.read_spec(s, start)          # \begin{block}<2->{..}
+            if spec:
+                res = self.environment(env, s[k:end]).replace(PARA, "").strip()
+                if res.startswith("<") and not res.startswith("</"):
+                    # put the spec on the element itself (keeps flex layouts
+                    # such as rows / columns intact)
+                    res = re.sub(r"^<(\w+)", r'<\1 data-spec="%s"' % spec, res, count=1)
+                else:
+                    res = '<div data-spec="%s">%s</div>' % (spec, res)
+                return PARA + res + PARA, after, 0
+            return self.environment(env, s[start:end]), after, 0
+        if name in ("def", "gdef", "edef", "newcommand", "renewcommand", "providecommand"):
+            return self.define(name, s, i)
+
+        # ---- fonts and colours
+        if name in SIZES:
+            return '<span style="font-size:%gem">' % SIZES[name], i, 1
+        if name in DECLS:
+            return '<span style="%s">' % DECLS[name], i, 1
+        if name == "color":
+            col, i = read_arg(s, i)
+            return '<span style="color:%s">' % COLORS.get(col, col), i, 1
+        if name == "textcolor":
+            col, i = read_arg(s, i)
+            txt, i = read_arg(s, i)
+            return '<span style="color:%s">%s</span>' % (COLORS.get(col, col), self.inline(txt)), i, 0
+        if name in WRAPS:
+            txt, i = read_arg(s, i)
+            tag = WRAPS[name]
+            return "<%s>%s</%s>" % (tag, self.inline(txt), tag), i, 0
+
+        # ---- citations, figures
+        if name in CITE_CMDS:
+            _, i = read_opt(s, i)
+            _, i = read_opt(s, i)
+            keys, i = read_arg(s, i)
+            return '<cite data-ref="%s"></cite>' % html.escape(keys.replace(" ", "")), i, 0
+        if name == "includegraphics":
+            opt, i = read_opt(s, i)
+            path, i = read_arg(s, i)
+            return self.image(self.expand(path), keyvals(opt)), i, 0
+        if name == "FigurePlaceholder":
+            w, i = read_opt(s, i)
+            h, i = read_arg(s, i)
+            if length_css(h, quiet=True) is None:      # \FigurePlaceholder{label}
+                warn("\\FigurePlaceholder{%s}: needs {height}{label}, e.g. "
+                     "\\FigurePlaceholder{3cm}{%s}" % (h, h))
+                label, h = h, "3cm"
+            else:
+                label, i = read_arg(s, i)
+            style = "height:%s" % length_css(h)
+            if w:
+                style += ";width:%s" % length_css(w)
+            return '<div class="figure-placeholder" style="%s">%s</div>' % (
+                style, self.inline(label)), i, 0
+
+        # ---- spacing and alignment
+        if name in ("vspace", "vspace*"):
+            ln, i = read_arg(s, i)
+            css = length_css(ln)
+            return (PARA + '<div style="height:%s"></div>' % css + PARA) if css else "", i, 0
+        if name in ("hspace", "hspace*"):
+            ln, i = read_arg(s, i)
+            css = length_css(ln)
+            return '<span style="display:inline-block;width:%s"></span>' % css if css else "", i, 0
+        if name in ("hfill", "hfil", "hss"):
+            return HFILL, i, 0
+        if name == "centering":
+            return CENTER, i, 0
+
+        # ---- step-by-step reveals
+        if name == "pause":
+            _, i = read_opt(s, i)                      # \pause[n]: number ignored
+            return PAUSE, i, 0
+
+        # ---- publications list (inside \begin{publications})
+        if name == "pubsection":
+            title, i = read_arg(s, i)
+            return PARA + '<div class="pub-section">%s</div>' % self.inline(title) + PARA, i, 0
+        if name in ("pub", "pubtext"):
+            status, i = read_opt(s, i)
+            arg, i = read_arg(s, i)
+            status = (status or "").strip()
+            if status and status not in PUB_STATUSES:
+                warn("\\%s[%s]: status should be one of %s" % (name, status, ", ".join(PUB_STATUSES)))
+            badge = '<span class="pub-badge" data-status="%s"></span>' % status if status else ""
+            if name == "pub":                      # entry filled in by deck.js from the .bib
+                return PARA + '<div class="pub" data-key="%s">%s<span class="pub-entry"></span></div>' % (
+                    html.escape(arg.strip()), badge) + PARA, i, 0
+            return PARA + '<div class="pub">%s<span class="pub-entry">%s</span></div>' % (
+                badge, self.inline(arg)) + PARA, i, 0
+
+        # ---- speaker notes (shown only in the presenter view)
+        if name == "note":
+            return self.note(s, i), self.note_end, 0
+
+        # ---- links, notes
+        if name in ("href", "url", "footnote", "label", "ref"):
+            return self.reference(name, s, i)
+        if name in OVERLAY_CMDS:
+            return self.overlay(name, s, i)
+
+        # ---- text
+        if name in ("ldots", "dots"):
+            return "…", i, 0
+        if name == "LaTeX":
+            return "LaTeX", i, 0
+        if name in ("item", "today", "hline") or name in IGNORE:
+            return "", i, 0                            # \item: handled by list envs
+        warn("unknown command \\%s (kept its text)" % name)
+        return "", i, 0
+
+    # ---------------------------------------------------------- helpers
+    def symbol(self, name, s, i):
+        """Single-character commands: \\\\  \\[ \\]  \\( \\)  \\&  \\%  \\,  ..."""
+        if name == "\\":                               # \\ or \\[len]
+            _, i = read_opt(s, i)
+            return "<br>", i, 0
+        if name == "[":
+            j = s.index("\\]", i)
+            return "\\[" + html.escape(s[i:j], quote=False) + "\\]", j + 2, 0
+        if name == "(":
+            j = s.index("\\)", i)
+            return "\\(" + html.escape(s[i:j], quote=False) + "\\)", j + 2, 0
+        return TEXT_SYMBOLS.get(name, html.escape(name)), i, 0
+
+    def define(self, name, s, i):
+        """\\def\\x{..} and \\newcommand{\\x}{..} (without arguments)."""
+        if name in ("def", "gdef", "edef"):
+            m = re.match(r"\s*\\([A-Za-z@]+)", s[i:])
+            val, j = read_arg(s, i + m.end())
+            self.macros[m.group(1)] = val
+            return "", j, 0
+        nm, i = read_arg(s, i)
+        nargs, i = read_opt(s, i)
+        val, i = read_arg(s, i)
+        if nargs:
+            warn("\\newcommand with arguments not supported: %s" % nm)
+        else:
+            self.macros[nm.lstrip("\\")] = val
+        return "", i, 0
+
+    def note(self, s, i):
+        """\\note{..}, \\note[item]{..}, \\note<2>{..} -> <aside class="note">.
+        The overlay spec is ignored: the presenter view shows a slide's notes
+        on all its steps. Sets self.note_end to the index after the note."""
+        _, i = self.read_spec(s, i)
+        opt, i = read_opt(s, i)
+        text, self.note_end = read_arg(s, i)
+        body = self.inline(text)
+        body = self.blocks(body) if PARA in body else body.strip()
+        return '<aside class="note"%s>%s</aside>' % (
+            " data-item" if (opt or "").strip() == "item" else "", body)
+
+    def reference(self, name, s, i):
+        """\\href, \\url, \\footnote; \\label and \\ref are dropped."""
+        if name == "href":
+            url, i = read_arg(s, i)
+            txt, i = read_arg(s, i)
+            return '<a href="%s">%s</a>' % (html.escape(url), self.inline(txt)), i, 0
+        arg, i = read_arg(s, i)
+        if name == "url":
+            return '<a href="%s">%s</a>' % (html.escape(arg), html.escape(arg)), i, 0
+        if name == "footnote":
+            return '<span class="footnote">%s</span>' % self.inline(arg), i, 0
+        return "", i, 0
+
+    def image(self, path, opts):
+        """<img> for \\includegraphics, with width/height from its options."""
+        style = []
+        for k in ("width", "height"):
+            if k in opts:
+                css = length_css(opts[k])
+                if css:
+                    style.append("%s:%s" % (k, css))
+        found = resolve_image(path, self.root)
+        if not found:
+            warn("image not found: %s" % path)
+            found = path
+        return '<img src="%s" style="%s" alt="">' % (html.escape(found), ";".join(style))
