@@ -3,7 +3,7 @@ import html
 import re
 
 from .log import warn
-from .parsing import read_arg, read_opt, split_items
+from .parsing import read_arg, read_group, read_opt, skip_ws, split_items
 from .units import length_css
 from .vocabulary import MATH_ENVS, PARA
 
@@ -121,8 +121,12 @@ class EnvironmentsMixin:
         """Literature table: \\study<spec>{keys}{summary} / \\studytext{who}{summary}.
         Each key becomes an author-year citation, filled in by deck.js."""
         opt, j = read_opt(body, 0)
-        body = body[j:]
         left = "%g%%" % (float(opt) * 100) if opt else "30%"
+        k = skip_ws(body, j)
+        if k < len(body) and body[k] == "{":        # \begin{litreview}{0.2\textwidth}
+            width, j = read_group(body, k)
+            left = length_css(width) or left
+        body = body[j:]
         marks = list(re.finditer(r"\\(studytext|study)\b", body))
         rows = []
         for n, m in enumerate(marks):

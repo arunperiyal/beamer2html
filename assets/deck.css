@@ -14,7 +14,8 @@
   --muted:       #555;
   --title-h:     88px;                 /* title area / bar height (config: titleHeight) */
   --fs:          1;                    /* text scale: class font size / 11pt (config: fontSize) */
-  --pad-x:       32px;                 /* left/right slide margin */
+  --pad-x:       32px;                 /* title bar / footer side margin (0.4cm) */
+  --body-x:      80px;                 /* slide body side margin (beamer: 1cm) */
   --serif: "Times New Roman", "TeX Gyre Termes", "Nimbus Roman", "Liberation Serif",
            Times, serif;
 }
@@ -77,7 +78,7 @@ html, body {
 /* ------------------------------------------------------------ body */
 .slide .body {
   flex: 1; min-height: 0;
-  padding: 18px var(--pad-x) 10px;
+  padding: 18px var(--body-x) 10px;
   display: flex; flex-direction: column; justify-content: center;
 }
 .slide .body.top { justify-content: flex-start; }   /* <section data-align="top"> */
@@ -210,8 +211,10 @@ aside.note { display: none !important; }
   padding: 0.75em 0.6em 0.8em;
 }
 .litreview td.lit-who {
-  /* like beamer: the column's cell padding comes out of its share */
-  width: calc(var(--lit-left, 30%) - 34px); text-align: center; font-weight: bold;
+  /* like beamer, the cell padding comes out of the column's share (border-box);
+     no calc() here: browsers ignore calc(% - px) widths on table cells */
+  width: var(--lit-left, 30%); box-sizing: border-box;
+  text-align: center; font-weight: bold;
 }
 .litreview td.lit-who cite { font-style: normal; }
 

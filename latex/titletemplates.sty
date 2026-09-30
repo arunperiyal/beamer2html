@@ -454,7 +454,7 @@
 }
 
 % ---------------------------------------------------------------- Literature review
-%   \begin{litreview}                           % [0.3] width of the left column
+%   \begin{litreview}{0.2\textwidth}            % left column width (default 0.3)
 %     \study{key1,key2}{What these studies found.}
 %     \study<2->{key3}{...}                     % <spec>: reveal on a later step
 %     \studytext{Author (2024)}{...}            % left text given directly
@@ -467,16 +467,21 @@
 \newcommand{\@ttLitRule}{\noalign{\color{black}\hrule height 1.1pt}}
 \newcommand{\@ttLitPad}{\rule{0pt}{2em}}        % space above the text in a row
 
+% width of the left column: \begin{litreview}{0.2\textwidth} (any length),
+% or the older \begin{litreview}[0.2] (a fraction); default 0.3\linewidth
 \newenvironment{litreview}[1][0.3]{%
+  \@ifnextchar\bgroup{\@ttLitBegin}{\@ttLitBegin{#1\linewidth}}%
+}{%
+  \end{tabular}\par
+}
+\newcommand{\@ttLitBegin}[1]{%
   \par\noindent
-  \setlength{\@ttLitLeft}{\dimexpr#1\linewidth-2\tabcolsep\relax}%
+  \setlength{\@ttLitLeft}{\dimexpr#1-2\tabcolsep\relax}%
   \small
   \begin{tabular}{@{}>{\centering\arraybackslash}m{\@ttLitLeft}
                      >{\raggedright\arraybackslash}%
                      m{\dimexpr\linewidth-\@ttLitLeft-2\tabcolsep\relax}@{}}
   \@ttLitRule
-}{%
-  \end{tabular}\par
 }
 
 % one "Author et al. (Year)" line per key (\@centercr: \\ would end the row)
