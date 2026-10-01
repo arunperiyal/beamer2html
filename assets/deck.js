@@ -35,6 +35,22 @@
   document.documentElement.style.setProperty("--title-h", C.titleHeight + "px");
   document.documentElement.style.setProperty("--fs", (C.fontSize || 11) / 11);
 
+  // ------------------------------------------------------------ live reload
+  // Decks built with `tex2html --watch` check html/build.js once a second
+  // and reload when it names a newer build. The URL keeps #slide.step, so
+  // the reload comes back to the same place. Other decks never check.
+  if (C.watch) {
+    setInterval(() => {
+      const s = document.createElement("script");
+      s.src = "html/build.js?t=" + Date.now();       // bypass the cache
+      s.onload = s.onerror = () => {
+        s.remove();
+        if (window.TEX2HTML_BUILD && window.TEX2HTML_BUILD !== C.build) location.reload();
+      };
+      document.head.appendChild(s);
+    }, 1000);
+  }
+
   // ------------------------------------------------------------ sections
   // A slide with data-section="Name" starts a section; later slides inherit it.
   const sections = [];

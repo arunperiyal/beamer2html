@@ -15,7 +15,15 @@ kept as plain text and reported as a warning.
 python3 path/to/tex2html                 # main.tex -> slides.html
 python3 path/to/tex2html main.tex -o talk.html
 python3 path/to/tex2html --pack talk.zip # also: zip for the presenting computer
+python3 path/to/tex2html --watch         # rebuild on every change (like latexmk -pvc)
 ```
+
+`--watch` (`-w`) keeps running and rebuilds whenever `main.tex`, an `\input`
+file, the `.bib`, an image the slides use, or the tool's own `deck.js` /
+`deck.css` / `titletemplates.sty` changes. An open deck built this way reloads
+itself and stays on the same slide and step. A failed build leaves the last
+good `slides.html` in place. Ctrl+C stops it. For the PDF, run
+`latexmk -pdf -pvc main.tex` alongside.
 
 `--pack` (default name: the HTML file's name with `.zip`) collects the deck,
 `html/` and exactly the images and animation frames the slides use into a zip
@@ -84,6 +92,7 @@ defined in the document, `\alert<…>`.
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
 | `pack.py` | `--pack`: zip of the deck and the files it uses |
+| `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 2 (Apache-2.0, see `vendor/mathjax/COPYRIGHT`) |
 | `latex/titletemplates.sty` | the beamer templates |
 

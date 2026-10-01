@@ -1,5 +1,6 @@
 """Walks the document: preamble settings (\\Set..., options), then the body's
 sections, frames and template slides (\\SeminarTitleFrame, ...)."""
+import os
 import re
 
 from . import log
@@ -37,10 +38,12 @@ DEFAULTS = {"titleBar": "on", "sectionName": "on", "footer": "full", "titleHeigh
 
 
 def convert(tex_path, root):
-    """Convert `tex_path` (relative to `root`). Returns (config, slides) where
-    config is the DECK_CONFIG dict and slides a list of <section> strings.
-    Also writes html/references.js for every \\addbibresource."""
-    src = read_tex(tex_path, root)
+    """Convert `tex_path` (relative to `root`). Returns (config, slides,
+    sources): the DECK_CONFIG dict, a list of <section> strings, and the full
+    paths of the .tex and .bib files read. Also writes html/references.js
+    for every \\addbibresource."""
+    sources = set()
+    src = read_tex(tex_path, root, sources)
     pre, _, body = src.partition("\\begin{document}")
     body = body.partition("\\end{document}")[0]
     cv = Converter(root)
@@ -48,8 +51,10 @@ def convert(tex_path, root):
     config, state = read_preamble(cv, pre)
     slides = read_body(cv, body, state, default=dict(state))
 
-    bib_to_js(re.findall(r"\\addbibresource\{([^}]*)\}", pre), root)
-    return config, slides
+    bibs = re.findall(r"\\addbibresource\{([^}]*)\}", pre)
+    bib_to_js(bibs, root)
+    sources.update(os.path.join(root, b if b.endswith(".bib") else b + ".bib") for b in bibs)
+    return config, slides, sources
 
 
 # beamer class options that set the base font size

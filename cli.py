@@ -1,14 +1,16 @@
-"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip]]"""
+"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip]] [--watch]"""
 import argparse
 import os
 import sys
+import time
 
 from . import __doc__ as package_doc
-from .assets import install_assets, install_latex
+from . import log
+from .assets import ASSETS, LATEX, install_assets, install_latex
 from .document import convert
-from .log import warn, warnings
-from .pack import pack
+from .pack import pack, referenced_files
 from .page import render_page
+from .watch import watch
 
 
 def main(argv=None):
@@ -25,35 +27,97 @@ def main(argv=None):
                     help="also write a zip with the deck and only the files it "
                          "uses, to copy to the presenting computer (default "
                          "name: the HTML file's name with .zip)")
+    ap.add_argument("-w", "--watch", action="store_true",
+                    help="keep running and rebuild whenever a source file "
+                         "changes (like latexmk -pvc); an open deck reloads "
+                         "itself. Ctrl+C to stop")
     a = ap.parse_args(argv)
 
     tex = os.path.abspath(a.tex)
     root = os.path.dirname(tex)
     if not os.path.isfile(tex):
         ap.error("%s not found" % a.tex)
+    if a.watch and a.pack is not None:
+        ap.error("--pack makes a copy for presenting: run it without --watch")
+    out = a.output if os.path.isabs(a.output) else os.path.join(root, a.output)
+
+    if a.watch:
+        def rebuild(changed):
+            if changed:
+                names = ", ".join(os.path.relpath(p, root) for p in changed[:3])
+                more = " and %d more" % (len(changed) - 3) if len(changed) > 3 else ""
+                print("[%s] changed: %s%s" % (time.strftime("%H:%M:%S"), names, more),
+                      flush=True)
+            try:
+                files, _ = build(tex, root, out, live=True)
+                print_warnings()
+                return files
+            except Exception as e:             # keep watching; last good deck stays
+                print("[%s] build failed (%s: %s) -- slides.html left as it was" % (
+                    time.strftime("%H:%M:%S"), type(e).__name__, e), file=sys.stderr)
+                return None
+        watch(rebuild)
+        return 0
+
+    _, config = build(tex, root, out)
+    if a.pack is not None:
+        do_pack(a.pack, root, out, config)
+    print_warnings()
+    return 0
+
+
+def build(tex, root, out, live=False):
+    """Convert once. Returns (files whose change should trigger a rebuild,
+    DECK_CONFIG). With live=True the page reloads itself after rebuilds."""
+    log.warnings.clear()
+    log.where = ""
     install_assets(root)                       # html/deck.js, deck.css, MathJax
     install_latex(root)                        # titletemplates.sty
-    config, slides = convert(os.path.basename(tex), root)
+    config, slides, sources = convert(os.path.basename(tex), root)
+    stamp = str(time.time_ns())
+    if live:
+        config["watch"], config["build"] = True, stamp
 
-    out = a.output if os.path.isabs(a.output) else os.path.join(root, a.output)
-    with open(out, "w", encoding="utf-8") as f:
+    tmp = out + ".tmp"                         # never leave a half-written deck
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(render_page(os.path.basename(tex), config, slides))
-    print("wrote %s (%d slides)" % (os.path.relpath(out, root), len(slides)))
+    os.replace(tmp, out)
+    if live:                                   # tells an open deck to reload
+        with open(os.path.join(root, "html", "build.js"), "w", encoding="utf-8") as f:
+            f.write("window.TEX2HTML_BUILD = %r;\n" % stamp)
 
-    if a.pack is not None:
-        zip_path = os.path.abspath(a.pack) if a.pack else os.path.splitext(out)[0] + ".zip"
-        if os.path.relpath(out, root).startswith(".."):
-            warn("--pack: the HTML file must be inside the project folder; not packed")
-        else:
-            count, size, missing = pack(root, out, zip_path, config)
-            shown = os.path.relpath(zip_path)
-            if shown.startswith(".."):
-                shown = zip_path
-            print("packed %s: %d files, %.1f MB -- unzip it and open %s/%s" % (
-                shown, count, size / 1e6,
-                os.path.splitext(os.path.basename(zip_path))[0],
-                os.path.relpath(out, root)))
+    prefix = "[%s] " % time.strftime("%H:%M:%S") if live else ""
+    print("%swrote %s (%d slides)" % (prefix, os.path.relpath(out, root), len(slides)),
+          flush=True)
 
-    for w in warnings:
+    # what to watch: the sources, the images the slides use, and the tool's
+    # own files that get installed into the project
+    with open(out, encoding="utf-8") as f:
+        used = referenced_files(f.read(), root, config)
+    files = set(sources)
+    files.update(os.path.join(root, p) for p in used
+                 if p.split(os.sep)[0] != "html" and p != os.path.relpath(out, root))
+    for folder in (ASSETS, LATEX):
+        for dirpath, dirs, names in os.walk(folder):
+            dirs[:] = [d for d in dirs if d != "vendor"]
+            files.update(os.path.join(dirpath, n) for n in names)
+    return files, config
+
+
+def do_pack(dest, root, out, config):
+    zip_path = os.path.abspath(dest) if dest else os.path.splitext(out)[0] + ".zip"
+    if os.path.relpath(out, root).startswith(".."):
+        log.warn("--pack: the HTML file must be inside the project folder; not packed")
+        return
+    count, size, _ = pack(root, out, zip_path, config)
+    shown = os.path.relpath(zip_path)
+    if shown.startswith(".."):
+        shown = zip_path
+    print("packed %s: %d files, %.1f MB -- unzip it and open %s/%s" % (
+        shown, count, size / 1e6, os.path.splitext(os.path.basename(zip_path))[0],
+        os.path.relpath(out, root)))
+
+
+def print_warnings():
+    for w in log.warnings:
         print("warning:", w, file=sys.stderr)
-    return 1 if not slides else 0

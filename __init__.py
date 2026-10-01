@@ -19,6 +19,8 @@ figures (browsers cannot show PDF images) in html/cache/.
 
 Modules
     cli           command line; writes the output files
+    watch         --watch: rebuild whenever a source file changes
+    pack          --pack: zip of the deck and the files it uses
     assets        installs assets/ into html/ and latex/*.sty into the project
     document      walks the document: preamble settings, sections, frames
     converter     Converter: block flow and inline text
