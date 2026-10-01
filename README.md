@@ -75,7 +75,9 @@ vim.opt.rtp:append("path/to/tex2html/nvim")   -- then :helptags path/to/tex2html
 | `:Tex2HtmlNew {dir}` | | new deck from `template/` |
 
 `require("tex2html").setup{ autosync = true }` makes a watched deck follow the
-cursor. See `:help tex2html`.
+cursor. With LuaSnip, snippets for the templates are added (`frame`, `cols`,
+`rows`, `block`, `stab`, `lit`, `prog`, `pubs`, `note`, `fig`, `anim`, ...).
+See `:help tex2html`.
 
 ## Presenting
 

@@ -8,6 +8,7 @@ CONTENTS                                                    *tex2html-contents*
   3. Mappings ............................. |tex2html-mappings|
   4. Configuration ........................ |tex2html-config|
   5. Statusline ........................... |tex2html-statusline|
+  6. Snippets ............................. |tex2html-snippets|
 
 ==============================================================================
 1. INTRODUCTION                                                *tex2html-intro*
@@ -103,4 +104,31 @@ in the browser moves there.
 runs, "" otherwise. For vim-airline: >vim
     let g:airline_section_x = '%{v:lua.require("tex2html").status()}'
 <
+==============================================================================
+6. SNIPPETS                                                 *tex2html-snippets*
+
+With LuaSnip installed, these snippets are added for tex files. Type the
+trigger, choose it from the completion menu (or expand it), then <Tab>
+through the fields; the default values can be accepted or typed over.
+
+  frame      \begin{frame}{Title} ... \end{frame}
+  framesub   frame with title and subtitle
+  cols       two columns (0.48\textwidth each)
+  rows       two rows (0.4 / 0.6 of the slide body)
+  block      \begin{block}{Title} ... \end{block}
+  stab       slidetable (style striped|plain|lines|header, header row)
+  lit        litreview with one \study
+  study      \study{keys}{finding}
+  prog       progress with one \task (done|ongoing|planned)
+  task       \task[status]{what}{when}
+  pubs       publications with a \pubsection and a \pub
+  pub        \pub[status]{key}
+  note       \note{...}
+  fig        \includegraphics[width=\linewidth]{figures/...}
+  anim       animateinline + \multiframe
+
+For any other environment, the `begin` snippet of friendly-snippets gives
+\begin{name} ... \end{name}, typing the name once (load friendly-snippets
+with `require("luasnip.loaders.from_vscode").lazy_load()`).
+
  vim:tw=78:ts=8:ft=help:norl:

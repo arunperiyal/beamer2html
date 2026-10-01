@@ -29,3 +29,7 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
     if s and s.watch then vim.fn.jobstop(s.watch.id) end
   end,
 })
+
+-- snippets for the deck templates (frame, cols, rows, stab, lit, prog, ...),
+-- when LuaSnip is installed
+pcall(require, "tex2html.snippets")
