@@ -1,0 +1,106 @@
+*tex2html.txt*  Build, watch, open and sync tex2html slide decks from Neovim
+
+==============================================================================
+CONTENTS                                                    *tex2html-contents*
+
+  1. Introduction ......................... |tex2html-intro|
+  2. Commands ............................. |tex2html-commands|
+  3. Mappings ............................. |tex2html-mappings|
+  4. Configuration ........................ |tex2html-config|
+  5. Statusline ........................... |tex2html-statusline|
+
+==============================================================================
+1. INTRODUCTION                                                *tex2html-intro*
+
+tex2html turns a beamer deck written with titletemplates.sty into an HTML
+slide deck (slides.html). This plugin runs it from Neovim: builds and the
+--watch mode run in the background, warnings go to the |quickfix| list at the
+slide they concern, and the browser can be opened at, or moved to, the slide
+under the cursor -- like SyncTeX forward search.
+
+The main .tex file is found automatically: the current file if it contains
+\documentclass, otherwise main.tex in the file's folder or a parent folder.
+Set |g:tex2html_main| (or b:tex2html_main) to choose another.
+
+Requires Neovim 0.10+, Python 3, and the tex2html repository this plugin is
+part of (the plugin finds the tool through its own location).
+
+==============================================================================
+2. COMMANDS                                                 *tex2html-commands*
+
+:Tex2Html                                                          *:Tex2Html*
+        Save all buffers and build slides.html. Warnings go to the quickfix
+        list (|:copen|), each at the source line of its slide.
+
+:Tex2HtmlWatch                                                *:Tex2HtmlWatch*
+        Start `tex2html --watch` in the background, or stop it if it runs.
+        The deck rebuilds on every save; an open deck reloads itself and
+        stays on its slide. Each rebuild refreshes the quickfix list.
+
+:Tex2HtmlStop                                                  *:Tex2HtmlStop*
+        Stop watching. Watching also stops when Neovim exits.
+
+:Tex2HtmlOpen                                                  *:Tex2HtmlOpen*
+        Open slides.html in the browser at the slide (and \pause step) under
+        the cursor.
+
+:Tex2HtmlSync                                                  *:Tex2HtmlSync*
+        Move the deck that is open in the browser to the slide and step under
+        the cursor. Works while watching (the deck must be built in watch
+        mode); see also |tex2html-autosync|.
+
+:Tex2HtmlPack [{zip}]                                          *:Tex2HtmlPack*
+        Save all, build, and write a zip with the deck and only the files it
+        uses, for the presenting computer. Default: slides.zip next to
+        slides.html.
+
+:Tex2HtmlLog                                                    *:Tex2HtmlLog*
+        Show the output of the last build or of the running watch.
+
+:Tex2HtmlNew {dir}                                              *:Tex2HtmlNew*
+        Copy the starter template (all templates, with placeholders) to {dir}
+        and open its main.tex. {dir} must not exist or be empty.
+
+==============================================================================
+3. MAPPINGS                                                 *tex2html-mappings*
+
+In tex buffers (filetype tex), unless `mappings = false`:
+
+  <localleader>mb    |:Tex2Html|          build
+  <localleader>mw    |:Tex2HtmlWatch|     watch on/off
+  <localleader>mo    |:Tex2HtmlOpen|      open the deck at the cursor
+  <localleader>ms    |:Tex2HtmlSync|      move the open deck to the cursor
+  <localleader>mp    |:Tex2HtmlPack|      zip for presenting
+  <localleader>ml    |:Tex2HtmlLog|       show the output
+
+==============================================================================
+4. CONFIGURATION                                              *tex2html-config*
+
+Defaults: >lua
+    require("tex2html").setup({
+      python   = "python3",
+      tool     = nil,            -- the tex2html folder; default: this repository
+      main     = nil,            -- main .tex file; default: found automatically
+      output   = "slides.html",
+      browser  = nil,            -- e.g. "firefox"; default: xdg-open / open
+      autosync = false,          -- follow the cursor while watching
+      mappings = true,
+    })
+<
+                                                            *g:tex2html_main*
+g:tex2html_main / b:tex2html_main
+        Path of the main .tex file, overriding the automatic choice.
+
+                                                            *tex2html-autosync*
+With `autosync = true`, while watching, the deck follows the cursor: after
+the cursor rests (|CursorHold|, see 'updatetime') on another slide, the deck
+in the browser moves there.
+
+==============================================================================
+5. STATUSLINE                                              *tex2html-statusline*
+
+`require("tex2html").status()` returns "tex2html: watching" while the watch
+runs, "" otherwise. For vim-airline: >vim
+    let g:airline_section_x = '%{v:lua.require("tex2html").status()}'
+<
+ vim:tw=78:ts=8:ft=help:norl:

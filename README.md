@@ -54,6 +54,29 @@ A project copy of `titletemplates.sty` that was edited in the project is kept as
 
 Build the PDF as usual with `latexmk -pdf main.tex` (biblatex + biber).
 
+## Neovim plugin
+
+`nvim/` is a Neovim plugin (0.10+): build and watch in the background,
+warnings in the quickfix list at their slide, and the browser opened at — or
+moved to — the slide under the cursor. Add the folder to the runtime path:
+
+```lua
+vim.opt.rtp:append("path/to/tex2html/nvim")   -- then :helptags path/to/tex2html/nvim/doc
+```
+
+| Command | Mapping | |
+|---------|---------|---|
+| `:Tex2Html` | `<localleader>mb` | build (warnings → quickfix) |
+| `:Tex2HtmlWatch` | `<localleader>mw` | watch on/off |
+| `:Tex2HtmlOpen` | `<localleader>mo` | open the deck at the cursor's slide |
+| `:Tex2HtmlSync` | `<localleader>ms` | move the open deck to the cursor (while watching) |
+| `:Tex2HtmlPack [zip]` | `<localleader>mp` | zip for presenting |
+| `:Tex2HtmlLog` | `<localleader>ml` | show the output |
+| `:Tex2HtmlNew {dir}` | | new deck from `template/` |
+
+`require("tex2html").setup{ autosync = true }` makes a watched deck follow the
+cursor. See `:help tex2html`.
+
 ## Presenting
 
 Open `slides.html` and use:
@@ -105,5 +128,6 @@ defined in the document, `\alert<…>`.
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 2 (Apache-2.0, see `vendor/mathjax/COPYRIGHT`) |
 | `latex/titletemplates.sty` | the beamer templates |
 | `template/` | starter deck using every template |
+| `nvim/` | Neovim plugin (`plugin/`, `lua/tex2html/`, `doc/`) |
 
 Requires Python 3.8+; `pdftoppm` (poppler) for PDF figures.
