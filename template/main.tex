@@ -1,0 +1,65 @@
+% Starter deck for titletemplates.sty + tex2html.
+%   PDF:   latexmk -pdf main.tex          (biblatex + biber)
+%   HTML:  tex2html                        (-> slides.html; --watch to rebuild on save)
+% Replace every [placeholder]; delete the slides you do not need.
+\documentclass[aspectratio=169,11pt]{beamer}   % 8pt ... 20pt scales all text
+
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}   % Times-like serif
+\usefonttheme{serif}
+\setbeamertemplate{navigation symbols}{}
+\usepackage{titletemplates}        % installed/updated here by tex2html
+\usepackage{animate}               % animations from image sequences
+
+% ---------------------------------------------------------------- references
+% numeric-comp: [1], [2-4]; style=authoryear for (Author, Year)
+\usepackage[backend=biber, style=numeric-comp, sorting=none,
+            maxbibnames=3, giveninits=true, doi=false, url=false]{biblatex}
+\addbibresource{references.bib}
+
+% ---------------------------------------------------------------- title slide fields
+\SetTitle{[Presentation Title]}
+\SetSeminar{[Seminar Name]}            % e.g. Extension seminar
+\SetDegree{[Degree Name]}              % e.g. Doctor of Philosophy
+\SetPresenter{[Presenter Name]}
+\SetRollNo{[Roll Number]}
+\SetSupervisor{[Supervisor Name]}
+\SetDepartment{[Department Name]}
+\SetInstitute{[Institute Name]}
+\SetLogo{figures/logo}                 % path without extension; a placeholder box until it exists
+
+\SetAuthorOne{[Author 1]}              % conference title slide
+\SetAuthorTwo{[Author 2]}
+\SetConference{[Conference Name]}
+
+\SetShortTitle{[Short Title]}          % footer of content slides
+\SetFootAuthor{[Presenter Name]}       % footer of content slides
+
+% ---------------------------------------------------------------- content slide options
+% Each switch also works between frames, for the frames after it.
+\TitleBarOn                % \TitleBarOff: no blue bar, underlined black title
+\SetTitleHeight{1.1cm}     % height of the title area / blue bar
+\SectionNameOn             % \SectionNameOff: no section name at the top right
+\FooterOn                  % \FooterNumberOnly: slide number only; \FooterOff: no footer
+% \showdividers            % editing aid: outline rows and columns (\hidedividers)
+
+\begin{document}
+
+\SeminarTitleFrame         % thesis / seminar title slide
+% \ConferenceTitleFrame    % conference title slide (two authors)
+
+\OverviewFrame             % lists the \section names below
+
+\input{sections/01-introduction}
+\input{sections/02-research-progress}
+\input{sections/03-literature-review}
+\input{sections/04-method}
+\input{sections/05-results}
+\input{sections/06-conclusion}
+\input{sections/07-publications}
+
+\ReferencesFrame           % the cited entries of references.bib
+
+\ThankYouFrame
+
+\end{document}

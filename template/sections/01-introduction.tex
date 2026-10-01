@@ -1,0 +1,40 @@
+\section{Introduction}
+
+% Bullets, citations, a block, step-by-step reveal and speaker notes.
+\begin{frame}{[Slide Title]}{[Optional Subtitle]}
+  \begin{itemize}
+    \item {[Point 1]} \cite{placeholder_article}
+    \pause                                  % the rest appears on the next click
+    \item {[Point 2]} \cite{placeholder_conference,placeholder_book}
+      \begin{itemize}
+        \item {[Sub-point]}
+      \end{itemize}
+    \item<3-> {[Point 3, from step 3]}
+  \end{itemize}
+
+  \begin{block}{[Block Title]}
+    [Key message], e.g. \( St = f_s D / U \)
+  \end{block}
+
+  \note{[What to say on this slide -- shown in the presenter view (S) only.]}
+  \note[item]{[Talking point 1]}
+  \note[item]{[Talking point 2]}
+\end{frame}
+
+% Text and a figure side by side.
+\begin{frame}{[Slide Title]}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item {[Point 1]}
+        \item {[Point 2]}
+        \item {[Point 3]}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \FigurePlaceholder{4.5cm}{[Figure]}   % then: \includegraphics[width=\linewidth]{figures/...}
+      \\[0.3em]{\small [Figure caption]}
+    \end{column}
+  \end{columns}
+\end{frame}

@@ -1,0 +1,26 @@
+\section{Results and Discussion}
+
+% Tables: \begin{slidetable}[style]{colspec}; the first row is the header.
+% Styles: plain (default), lines, header, striped.
+\begin{frame}{[Slide Title]}
+  \begin{slidetable}[striped]{lccc}
+    Case       & [Quantity 1] & [Quantity 2] & [Quantity 3] \\
+    [Case 1]   & 0.00 & 0.00 & 0.00 \\
+    [Case 2]   & 0.00 & 0.00 & 0.00 \\
+    [Case 3]   & 0.00 & 0.00 & 0.00 \\
+  \end{slidetable}
+  \centering [Observation about the table]
+\end{frame}
+
+% Animation from numbered image files (e.g. frames/case_3000.png ... _5000.png,
+% step 50): several \includegraphics in one \multiframe play in sync.
+% controls={play,step,stop,speed}, controls (= all), or leave it out.
+% \begin{frame}{[Slide Title]}
+%   \centering
+%   \begin{animateinline}[autoplay, loop, controls]{3}        % frames per second
+%     \multiframe{41}{iT=3000+50}{%
+%       \includegraphics[width=0.48\linewidth]{figures/caseA/frame_\iT}\hfill
+%       \includegraphics[width=0.48\linewidth]{figures/caseB/frame_\iT}%
+%     }
+%   \end{animateinline}
+% \end{frame}
