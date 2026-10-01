@@ -9,6 +9,14 @@ title bar, footer, rows/columns, progress timeline, publications, literature
 table). It understands that LaTeX, not LaTeX in general: anything unknown is
 kept as plain text and reported as a warning.
 
+## Starting a new deck
+
+```sh
+cp -r path/to/tex2html/template my-talk     # example deck using every template
+```
+
+See [`template/README.md`](template/README.md).
+
 ## Usage
 
 ```sh
@@ -61,6 +69,7 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `\SetTitleHeight`, `\SectionNameOn/Off`, `\FooterOn/NumberOnly/Off`,
   `\showdividers`/`\hidedividers`, `rows`/`row`, `progress`/`\task`,
   `publications`/`\pub`/`\pubtext`/`\pubsection`, `litreview`/`\study`/`\studytext`,
+  `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header),
   `\FigurePlaceholder`
 - beamer: frames (`[t]`, `[plain]`, `\frametitle`), `\section`, `\pause`, overlay
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
@@ -86,5 +95,6 @@ defined in the document, `\alert<…>`.
 | `pack.py` | `--pack`: zip of the deck and the files it uses |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 2 (Apache-2.0, see `vendor/mathjax/COPYRIGHT`) |
 | `latex/titletemplates.sty` | the beamer templates |
+| `template/` | starter deck using every template |
 
 Requires Python 3.8+; `pdftoppm` (poppler) for PDF figures.
