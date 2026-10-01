@@ -218,6 +218,22 @@ aside.note { display: none !important; }
 }
 .litreview td.lit-who cite { font-style: normal; }
 
+/* slide tables (\begin{slidetable}[style]{colspec}): first row = header */
+.slidetable-wrap { display: flex; justify-content: center; margin: 0.2em 0 0.5em; }
+.slidetable { border-collapse: collapse; line-height: 1.25; }
+.slidetable th, .slidetable td { padding: 0.28em 0.6em; }
+.slidetable th { font-weight: bold; }
+.slidetable[data-style="plain"],
+.slidetable[data-style="lines"]       { border-top: 3px solid #000; border-bottom: 3px solid #000; }
+.slidetable[data-style="plain"] thead,
+.slidetable[data-style="lines"] thead { border-bottom: 1.6px solid #000; }
+.slidetable[data-style="lines"] tbody tr + tr { border-top: 1px solid rgb(170, 170, 170); }
+.slidetable[data-style="header"] th,
+.slidetable[data-style="striped"] th  { background: var(--blue); color: #fff; }
+.slidetable[data-style="header"],
+.slidetable[data-style="striped"]     { border-bottom: 2.8px solid var(--blue); }
+.slidetable[data-style="striped"] tbody tr:nth-child(even) { background: rgb(232, 237, 244); }
+
 /* publications (\begin{publications}, \pub[status]{key}, \pubtext, \pubsection) */
 .publications { font-size: 0.85em; }
 .publications .p { margin: 0; }

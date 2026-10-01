@@ -63,6 +63,8 @@ class EnvironmentsMixin:
             return PARA + self.flow(body[j:]) + PARA
         if env == "progress":
             return self.env_progress(body)
+        if env == "slidetable":
+            return self.env_slidetable(body)
         if env == "litreview":
             return self.env_litreview(body)
         if env == "publications":                  # \pub.. commands: commands.py
@@ -145,6 +147,32 @@ class EnvironmentsMixin:
         return PARA + '<table class="litreview" style="--lit-left:%s">%s</table>' % (
             left, "".join(rows)) + PARA
 
+    def env_slidetable(self, body):
+        """\\begin{slidetable}[style]{colspec}: first row is the header; the
+        style (plain, lines, header, striped) draws rules and shading."""
+        style, j = read_opt(body, 0)
+        style = (style or "plain").strip()
+        if style not in ("plain", "lines", "header", "striped"):
+            warn("slidetable: unknown style '%s' (plain, lines, header, striped)" % style)
+        spec, j = read_arg(body, j)
+        aligns = column_aligns(spec)
+        rows = []
+        for r in re.split(r"\\\\(?:\[[^\]]*\])?", body[j:]):
+            r = re.sub(r"\\(hline|toprule|midrule|bottomrule|cline\{[^}]*\})", "", r)
+            if r.strip():
+                rows.append([self.inline(c).strip() for c in re.split(r"(?<!\\)&", r)])
+        if not rows:
+            return ""
+
+        def tr(cells, tag):
+            return "<tr>%s</tr>" % "".join(
+                '<%s style="text-align:%s">%s</%s>' % (
+                    tag, aligns[k] if k < len(aligns) else "left", c, tag)
+                for k, c in enumerate(cells))
+        return PARA + ('<div class="slidetable-wrap"><table class="slidetable" data-style="%s">'
+                       '<thead>%s</thead><tbody>%s</tbody></table></div>'
+                       % (style, tr(rows[0], "th"), "".join(tr(r, "td") for r in rows[1:]))) + PARA
+
     def env_tabular(self, env, body):
         """tabular -> <table>; \\hline / booktabs rules become borders."""
         if env == "tabular*":
@@ -163,3 +191,24 @@ class EnvironmentsMixin:
             trs.append("<tr%s>%s</tr>" % (' class="rule"' if hline else "",
                        "".join("<td>%s</td>" % self.inline(c).strip() for c in cells)))
         return PARA + '<table class="tab">%s</table>' % "".join(trs) + PARA
+
+
+def column_aligns(spec):
+    """'l c >{\\bfseries}r p{3cm} @{}' -> ['left', 'center', 'right', 'left']"""
+    aligns, i = [], 0
+    while i < len(spec):
+        c = spec[i]
+        if c in "lcrpmbX":
+            aligns.append({"c": "center", "r": "right"}.get(c, "left"))
+            i += 1
+            if c in "pmb":                         # skip the {width}
+                _, i = read_arg(spec, i)
+        elif c in "@!><":                          # @{..} !{..} >{..} <{..}
+            _, i = read_arg(spec, i + 1)
+        elif c == "*":                             # *{3}{c}
+            n, i = read_arg(spec, i + 1)
+            sub, i = read_arg(spec, i)
+            aligns += column_aligns(sub) * int(n) if n.strip().isdigit() else []
+        else:
+            i += 1                                 # | and spaces
+    return aligns
