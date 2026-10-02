@@ -71,6 +71,8 @@ class EnvironmentsMixin:
         if env == "publications":                  # \pub.. commands: commands.py
             return PARA + '<div class="publications">%s</div>' % (
                 self.blocks(self.inline(body))) + PARA
+        if env == "animation":
+            return self.env_animation(body)
         if env == "animateinline":
             return self.animation(body)
         warn("unknown environment {%s} (kept its content)" % env)

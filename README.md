@@ -115,7 +115,10 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `\label` and `\ref` (also forward references), lists, `minipage`, `center`,
   `tabular`, math (MathJax), `\includegraphics`,
   font sizes/styles, `\color`, `\cite`, `\href`, `\def`/`\newcommand` without arguments
-- `animate`: `animateinline` + `\multiframe` (synchronised panels, `controls` option)
+- animations: `animation` environment with `\animpanel{label}{path_\N}` lines
+  (`frames=first:last:step`, `fps`, `width`, `controls`, `autoplay`, `loop`,
+  `subcaptions`; put it in a `figure` for a caption), and `animate`'s own
+  `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 
 Not supported: TikZ drawings (export them as images), commands with arguments
 defined in the document, `\alert<…>`.

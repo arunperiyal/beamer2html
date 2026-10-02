@@ -98,12 +98,13 @@ local snippets = {
 	\end{slidetable}
 \end{table}]], { i(1, "Caption."), i(2, "name"), i(3, "plain"), i(4, "lcc"), i(5, "Case & A & B"), i(0, "row & 0 & 0") }),
 
-  snip("anim", "animation from numbered frames (several panels play in sync)", [[
-\begin{animateinline}[autoplay, loop, controls]{<>}
-	\multiframe{<>}{iT=<>+<>}{%
-		\includegraphics[width=<>\linewidth]{figures/<>_\iT}%
-	}
-\end{animateinline}]], { i(1, "3"), i(2, "41"), i(3, "3000"), i(4, "50"), i(5, "0.48"), i(0, "frame") }),
+  snip("anim", "animation: panels in sync (\\N = frame number), with caption and label", [[
+\begin{figure}
+	\begin{animation}[fps=<>, frames=<>]
+		\animpanel{<>}{figures/<>_\N}
+	\end{animation}
+	\caption{<>}\label{fig:<>}
+\end{figure}]], { i(1, "3"), i(2, "3000:5000:50"), i(3, "Label"), i(4, "frame"), i(5, "Caption."), i(0, "name") }),
 }
 
 ls.add_snippets("tex", snippets, { key = "tex2html" })

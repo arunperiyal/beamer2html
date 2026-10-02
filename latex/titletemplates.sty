@@ -521,6 +521,144 @@
   \@ttLitRow{#3}{\def\@ttLitSep{}\forcsvlist{\@ttLitCite}{#1}}{#2}}
 \newcommand<>{\studytext}[2]{\@ttLitRow{#3}{#1}{#2}}
 
+% ---------------------------------------------------------------- Animations
+%   \begin{animation}[fps=3, frames=3000:5000:50]   % first:last:step
+%     \animpanel{Bare cylinder}{figures/.../bare/frame_\N}
+%     \animpanel{Helical grooves}{figures/.../helical/frame_\N}
+%   \end{animation}
+% Panels play in sync, side by side, with their labels above; \N is the
+% frame number. Options: fps (3), frames (required), width (of each panel;
+% default: equal shares of the line), controls (all; play,step,stop,speed
+% or none), autoplay (true), loop (true), subcaptions ((a), (b), ... before
+% the labels). Put it in a figure for \caption / \label. Needs animate.
+\ExplSyntaxOn
+\seq_new:N  \g__tt_anim_labels_seq
+\seq_new:N  \g__tt_anim_paths_seq
+\tl_new:N   \l__tt_anim_fps_tl
+\tl_new:N   \l__tt_anim_frames_tl
+\tl_new:N   \l__tt_anim_width_tl
+\tl_new:N   \l__tt_anim_controls_tl
+\tl_new:N   \l__tt_anim_out_tl
+\bool_new:N \l__tt_anim_autoplay_bool
+\bool_new:N \l__tt_anim_loop_bool
+\bool_new:N \l__tt_anim_sub_bool
+\dim_new:N  \l__tt_anim_w_dim
+\dim_new:N  \l__tt_anim_gap_dim
+\int_new:N  \l__tt_anim_n_int
+
+\keys_define:nn { tt / animation }
+  {
+    fps         .tl_set:N   = \l__tt_anim_fps_tl,
+    fps         .initial:n  = 3,
+    frames      .tl_set:N   = \l__tt_anim_frames_tl,
+    width       .tl_set:N   = \l__tt_anim_width_tl,
+    controls    .tl_set:N   = \l__tt_anim_controls_tl,
+    controls    .initial:n  = all,
+    controls    .default:n  = all,
+    autoplay    .bool_set:N = \l__tt_anim_autoplay_bool,
+    autoplay    .initial:n  = true,
+    autoplay    .default:n  = true,
+    loop        .bool_set:N = \l__tt_anim_loop_bool,
+    loop        .initial:n  = true,
+    loop        .default:n  = true,
+    subcaptions .bool_set:N = \l__tt_anim_sub_bool,
+    subcaptions .initial:n  = false,
+    subcaptions .default:n  = true,
+  }
+
+\cs_generate_variant:Nn \seq_set_split:Nnn { NVV }
+\NewDocumentEnvironment { animation } { O{} +b }
+  {
+    \keys_set:nn { tt / animation } {#1}
+    \seq_gclear:N \g__tt_anim_labels_seq
+    \seq_gclear:N \g__tt_anim_paths_seq
+    \hbox_set:Nn \l_tmpa_box                   % collect the panels, print nothing
+      {
+        \cs_set:Npn \animpanel ##1 ##2
+          {
+            \seq_gput_right:Nn \g__tt_anim_labels_seq {##1}
+            \seq_gput_right:Nn \g__tt_anim_paths_seq {##2}
+          }
+        #2
+      }
+    \__tt_anim_typeset:
+  }
+  { }
+
+\cs_new_protected:Npn \__tt_anim_typeset:
+  {
+    \@ifpackageloaded { animate } { }
+      { \PackageError { titletemplates } { animation~needs~\string\usepackage{animate} } { } }
+    % frames = first:last[:step]
+    \seq_set_split:NVV \l_tmpa_seq \c_colon_str \l__tt_anim_frames_tl   % ':' is a letter here
+    \int_set:Nn \l_tmpa_int { \seq_item:Nn \l_tmpa_seq { 1 } }
+    \tl_set:Nx \l_tmpa_tl { \seq_item:Nn \l_tmpa_seq { 3 } }
+    \int_set:Nn \l_tmpb_int { \tl_if_blank:VTF \l_tmpa_tl { 1 } { \l_tmpa_tl } }
+    \int_set:Nn \l__tt_anim_n_int { \seq_count:N \g__tt_anim_paths_seq }
+    % panel width and the gap between panels
+    \tl_if_blank:VTF \l__tt_anim_width_tl
+      {
+        \dim_set:Nn \l__tt_anim_gap_dim { 0.02 \linewidth }
+        \dim_set:Nn \l__tt_anim_w_dim
+          { ( \linewidth - \l__tt_anim_gap_dim * ( \l__tt_anim_n_int - 1 ) ) / \l__tt_anim_n_int }
+      }
+      {
+        \dim_set:Nn \l__tt_anim_w_dim { \l__tt_anim_width_tl }
+        \dim_set:Nn \l__tt_anim_gap_dim
+          {
+            \int_compare:nNnTF \l__tt_anim_n_int > 1
+              { ( \linewidth - \l__tt_anim_w_dim * \l__tt_anim_n_int ) / ( \l__tt_anim_n_int - 1 ) }
+              { 0pt }
+          }
+        \dim_compare:nNnT \l__tt_anim_gap_dim < { 0pt } { \dim_zero:N \l__tt_anim_gap_dim }
+      }
+    % labels row
+    \par \noindent
+    \hbox_to_wd:nn { \linewidth }
+      {
+        \seq_map_indexed_inline:Nn \g__tt_anim_labels_seq
+          {
+            \int_compare:nNnF {##1} = { 1 } { \skip_horizontal:N \l__tt_anim_gap_dim }
+            \parbox[b]{ \l__tt_anim_w_dim }
+              {
+                \centering \small
+                \bool_if:NT \l__tt_anim_sub_bool { ( \int_to_alph:n {##1} ) ~ }
+                ##2
+              }
+          }
+        \hfil
+      }
+    \par \nointerlineskip \vspace { 0.25em }
+    % the animation: one \multiframe frame holds every panel
+    \tl_set:Nx \l__tt_anim_out_tl
+      {
+        \exp_not:N \begin { animateinline }
+          [ \bool_if:NT \l__tt_anim_autoplay_bool { autoplay , }
+            \bool_if:NT \l__tt_anim_loop_bool { loop , }
+            \str_if_eq:VnF \l__tt_anim_controls_tl { none }
+              { controls = { \exp_not:V \l__tt_anim_controls_tl } , }
+            buttonsize = 0.8em , buttonfg = 0.12~0.29~0.49 ]
+          { \exp_not:V \l__tt_anim_fps_tl }
+        \exp_not:N \multiframe
+          { \int_eval:n { ( \seq_item:Nn \l_tmpa_seq { 2 } - \l_tmpa_int ) / \l_tmpb_int + 1 } }
+          { iN = \int_use:N \l_tmpa_int + \int_use:N \l_tmpb_int }
+          {
+            \exp_not:n { \def \N { \iN } }
+            \seq_map_indexed_function:NN \g__tt_anim_paths_seq \__tt_anim_panel:nn
+          }
+        \exp_not:N \end { animateinline }
+      }
+    \tl_use:N \l__tt_anim_out_tl
+    \par
+  }
+% one panel inside the \multiframe body (expanded into \l__tt_anim_out_tl)
+\cs_new:Npn \__tt_anim_panel:nn #1 #2
+  {
+    \int_compare:nNnF {#1} = { 1 } { \exp_not:N \hspace* { \dim_use:N \l__tt_anim_gap_dim } }
+    \exp_not:N \includegraphics [ width = \dim_use:N \l__tt_anim_w_dim ] { \exp_not:n {#2} }
+  }
+\ExplSyntaxOff
+
 % ---------------------------------------------------------------- Captions
 %   \begin{figure}                       % (or table) -- centred, does not float
 %     \includegraphics[width=0.8\linewidth]{figures/...}

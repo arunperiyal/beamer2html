@@ -15,15 +15,16 @@
   \centering [Observation about Table~\ref{tab:results} and Fig.~\ref{fig:example}]
 \end{frame}
 
-% Animation from numbered image files (e.g. frames/case_3000.png ... _5000.png,
-% step 50): several \includegraphics in one \multiframe play in sync.
-% controls={play,step,stop,speed}, controls (= all), or leave it out.
+% Animation from numbered image files (e.g. figures/caseA/frame_3000.png ...
+% _5000.png, step 50): the panels play in sync, labels above them, \N is the
+% frame number. Options: fps, frames, width, controls (all | none |
+% play,step,stop,speed), autoplay, loop, subcaptions. Needs \usepackage{animate}.
 % \begin{frame}{[Slide Title]}
-%   \centering
-%   \begin{animateinline}[autoplay, loop, controls]{3}        % frames per second
-%     \multiframe{41}{iT=3000+50}{%
-%       \includegraphics[width=0.48\linewidth]{figures/caseA/frame_\iT}\hfill
-%       \includegraphics[width=0.48\linewidth]{figures/caseB/frame_\iT}%
-%     }
-%   \end{animateinline}
+%   \begin{figure}
+%     \begin{animation}[fps=3, frames=3000:5000:50]
+%       \animpanel{[Case A]}{figures/caseA/frame_\N}
+%       \animpanel{[Case B]}{figures/caseB/frame_\N}
+%     \end{animation}
+%     \caption{[Animation caption]}\label{fig:animation}
+%   \end{figure}
 % \end{frame}

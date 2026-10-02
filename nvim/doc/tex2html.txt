@@ -127,7 +127,7 @@ through the fields; the default values can be accepted or typed over.
   fig        \includegraphics[width=\linewidth]{figures/...}
   figcap     figure with \caption and \label (fig:...)
   tabcap     table with \caption above a slidetable, \label (tab:...)
-  anim       animateinline + \multiframe
+  anim       figure with an animation environment (\animpanel, \N) and caption
 
 For any other environment, the `begin` snippet of friendly-snippets gives
 \begin{name} ... \end{name}, typing the name once (load friendly-snippets
