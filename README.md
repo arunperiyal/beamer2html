@@ -116,8 +116,12 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `tabular`, math (MathJax), `\includegraphics`,
   font sizes/styles, `\color`, `\cite`, `\href`, `\def`/`\newcommand` without arguments
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
-  (`frames=first:last:step`, `fps`, `width`, `controls`, `autoplay`, `loop`,
-  `subcaptions`; put it in a `figure` for a caption), and `animate`'s own
+  (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
+  buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,
+  `subcaptions`, `dt` to show the time (frame number × dt) below the panels
+  with `timelabel`, `timedigits`, `timeunit`, `timebar` for a progress bar
+  under the panels (clickable in HTML); put it in a `figure` for a
+  caption), and `animate`'s own
   `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 
 Not supported: TikZ drawings (export them as images), commands with arguments

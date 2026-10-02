@@ -55,10 +55,37 @@ class AnimationMixin:
             attrs += " data-loop"
         controls = o.get("controls", "all")
         controls = "all" if controls is True else re.sub(r"\s+", "", str(controls))
-        if controls != "none":
+        if controls == "hover":                    # buttons only while hovered
+            attrs += ' data-controls="all" data-hover'
+        elif controls != "none":
             attrs += ' data-controls="%s"' % html.escape(controls)
-        return PARA + '<div class="anim anim-labelled"%s><div class="panels">%s</div></div>' % (
-            attrs, "".join(figs)) + PARA
+        time = bar = ""
+        dt = o.get("dt")
+        if isinstance(dt, str) and dt.strip():     # time = frame number x dt
+            try:
+                float(dt)
+            except ValueError:
+                warn("animation: dt=%s is not a number" % dt)
+            else:
+                label = o.get("timelabel", "$t = $")
+                unit = o.get("timeunit", "")
+                digits = str(o.get("timedigits", "2")).strip()
+                attrs += ' data-dt="%s" data-time-digits="%s"' % (html.escape(dt.strip()),
+                                                                  html.escape(digits))
+                time = ('<div class="anim-time"><span class="anim-time-label">%s</span>&nbsp;'
+                        '<span class="anim-time-value"></span>%s</div>'
+                        % (self.inline(label if isinstance(label, str) else "").strip(),
+                           ("&nbsp;" + self.inline(unit).strip()) if isinstance(unit, str) and unit.strip() else ""))
+        if flag("timebar", False):                 # progress bar, first/last times
+            ends = ("", "")
+            if time:
+                d = int(str(o.get("timedigits", "2")).strip() or 2)
+                ends = tuple('<span class="anim-bar-end">%.*f</span>' % (d, n * float(dt))
+                             for n in (first, last))
+            bar = ('<div class="anim-bar">%s<div class="anim-bar-track" title="Click to go to a frame">'
+                   '<div class="anim-bar-fill"></div></div>%s</div>' % ends)
+        return PARA + '<div class="anim anim-labelled"%s><div class="panels">%s</div>%s%s</div>' % (
+            attrs, "".join(figs), bar, time) + PARA
 
     def animation(self, body):
         """animateinline + \\multiframe{N}{iT=a+b}{...\\includegraphics{..\\iT}...}

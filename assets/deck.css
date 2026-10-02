@@ -359,6 +359,31 @@ cite a { color: var(--blue); text-decoration: none; }
 .anim .panels figcaption { margin: 0 0 6px; text-align: center; font-size: 0.9em; }  /* labels above, \small */
 .anim .panels img { width: 100%; cursor: pointer; }
 
+/* time bar below the panels (animation timebar): track filled to the current frame */
+.anim-bar { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin-top: 8px; }
+.anim-bar-track { width: 60%; height: 2.6px; background: rgba(0, 0, 0, 0.13); cursor: pointer;
+                  position: relative; }
+.anim-bar-track::after { content: ""; position: absolute; inset: -6px 0; }  /* easier to click */
+.anim-bar-fill { height: 100%; width: 0; background: var(--blue); }
+.anim-bar-end { font-size: 0.7em; color: #555; font-variant-numeric: tabular-nums; }
+/* time below the panels (animation dt=...) */
+.anim-time { text-align: center; font-size: 0.9em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+/* controls=hover: the button bar floats over the bottom of the panels (taking
+   no space, as in the PDF where it is hidden) and fades in on hover */
+.anim[data-hover] { position: relative; }
+.anim[data-hover] .anim-controls {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 1.9em; margin: 0;
+  background: rgba(255, 255, 255, 0.92); padding: 4px 8px; border-radius: 6px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+  opacity: 0; transition: opacity 0.2s;
+}
+.anim[data-hover]:not(:has(.anim-time)) .anim-controls { bottom: 0.5em; }
+.anim[data-hover]:has(.anim-bar) .anim-controls { bottom: 3.6em; }          /* above the time bar */
+.anim[data-hover]:has(.anim-bar):not(:has(.anim-time)) .anim-controls { bottom: 2.2em; }
+.anim[data-hover] .anim-controls { pointer-events: none; }   /* invisible: let clicks through */
+.anim[data-hover]:hover .anim-controls,
+.anim[data-hover]:focus-within .anim-controls { opacity: 1; pointer-events: auto; }
+
 .anim-controls {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   margin-top: 8px; font-size: 18px; color: var(--blue);

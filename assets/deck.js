@@ -556,6 +556,19 @@
     this.playBtn = bar.querySelector('[data-a="play"]');
     this.slider = bar.querySelector("input");
     this.readout = bar.querySelector(".readout");
+    this.timeEl = el.querySelector(".anim-time-value");
+    this.barFill = el.querySelector(".anim-bar-fill");     // timebar
+    const track = el.querySelector(".anim-bar-track");
+    if (track) {
+      track.addEventListener("mousedown", (e) => e.preventDefault());
+      track.addEventListener("click", (e) => {             // click: go to that frame
+        const r = track.getBoundingClientRect();
+        this.pause();
+        this.go(Math.round((e.clientX - r.left) / r.width * (this.nums.length - 1)));
+      });
+    }
+    this.dt = parseFloat(el.dataset.dt || "0");
+    this.digits = parseInt(el.dataset.timeDigits || "2", 10);
 
     bar.addEventListener("mousedown", (e) => {
       if (e.target.tagName === "BUTTON") e.preventDefault();   // keep keys for slides
@@ -592,6 +605,12 @@
     i = this.loop ? (i + n) % n : Math.max(0, Math.min(n - 1, i));
     this.i = i;
     this.imgs.forEach((img, p) => { img.src = this.urls[p][i]; });
+    if (this.timeEl) {                    // time = frame number x dt (data-dt)
+      this.timeEl.textContent = (this.nums[i] * this.dt).toFixed(this.digits);
+    }
+    if (this.barFill) {
+      this.barFill.style.width = (n > 1 ? i / (n - 1) * 100 : 100) + "%";
+    }
     if (this.slider) this.slider.value = i;
     this.updateReadout();
   };

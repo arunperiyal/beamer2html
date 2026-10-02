@@ -528,9 +528,13 @@
 %   \end{animation}
 % Panels play in sync, side by side, with their labels above; \N is the
 % frame number. Options: fps (3), frames (required), width (of each panel;
-% default: equal shares of the line), controls (all; play,step,stop,speed
-% or none), autoplay (true), loop (true), subcaptions ((a), (b), ... before
-% the labels). Put it in a figure for \caption / \label. Needs animate.
+% default: equal shares of the line), controls (all; play,step,stop,speed,
+% none, or hover: buttons only while the mouse is over the animation in the
+% HTML deck -- none in the PDF), autoplay (true), loop (true), subcaptions
+% ((a), (b), ... before the labels), dt (show the time below the panels:
+% frame number x dt), timelabel ($t = $), timedigits (2), timeunit (),
+% timebar (a progress bar below the panels; with dt, first/last times at its ends).
+% Put it in a figure for \caption / \label. Needs animate.
 \ExplSyntaxOn
 \seq_new:N  \g__tt_anim_labels_seq
 \seq_new:N  \g__tt_anim_paths_seq
@@ -545,6 +549,15 @@
 \dim_new:N  \l__tt_anim_w_dim
 \dim_new:N  \l__tt_anim_gap_dim
 \int_new:N  \l__tt_anim_n_int
+\bool_new:N \l__tt_anim_hover_bool
+\tl_new:N   \l__tt_anim_dt_tl
+\tl_new:N   \l__tt_anim_timelabel_tl
+\tl_new:N   \l__tt_anim_timeunit_tl
+\int_new:N  \l__tt_anim_timedigits_int
+\bool_new:N \l__tt_anim_bar_bool
+\int_new:N  \l__tt_anim_first_int
+\int_new:N  \l__tt_anim_last_int
+\dim_new:N  \l__tt_anim_barw_dim
 
 \keys_define:nn { tt / animation }
   {
@@ -564,12 +577,24 @@
     subcaptions .bool_set:N = \l__tt_anim_sub_bool,
     subcaptions .initial:n  = false,
     subcaptions .default:n  = true,
+    dt          .tl_set:N   = \l__tt_anim_dt_tl,
+    timelabel   .tl_set:N   = \l__tt_anim_timelabel_tl,
+    timelabel   .initial:n  = { $t = $ },
+    timedigits  .int_set:N  = \l__tt_anim_timedigits_int,
+    timedigits  .initial:n  = 2,
+    timeunit    .tl_set:N   = \l__tt_anim_timeunit_tl,
+    timebar     .bool_set:N = \l__tt_anim_bar_bool,
+    timebar     .initial:n  = false,
+    timebar     .default:n  = true,
   }
 
 \cs_generate_variant:Nn \seq_set_split:Nnn { NVV }
 \NewDocumentEnvironment { animation } { O{} +b }
   {
     \keys_set:nn { tt / animation } {#1}
+    \bool_set_false:N \l__tt_anim_hover_bool
+    \str_if_eq:VnT \l__tt_anim_controls_tl { hover }   % hover: no buttons in the PDF
+      { \bool_set_true:N \l__tt_anim_hover_bool }
     \seq_gclear:N \g__tt_anim_labels_seq
     \seq_gclear:N \g__tt_anim_paths_seq
     \hbox_set:Nn \l_tmpa_box                   % collect the panels, print nothing
@@ -592,6 +617,9 @@
     % frames = first:last[:step]
     \seq_set_split:NVV \l_tmpa_seq \c_colon_str \l__tt_anim_frames_tl   % ':' is a letter here
     \int_set:Nn \l_tmpa_int { \seq_item:Nn \l_tmpa_seq { 1 } }
+    \int_set:Nn \l__tt_anim_first_int { \l_tmpa_int }
+    \int_set:Nn \l__tt_anim_last_int { \seq_item:Nn \l_tmpa_seq { 2 } }
+    \dim_set:Nn \l__tt_anim_barw_dim { 0.6 \linewidth }
     \tl_set:Nx \l_tmpa_tl { \seq_item:Nn \l_tmpa_seq { 3 } }
     \int_set:Nn \l_tmpb_int { \tl_if_blank:VTF \l_tmpa_tl { 1 } { \l_tmpa_tl } }
     \int_set:Nn \l__tt_anim_n_int { \seq_count:N \g__tt_anim_paths_seq }
@@ -635,8 +663,11 @@
         \exp_not:N \begin { animateinline }
           [ \bool_if:NT \l__tt_anim_autoplay_bool { autoplay , }
             \bool_if:NT \l__tt_anim_loop_bool { loop , }
-            \str_if_eq:VnF \l__tt_anim_controls_tl { none }
-              { controls = { \exp_not:V \l__tt_anim_controls_tl } , }
+            \bool_if:NF \l__tt_anim_hover_bool
+              {
+                \str_if_eq:VnF \l__tt_anim_controls_tl { none }
+                  { controls = { \exp_not:V \l__tt_anim_controls_tl } , }
+              }
             buttonsize = 0.8em , buttonfg = 0.12~0.29~0.49 ]
           { \exp_not:V \l__tt_anim_fps_tl }
         \exp_not:N \multiframe
@@ -644,12 +675,74 @@
           { iN = \int_use:N \l_tmpa_int + \int_use:N \l_tmpb_int }
           {
             \exp_not:n { \def \N { \iN } }
-            \seq_map_indexed_function:NN \g__tt_anim_paths_seq \__tt_anim_panel:nn
+            \bool_if:nTF { \l__tt_anim_bar_bool || ! \tl_if_blank_p:V \l__tt_anim_dt_tl }
+              {                                    % panels, time bar, time below them
+                \exp_not:N \parbox { \dim_use:N \linewidth }
+                  {
+                    \exp_not:N \centering
+                    \seq_map_indexed_function:NN \g__tt_anim_paths_seq \__tt_anim_panel:nn
+                    \bool_if:NT \l__tt_anim_bar_bool
+                      { \exp_not:N \par \exp_not:N \vspace { 0.3em } \exp_not:N \__tt_anim_bar: }
+                    \tl_if_blank:VF \l__tt_anim_dt_tl
+                      { \exp_not:N \par \exp_not:N \vspace { 0.15em } \exp_not:N \__tt_anim_time: }
+                  }
+              }
+              { \seq_map_indexed_function:NN \g__tt_anim_paths_seq \__tt_anim_panel:nn }
           }
         \exp_not:N \end { animateinline }
       }
     \tl_use:N \l__tt_anim_out_tl
     \par
+  }
+% time bar: a track filled up to the current frame; with dt, the first and
+% last times at its ends
+\cs_new_protected:Npn \__tt_anim_bar:
+  {
+    \tl_if_blank:VF \l__tt_anim_dt_tl
+      {
+        { \scriptsize \color{darkgray}
+          \__tt_anim_fixed:nn { \l__tt_anim_first_int * \l__tt_anim_dt_tl } { \l__tt_anim_timedigits_int } }
+        \hspace { 0.6em }
+      }
+    \begin{tikzpicture}[baseline=-0.6ex]
+      \fill [ gray!25 ] (0pt, -1.3pt) rectangle (\dim_use:N \l__tt_anim_barw_dim, 1.3pt);
+      \fill [ bannerblue ] (0pt, -1.3pt) rectangle
+        ( \fp_to_dim:n
+            {
+              \int_compare:nNnTF \l__tt_anim_last_int = \l__tt_anim_first_int { \l__tt_anim_barw_dim }
+                { \l__tt_anim_barw_dim * ( \iN - \l__tt_anim_first_int )
+                  / ( \l__tt_anim_last_int - \l__tt_anim_first_int ) }
+            } , 1.3pt );
+    \end{tikzpicture}
+    \tl_if_blank:VF \l__tt_anim_dt_tl
+      {
+        \hspace { 0.6em }
+        { \scriptsize \color{darkgray}
+          \__tt_anim_fixed:nn { \l__tt_anim_last_int * \l__tt_anim_dt_tl } { \l__tt_anim_timedigits_int } }
+      }
+  }
+% the time of the current frame: timelabel, \iN x dt with timedigits
+% decimals, timeunit
+\cs_new_protected:Npn \__tt_anim_time:
+  {
+    { \small \l__tt_anim_timelabel_tl \unskip \nobreakspace
+      \__tt_anim_fixed:nn { \iN * \l__tt_anim_dt_tl } { \l__tt_anim_timedigits_int }
+      \tl_if_blank:VF \l__tt_anim_timeunit_tl { \nobreakspace \l__tt_anim_timeunit_tl } }
+  }
+% #1 rounded to #2 decimals, always printed with #2 decimals (150 -> 150.00)
+\cs_new_protected:Npn \__tt_anim_fixed:nn #1 #2
+  {
+    \int_set:Nn \l_tmpa_int { \fp_eval:n { round( (#1) * 10 ^ (#2) ) } }
+    \int_compare:nNnT \l_tmpa_int < { 0 } { - }
+    \int_set:Nn \l_tmpb_int { \int_abs:n { \l_tmpa_int } }
+    \int_eval:n { \int_div_truncate:nn { \l_tmpb_int } { \fp_eval:n { 10 ^ (#2) } } }
+    \int_compare:nNnT { #2 } > { 0 }
+      {
+        .
+        \tl_set:Nx \l_tmpa_tl { \int_eval:n { \int_mod:nn { \l_tmpb_int } { \fp_eval:n { 10 ^ (#2) } } } }
+        \prg_replicate:nn { (#2) - \tl_count:N \l_tmpa_tl } { 0 }
+        \l_tmpa_tl
+      }
   }
 % one panel inside the \multiframe body (expanded into \l__tt_anim_out_tl)
 \cs_new:Npn \__tt_anim_panel:nn #1 #2

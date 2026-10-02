@@ -17,8 +17,11 @@
 
 % Animation from numbered image files (e.g. figures/caseA/frame_3000.png ...
 % _5000.png, step 50): the panels play in sync, labels above them, \N is the
-% frame number. Options: fps, frames, width, controls (all | none |
-% play,step,stop,speed), autoplay, loop, subcaptions. Needs \usepackage{animate}.
+% frame number. Options: fps, frames, width, controls (all | none | hover |
+% play,step,stop,speed), autoplay, loop, subcaptions, dt (time below the
+% panels = frame number x dt; timelabel, timedigits, timeunit), timebar
+% (progress bar below the panels).
+% Needs \usepackage{animate}.
 % \begin{frame}{[Slide Title]}
 %   \begin{figure}
 %     \begin{animation}[fps=3, frames=3000:5000:50]
