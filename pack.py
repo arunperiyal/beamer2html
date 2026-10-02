@@ -57,7 +57,7 @@ def referenced_files(page, root, config):
         if rel.split(os.sep)[:2] == ["html", "cache"]:
             continue
         for name in names:
-            if not name.startswith(".") and name != "build.js":   # build.js: --watch only
+            if not name.startswith(".") and name not in ("build.js", "goto.js"):  # --watch only
                 files.add(os.path.normpath(os.path.join(rel, name)))
     return files
 

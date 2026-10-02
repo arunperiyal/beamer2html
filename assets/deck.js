@@ -36,18 +36,29 @@
   document.documentElement.style.setProperty("--fs", (C.fontSize || 11) / 11);
 
   // ------------------------------------------------------------ live reload
-  // Decks built with `tex2html --watch` check html/build.js once a second
-  // and reload when it names a newer build. The URL keeps #slide.step, so
-  // the reload comes back to the same place. Other decks never check.
+  // Decks built with `tex2html --watch` check two files once a second:
+  //  * html/build.js -- reload when it names a newer build. The URL keeps
+  //    #slide.step, so the reload comes back to the same place.
+  //  * html/goto.js  -- written by the editor plugin (:Tex2HtmlSync): go to
+  //    { slide, step }. A request older than this page load is ignored.
+  // Other decks never check.
   if (C.watch) {
-    setInterval(() => {
+    const load = (file, done) => {
       const s = document.createElement("script");
-      s.src = "html/build.js?t=" + Date.now();       // bypass the cache
-      s.onload = s.onerror = () => {
-        s.remove();
-        if (window.TEX2HTML_BUILD && window.TEX2HTML_BUILD !== C.build) location.reload();
-      };
+      s.src = "html/" + file + "?t=" + Date.now();   // bypass the cache
+      s.onload = s.onerror = () => { s.remove(); done(); };
       document.head.appendChild(s);
+    };
+    let seenGoto;
+    setInterval(() => {
+      load("build.js", () => {
+        if (window.TEX2HTML_BUILD && window.TEX2HTML_BUILD !== C.build) location.reload();
+      });
+      load("goto.js", () => {
+        const g = window.TEX2HTML_GOTO;
+        if (g && seenGoto !== undefined && g.t !== seenGoto) show(g.slide - 1, g.step || 0);
+        seenGoto = g ? g.t : null;
+      });
     }, 1000);
   }
 
