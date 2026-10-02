@@ -3,13 +3,16 @@
 % Tables: \begin{slidetable}[style]{colspec}; the first row is the header.
 % Styles: plain (default), lines, header, striped.
 \begin{frame}{[Slide Title]}
+  \begin{table}
+  \caption{[Table caption]}\label{tab:results}
   \begin{slidetable}[striped]{lccc}
     Case       & [Quantity 1] & [Quantity 2] & [Quantity 3] \\
     [Case 1]   & 0.00 & 0.00 & 0.00 \\
     [Case 2]   & 0.00 & 0.00 & 0.00 \\
     [Case 3]   & 0.00 & 0.00 & 0.00 \\
   \end{slidetable}
-  \centering [Observation about the table]
+  \end{table}
+  \centering [Observation about Table~\ref{tab:results} and Fig.~\ref{fig:example}]
 \end{frame}
 
 % Animation from numbered image files (e.g. frames/case_3000.png ... _5000.png,

@@ -14,8 +14,9 @@
   --muted:       #555;
   --title-h:     88px;                 /* title area / bar height (config: titleHeight) */
   --fs:          1;                    /* text scale: class font size / 11pt (config: fontSize) */
-  --pad-x:       32px;                 /* title bar / footer side margin (0.4cm) */
-  --body-x:      80px;                 /* slide body side margin (beamer: 1cm) */
+  --pad-x:       32px;                 /* title bar / footer side margin (\SetBarMargin, 0.4cm) */
+  --body-l:      80px;                 /* slide body margins (\setbeamersize, beamer: 1cm) */
+  --body-r:      80px;
   --serif: "Times New Roman", "TeX Gyre Termes", "Nimbus Roman", "Liberation Serif",
            Times, serif;
 }
@@ -78,7 +79,7 @@ html, body {
 /* ------------------------------------------------------------ body */
 .slide .body {
   flex: 1; min-height: 0;
-  padding: 18px var(--body-x) 10px;
+  padding: 18px var(--body-r) 10px var(--body-l);
   display: flex; flex-direction: column; justify-content: center;
 }
 .slide .body.top { justify-content: flex-start; }   /* <section data-align="top"> */
@@ -143,7 +144,10 @@ html, body {
 .block > .block-body { background: var(--blue-soft); padding: 8px 14px; }
 
 /* columns */
-.columns { display: flex; gap: 4%; align-items: flex-start; }
+/* like beamer: the space left over by the column widths is spread before,
+   between and after the columns ([onlytextwidth]: only between them) */
+.columns { display: flex; justify-content: space-evenly; align-items: flex-start; }
+.columns.otw { justify-content: space-between; }
 .columns > .col { flex: 1; min-width: 0; }
 .columns.center { align-items: center; }
 
@@ -221,7 +225,10 @@ aside.note { display: none !important; }
 /* slide tables (\begin{slidetable}[style]{colspec}): first row = header */
 .slidetable-wrap { display: flex; justify-content: center; margin: 0.2em 0 0.5em; }
 .slidetable { border-collapse: collapse; line-height: 1.25; }
-.slidetable th, .slidetable td { padding: 0.28em 0.6em; }
+/* row padding follows \slidetablestretch (--tab-stretch, default 1.3 -> 0.28em) */
+.slidetable th, .slidetable td {
+  padding: max(0em, calc((1.39 * var(--tab-stretch, 1.3) - 1.25) * 0.5em)) 0.6em;
+}
 .slidetable th { font-weight: bold; }
 .slidetable[data-style="plain"],
 .slidetable[data-style="lines"]       { border-top: 3px solid #000; border-bottom: 3px solid #000; }
@@ -254,6 +261,16 @@ aside.note { display: none !important; }
 .pub-badge[data-status="review"]::after      { content: "Under review"; }
 .pub-badge[data-status="submitted"]::after   { content: "Submitted"; }
 .pub-badge[data-status="preparation"]::after { content: "In preparation"; }
+
+/* figure / table with \caption: "Figure n: text"; a short caption is
+   centred, a long one fills the width left-aligned (display: table), as in beamer */
+figure.float { margin: 0.2em 0; }
+figure.float .p { margin: 0; }
+.float figcaption {
+  display: table; margin: 4px auto 2px; text-align: left;
+  font-size: 0.91em; line-height: 1.3;
+}
+.float .caption-name { color: var(--blue); font-weight: bold; }
 
 /* citations */
 cite { font-style: normal; }

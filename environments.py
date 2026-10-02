@@ -3,7 +3,7 @@ import html
 import re
 
 from .log import warn
-from .parsing import read_arg, read_group, read_opt, skip_ws, split_items
+from .parsing import keyvals, read_arg, read_group, read_opt, skip_ws, split_items
 from .units import length_css
 from .vocabulary import MATH_ENVS, PARA
 
@@ -25,9 +25,12 @@ class EnvironmentsMixin:
                            % (self.inline(title), self.flow(body[j:]))) + PARA
         if env == "columns":
             opt, j = read_opt(body, 0)
-            align = " center" if opt and "c" in opt and "T" not in opt else ""
+            o = keyvals(opt)
+            cls = " center" if "c" in o else ""
+            if "onlytextwidth" in o:               # space only between columns
+                cls += " otw"
             return PARA + '<div class="columns%s">%s</div>' % (
-                align, self.inline(body[j:]).replace(PARA, "")) + PARA
+                cls, self.inline(body[j:]).replace(PARA, "")) + PARA
         if env == "column":
             _, j = read_opt(body, 0)
             w, j = read_arg(body, j)
@@ -50,17 +53,15 @@ class EnvironmentsMixin:
             w, j = read_arg(body, j)
             return '<div class="minipage" style="width:%s">%s</div>' % (
                 length_css(w), self.flow(body[j:]))
-        if env in ("center", "figure", "figure*"):
-            _, j = read_opt(body, 0)
-            return PARA + '<div class="center">%s</div>' % self.flow(body[j:]) + PARA
+        if env in ("figure", "figure*", "table", "table*"):
+            return self.env_float(env.rstrip("*"), body)
+        if env == "center":
+            return PARA + '<div class="center">%s</div>' % self.flow(body) + PARA
         if env in MATH_ENVS:
             return PARA + html.escape("\\begin{%s}%s\\end{%s}" % (env, body, env),
                                       quote=False) + PARA
         if env in TABLES:
             return self.env_tabular(env, body)
-        if env == "table":
-            _, j = read_opt(body, 0)
-            return PARA + self.flow(body[j:]) + PARA
         if env == "progress":
             return self.env_progress(body)
         if env == "slidetable":
@@ -147,6 +148,18 @@ class EnvironmentsMixin:
         return PARA + '<table class="litreview" style="--lit-left:%s">%s</table>' % (
             left, "".join(rows)) + PARA
 
+    def env_float(self, kind, body):
+        """figure / table: a centred block (beamer's floats do not float);
+        \\caption inside it is numbered "Figure n:" / "Table n:"."""
+        _, j = read_opt(body, 0)                    # placement [htbp]: ignored
+        self.floats.append({"kind": kind, "n": None})
+        try:
+            content = self.flow(body[j:])
+        finally:
+            self.floats.pop()
+        return PARA + '<figure class="float" data-kind="%s"><div class="center">%s</div></figure>' % (
+            kind, content) + PARA
+
     def env_slidetable(self, body):
         """\\begin{slidetable}[style]{colspec}: first row is the header; the
         style (plain, lines, header, striped) draws rules and shading."""
@@ -169,9 +182,16 @@ class EnvironmentsMixin:
                 '<%s style="text-align:%s">%s</%s>' % (
                     tag, aligns[k] if k < len(aligns) else "left", c, tag)
                 for k, c in enumerate(cells))
-        return PARA + ('<div class="slidetable-wrap"><table class="slidetable" data-style="%s">'
-                       '<thead>%s</thead><tbody>%s</tbody></table></div>'
-                       % (style, tr(rows[0], "th"), "".join(tr(r, "td") for r in rows[1:]))) + PARA
+        stretch = self.macros.get("slidetablestretch", "1.3").strip()
+        try:
+            stretch = "%g" % float(stretch)
+        except ValueError:
+            warn("\\slidetablestretch should be a number, not '%s'" % stretch)
+            stretch = "1.3"
+        return PARA + ('<div class="slidetable-wrap"><table class="slidetable" data-style="%s"'
+                       ' style="--tab-stretch:%s"><thead>%s</thead><tbody>%s</tbody></table></div>'
+                       % (style, stretch, tr(rows[0], "th"),
+                          "".join(tr(r, "td") for r in rows[1:]))) + PARA
 
     def env_tabular(self, env, body):
         """tabular -> <table>; \\hline / booktabs rules become borders."""
@@ -195,15 +215,23 @@ class EnvironmentsMixin:
 
 def column_aligns(spec):
     """'l c >{\\bfseries}r p{3cm} @{}' -> ['left', 'center', 'right', 'left']"""
-    aligns, i = [], 0
+    aligns, i, pre = [], 0, None
     while i < len(spec):
         c = spec[i]
         if c in "lcrpmbX":
-            aligns.append({"c": "center", "r": "right"}.get(c, "left"))
+            align = {"c": "center", "r": "right"}.get(c, "left")
+            if pre and "\\centering" in pre:          # >{\centering}p{..}
+                align = "center"
+            elif pre and "\\raggedleft" in pre:
+                align = "right"
+            aligns.append(align)
+            pre = None
             i += 1
             if c in "pmb":                         # skip the {width}
                 _, i = read_arg(spec, i)
-        elif c in "@!><":                          # @{..} !{..} >{..} <{..}
+        elif c == ">":                             # >{..}: applies to the next column
+            pre, i = read_arg(spec, i + 1)
+        elif c in "@!<":                           # @{..} !{..} <{..}
             _, i = read_arg(spec, i + 1)
         elif c == "*":                             # *{3}{c}
             n, i = read_arg(spec, i + 1)

@@ -32,9 +32,11 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \centering
-      \FigurePlaceholder{4.5cm}{[Figure]}   % then: \includegraphics[width=\linewidth]{figures/...}
-      \\[0.3em]{\small [Figure caption]}
+      % numbered caption + label; refer to it with Fig.~\ref{fig:example}
+      \begin{figure}
+        \FigurePlaceholder{4.2cm}{[Figure]}   % then: \includegraphics[width=\linewidth]{figures/...}
+        \caption{[Figure caption]}\label{fig:example}
+      \end{figure}
     \end{column}
   \end{columns}
 \end{frame}

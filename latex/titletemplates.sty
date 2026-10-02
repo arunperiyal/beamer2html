@@ -143,6 +143,29 @@
 \newcommand{\SectionNameOn}{\@ttsecnametrue}
 \newcommand{\SectionNameOff}{\@ttsecnamefalse}
 \newcommand{\SetTitleHeight}[1]{\setlength{\@ttTitleHt}{#1}}
+% side margin of the title bar and the footer (the slide body's margins are
+% beamer's: \setbeamersize{text margin left=..., text margin right=...})
+\newlength{\@ttBarMargin}  \setlength{\@ttBarMargin}{0.4cm}
+\newcommand{\SetBarMargin}[1]{\setlength{\@ttBarMargin}{#1}}
+
+% \SetTextMargins{left}{right}: side margins of the slide body, also between
+% frames (beamer's \setbeamersize works only in the preamble, through
+% geometry; between frames the page offset and text width are set directly)
+\newcommand{\SetTextMargins}[2]{%
+  \ifx\document\@notprerr                     % after \begin{document}
+    \global\beamer@leftmargin=#1\relax
+    \global\beamer@rightmargin=#2\relax
+    \xdef\Gm@lmargin{\the\dimexpr#1\relax}%   % beamer places head/foot with these
+    \xdef\Gm@rmargin{\the\dimexpr#2\relax}%   % (geometry keeps them as macros)
+    \global\oddsidemargin=\dimexpr#1-1in\relax
+    \global\evensidemargin=\oddsidemargin
+    \global\textwidth=\dimexpr\paperwidth-#1-#2\relax
+    \global\linewidth=\textwidth
+    \global\columnwidth=\textwidth
+    \global\hsize=\textwidth
+  \else
+    \setbeamersize{text margin left=#1, text margin right=#2}%
+  \fi}
 
 \newsavebox{\@ttTmpBox}
 \newlength{\@ttRuleWd}
@@ -166,7 +189,7 @@
     \fi
   \fi\fi
   % the title gets whatever width the section name leaves free
-  \setlength{\@ttTitleWd}{\dimexpr\paperwidth-0.8cm\relax}%
+  \setlength{\@ttTitleWd}{\dimexpr\paperwidth-2\@ttBarMargin\relax}%
   \ifdim\wd\@ttSecBox>0pt
     \addtolength{\@ttTitleWd}{-\wd\@ttSecBox}%
     \addtolength{\@ttTitleWd}{-0.6cm}%
@@ -201,8 +224,8 @@
     \if@ttbar
       \fill[bannerblue] (0,0) rectangle (\paperwidth,-\@ttAreaHt);
     \fi
-    \node[anchor=west] at (0.4cm,-0.5\@ttAreaHt) {\usebox{\@ttTitleBox}};
-    \node[anchor=east] at (\paperwidth-0.4cm,-0.5\@ttAreaHt)
+    \node[anchor=west] at (\@ttBarMargin,-0.5\@ttAreaHt) {\usebox{\@ttTitleBox}};
+    \node[anchor=east] at (\paperwidth-\@ttBarMargin,-0.5\@ttAreaHt)
       {\usebox{\@ttSecBox}};
   \end{tikzpicture}%
   \end{beamercolorbox}%
@@ -229,14 +252,14 @@
     {\color{bannerblue}\rule{\paperwidth}{0.5pt}}\par\nointerlineskip
     \vspace{0.4ex}%
     \begin{beamercolorbox}[wd=\paperwidth,ht=2.2ex,dp=1ex,
-                           leftskip=0.4cm,rightskip=0.4cm]{footline}%
+                           leftskip=\@ttBarMargin,rightskip=\@ttBarMargin]{footline}%
       \usebeamerfont{footline}%
       \@ttFootAuthor\hfill\@ttShortTitle\hfill
       \insertframenumber\,/\,\inserttotalframenumber
     \end{beamercolorbox}%
   \else\ifx\@ttFootMode\@ttFootNumber
     \begin{beamercolorbox}[wd=\paperwidth,ht=2.2ex,dp=1.4ex,
-                           leftskip=0.4cm,rightskip=0.4cm]{footline}%
+                           leftskip=\@ttBarMargin,rightskip=\@ttBarMargin]{footline}%
       \usebeamerfont{footline}\hfill\insertframenumber
     \end{beamercolorbox}%
   \fi\fi
@@ -498,6 +521,26 @@
   \@ttLitRow{#3}{\def\@ttLitSep{}\forcsvlist{\@ttLitCite}{#1}}{#2}}
 \newcommand<>{\studytext}[2]{\@ttLitRow{#3}{#1}{#2}}
 
+% ---------------------------------------------------------------- Captions
+%   \begin{figure}                       % (or table) -- centred, does not float
+%     \includegraphics[width=0.8\linewidth]{figures/...}
+%     \caption{What it shows.}\label{fig:name}
+%   \end{figure}
+%   ... see Fig.~\ref{fig:name} ...
+% Numbered "Figure n: caption" / "Table n: caption"; numbers run through the
+% deck. A short caption is centred, a long one left-aligned (beamer's rule).
+\setbeamertemplate{caption}{%
+  \raggedright
+  {\usebeamercolor[fg]{caption name}\usebeamerfont*{caption name}%
+   \insertcaptionname~\insertcaptionnumber
+   \usebeamertemplate{caption label separator}}%
+  \insertcaption\par}
+\setbeamerfont{caption}{size=\small}
+\setbeamerfont{caption name}{series=\bfseries}
+\setbeamercolor{caption name}{fg=bannerblue}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{2pt}
+
 % ---------------------------------------------------------------- Tables
 %   \begin{slidetable}[striped]{lcc}    % column spec as for tabular
 %     Case    & $A^*/D$ & $St$ \\       % first row = header
@@ -511,6 +554,9 @@
 % \\[0pt] and \rowcolor gets its optional overhangs, so a cell starting with
 % "[" is never taken as an optional argument.)
 \RequirePackage{colortbl}
+% row spacing of slide tables; \renewcommand{\slidetablestretch}{1.0} before a
+% table (or in the preamble) for denser tables
+\newcommand{\slidetablestretch}{1.3}
 \definecolor{tablestripe}{RGB}{232,237,244}   % light bannerblue
 \definecolor{tableline}{RGB}{170,170,170}
 
@@ -541,7 +587,7 @@
       { \PackageWarning{titletemplates}{slidetable:~unknown~style~'#1'~(plain,~lines,~header,~striped)} }
     \__tt_build:n {#3}
     \par \centering
-    \renewcommand{\arraystretch}{1.3}
+    \renewcommand{\arraystretch}{\slidetablestretch}
     \begin{tabular}{#2} \l__tt_out_tl \end{tabular}
     \par \vspace{0.5em}
   }

@@ -40,6 +40,11 @@ COLORS = {"bannerblue": "var(--blue)", "bannertext": "#fff"}
 # k-th marker of a slide until step k is reached.
 PAUSE = '<span class="pause"></span>'
 
+# \ref{key} -> REF_MARK % key; resolved after the whole document is read,
+# so a reference may come before its \label.
+REF_MARK = "\x00R:%s\x00"
+REF_RE = "\x00R:([^\x00]*)\x00"
+
 # Internal markers placed in the HTML while converting, resolved by
 # Converter.flow(): paragraph break, \hfill, \centering.
 PARA, HFILL, CENTER = "\x00P\x00", "\x00H\x00", "\x00C\x00"
