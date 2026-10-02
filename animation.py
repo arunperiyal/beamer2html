@@ -12,6 +12,54 @@ from .vocabulary import PARA
 
 
 class AnimationMixin:
+    def env_animation(self, body):
+        """\\begin{animation}[fps=3, frames=a:b:step, width=, controls=, autoplay=,
+        loop=, subcaptions] with \\animpanel{label}{path with \\N} lines
+        (titletemplates.sty). Panels play in sync, labels above them."""
+        opt, j = read_opt(body, 0)
+        o = keyvals(opt)
+        fr = re.match(r"\s*(-?\d+)\s*:\s*(-?\d+)\s*(?::\s*(-?\d+))?\s*$", o.get("frames") or "")
+        if not fr:
+            warn("animation: frames=first:last[:step] is required")
+            return ""
+        first, last, step = int(fr.group(1)), int(fr.group(2)), int(fr.group(3) or 1)
+
+        def flag(name, default):
+            v = o.get(name, default)
+            return v is True or str(v).strip().lower() in ("true", "")
+        panels = []
+        rest = body[j:]
+        for m in re.finditer(r"\\animpanel", rest):
+            label, k = read_arg(rest, m.end())
+            path, k = read_arg(rest, k)
+            panels.append((label, path.strip().replace("\\N", "{n}")))
+        if not panels:
+            warn("animation: no \\animpanel")
+            return ""
+        width = o.get("width")
+        css = length_css(width) if isinstance(width, str) else None
+        style = ' style="flex:0 0 %s"' % css if css else ""
+        figs = []
+        for n, (label, path) in enumerate(panels, 1):
+            label = self.inline(label).strip()
+            if flag("subcaptions", False):
+                label = "(%s)&nbsp;%s" % (chr(96 + n), label)
+            figs.append('<figure%s><figcaption class="anim-label">%s</figcaption>'
+                        '<img data-src="%s" alt=""></figure>'
+                        % (style, label, html.escape(self.frame_pattern(path, first))))
+        fps = str(o.get("fps", "3")).strip()
+        attrs = ' data-fps="%s" data-frames="%d:%d:%d"' % (html.escape(fps), first, last, step)
+        if flag("autoplay", True):
+            attrs += " data-autoplay"
+        if flag("loop", True):
+            attrs += " data-loop"
+        controls = o.get("controls", "all")
+        controls = "all" if controls is True else re.sub(r"\s+", "", str(controls))
+        if controls != "none":
+            attrs += ' data-controls="%s"' % html.escape(controls)
+        return PARA + '<div class="anim anim-labelled"%s><div class="panels">%s</div></div>' % (
+            attrs, "".join(figs)) + PARA
+
     def animation(self, body):
         """animateinline + \\multiframe{N}{iT=a+b}{...\\includegraphics{..\\iT}...}
         Each \\includegraphics in the frame becomes one synchronised panel.
