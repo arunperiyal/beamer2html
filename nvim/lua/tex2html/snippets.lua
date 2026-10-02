@@ -83,6 +83,21 @@ local snippets = {
   snip("fig", "figure filling the width", [[\includegraphics[width=<>]{figures/<>}]],
        { i(1, "\\linewidth"), i(0, "file") }),
 
+  snip("figcap", "figure with numbered caption and label", [[
+\begin{figure}
+	\includegraphics[width=<>]{figures/<>}
+	\caption{<>}\label{fig:<>}
+\end{figure}]], { i(1, "0.8\\linewidth"), i(2, "file"), i(3, "Caption."), i(0, "name") }),
+
+  snip("tabcap", "table with numbered caption (above) and label", [[
+\begin{table}
+	\caption{<>}\label{tab:<>}
+	\begin{slidetable}[<>]{<>}
+		<> \\
+		<> \\
+	\end{slidetable}
+\end{table}]], { i(1, "Caption."), i(2, "name"), i(3, "plain"), i(4, "lcc"), i(5, "Case & A & B"), i(0, "row & 0 & 0") }),
+
   snip("anim", "animation from numbered frames (several panels play in sync)", [[
 \begin{animateinline}[autoplay, loop, controls]{<>}
 	\multiframe{<>}{iT=<>+<>}{%

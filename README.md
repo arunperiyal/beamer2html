@@ -100,6 +100,9 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
 - `titletemplates.sty`: `\Set…` fields, `\SeminarTitleFrame`, `\ConferenceTitleFrame`,
   `\OverviewFrame`, `\ReferencesFrame`, `\ThankYouFrame`, `\TitleBarOn/Off`,
   `\SetTitleHeight`, `\SectionNameOn/Off`, `\FooterOn/NumberOnly/Off`,
+  `\SetTextMargins{left}{right}` (slide body; also between frames — beamer's
+  `\setbeamersize{text margin left=…}` is read too, preamble only),
+  `\SetBarMargin{len}` (title bar and footer), `\slidetablestretch`,
   `\showdividers`/`\hidedividers`, `rows`/`row`, `progress`/`\task`,
   `publications`/`\pub`/`\pubtext`/`\pubsection`, `litreview`/`\study`/`\studytext`,
   `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header),
@@ -108,7 +111,9 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
   `\invisible`, `\alt`, `\onslide`, environments with `<…>`), `columns`, `block`,
   `\note`, class font size option
-- LaTeX: lists, `minipage`, `center`, `tabular`, math (MathJax), `\includegraphics`,
+- LaTeX: `figure` / `table` with `\caption` ("Figure n:", numbered through the deck),
+  `\label` and `\ref` (also forward references), lists, `minipage`, `center`,
+  `tabular`, math (MathJax), `\includegraphics`,
   font sizes/styles, `\color`, `\cite`, `\href`, `\def`/`\newcommand` without arguments
 - `animate`: `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 

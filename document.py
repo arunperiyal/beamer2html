@@ -11,6 +11,7 @@ from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_group, read_opt, skip_ws
 from .source import read_tex
 from .units import length_px
+from .vocabulary import REF_RE
 
 # \SetX{...} in titletemplates.sty -> DECK_CONFIG key in deck.js
 SETTERS = {"SetTitle": "title", "SetSeminar": "seminar", "SetDegree": "degree",
@@ -34,7 +35,39 @@ TEMPLATE_CMDS = {"SeminarTitleFrame": "seminar", "ConferenceTitleFrame": "confer
                  "ThankYouFrame": "thanks"}
 
 DEFAULTS = {"titleBar": "on", "sectionName": "on", "footer": "full", "titleHeight": 88,
-            "dividers": "off"}
+            "dividers": "off",
+            # side margins in px: slide body (beamer's text margins, 1cm) and
+            # title bar / footer (\SetBarMargin, 0.4cm)
+            "marginLeft": 80, "marginRight": 80, "barMargin": 32}
+
+LENGTH_CMDS = ("SetTitleHeight", "SetBarMargin", "setbeamersize", "SetTextMargins")
+
+
+def length_setting(name, s, i, state):
+    """\\SetTitleHeight{len}, \\SetBarMargin{len},
+    \\setbeamersize{text margin left=len, text margin right=len},
+    \\SetTextMargins{left}{right}: update `state`; returns the index after
+    the arguments."""
+    val, i = read_arg(s, i)
+    if name == "SetTextMargins":
+        right, i = read_arg(s, i)
+        for v, setting in ((val, "marginLeft"), (right, "marginRight")):
+            px = length_px(v)
+            if px is not None:
+                state[setting] = px
+        return i
+    if name == "setbeamersize":
+        for key, setting in (("text margin left", "marginLeft"),
+                             ("text margin right", "marginRight")):
+            v = keyvals(val).get(key)
+            px = length_px(v) if isinstance(v, str) else None
+            if px is not None:
+                state[setting] = px
+        return i
+    px = length_px(val)
+    if px is not None:
+        state["titleHeight" if name == "SetTitleHeight" else "barMargin"] = px
+    return i
 
 
 def convert(tex_path, root):
@@ -50,6 +83,7 @@ def convert(tex_path, root):
 
     config, state = read_preamble(cv, pre)
     slides = read_body(cv, body, state, default=dict(state))
+    slides = [resolve_refs(cv, sl) for sl in slides]
 
     bibs = re.findall(r"\\addbibresource\{([^}]*)\}", pre)
     bib_to_js(bibs, root)
@@ -74,6 +108,17 @@ def class_font_size(pre):
     return 11
 
 
+def resolve_refs(cv, html_text):
+    """Replace \\ref placeholders with the numbers of their \\label's."""
+    def number(m):
+        key = m.group(1)
+        if key in cv.labels:
+            return str(cv.labels[key])
+        warn("\\ref{%s}: no figure/table with this \\label (shown as ??)" % key)
+        return "??"
+    return re.sub(REF_RE, number, html_text)
+
+
 def read_preamble(cv, pre):
     """\\SetX{...} fields and the option switches before \\begin{document}."""
     config, state = {"fontSize": class_font_size(pre)}, dict(DEFAULTS)
@@ -91,11 +136,8 @@ def read_preamble(cv, pre):
         elif name in SWITCHES:
             k, v = SWITCHES[name]
             state[k] = v
-        elif name == "SetTitleHeight":
-            val, i = read_arg(pre, m.end())
-            px = length_px(val)
-            if px is not None:
-                state["titleHeight"] = px
+        elif name in LENGTH_CMDS:
+            i = length_setting(name, pre, m.end(), state)
     config.update(state)
     return config, state
 
@@ -133,11 +175,8 @@ def read_body(cv, body, state, default):
         elif tok in SWITCHES:
             k, v = SWITCHES[tok]
             state[k] = v
-        elif tok == "SetTitleHeight":
-            val, i = read_arg(body, i)
-            px = length_px(val)
-            if px is not None:
-                state["titleHeight"] = px
+        elif tok in LENGTH_CMDS:
+            i = length_setting(tok, body, i, state)
         elif tok == "note":                    # \note after a frame: belongs to it
             aside = cv.note(body, i)
             i = cv.note_end
@@ -162,7 +201,8 @@ def safe_frame(cv, s, state, default, section, number):
     the whole run."""
     title = frame_titles(s, read_opt(s, 0)[1])[0]
     log.where = 'slide %d "%s"' % (number, " ".join((title or "").split()))
-    try:
+    saved = dict(cv.macros)                    # a frame is a group: definitions made
+    try:                                       # in it end with it
         return frame_html(cv, s, state, default, section)
     except Exception as e:                     # keep converting the other slides
         warn("could not convert this slide (%s: %s)" % (type(e).__name__, e))
@@ -170,6 +210,8 @@ def safe_frame(cv, s, state, default, section, number):
         return ('<section class="slide"%s>\n<h2>%s</h2>\n<div class="figure-placeholder">'
                 'tex2html could not convert this slide -- see the warning in the '
                 'terminal</div>\n</section>' % (attrs, cv.inline(title or "")))
+    finally:
+        cv.macros = saved
 
 
 def frame_html(cv, s, state, default, section):
@@ -189,8 +231,10 @@ def frame_html(cv, s, state, default, section):
                  ("footer", "data-footer"), ("dividers", "data-dividers")):
         if state[k] != default[k]:
             attrs.append('%s="%s"' % (a, state[k]))
-    if state["titleHeight"] != default["titleHeight"]:
-        attrs.append('data-title-height="%d"' % state["titleHeight"])
+    for k, a in (("titleHeight", "data-title-height"), ("marginLeft", "data-margin-left"),
+                 ("marginRight", "data-margin-right"), ("barMargin", "data-bar-margin")):
+        if state[k] != default[k]:
+            attrs.append('%s="%d"' % (a, state[k]))
     if "plain" in opts:
         attrs.append('data-footer="off"')
 

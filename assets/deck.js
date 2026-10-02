@@ -23,7 +23,7 @@
     author1: "[Author 1]", author2: "[Author 2]", conference: "[Conference Name]",
     shortTitle: "[Short Title]", footAuthor: "[Presenter Name]",
     titleBar: "on", titleHeight: 88, sectionName: "on", footer: "full",
-    dividers: "off", fontSize: 11,
+    dividers: "off", fontSize: 11, marginLeft: 80, marginRight: 80, barMargin: 32,
     maxNames: 3,
   }, window.DECK_CONFIG || {});
 
@@ -33,6 +33,11 @@
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   document.documentElement.style.setProperty("--title-h", C.titleHeight + "px");
+  // side margins: slide body (\setbeamersize text margins), title bar/footer (\SetBarMargin)
+  const MARGINS = { marginLeft: "--body-l", marginRight: "--body-r", barMargin: "--pad-x" };
+  for (const [key, v] of Object.entries(MARGINS)) {
+    if (C[key] != null) document.documentElement.style.setProperty(v, C[key] + "px");
+  }
   document.documentElement.style.setProperty("--fs", (C.fontSize || 11) / 11);
 
   // ------------------------------------------------------------ live reload
@@ -183,6 +188,9 @@
     const h2 = s.querySelector(":scope > h2");
     const h3 = s.querySelector(":scope > h3");
     if (s.dataset.titleHeight) s.style.setProperty("--title-h", s.dataset.titleHeight + "px");
+    for (const [key, v] of Object.entries(MARGINS)) {     // data-margin-left etc.
+      if (s.dataset[key]) s.style.setProperty(v, s.dataset[key] + "px");
+    }
     const header = document.createElement("div");
     header.className = "titlebar";
     header.innerHTML = `

@@ -21,6 +21,9 @@ class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin):
     def __init__(self, root):
         self.root = root          # project folder; image paths are relative to it
         self.macros = {}          # \def\name{value}
+        self.counters = {"figure": 0, "table": 0}   # \caption numbers, deck-wide
+        self.floats = []          # open figure/table environments
+        self.labels = {}          # \label key -> number (\ref is resolved at the end)
 
     # ---------------------------------------------------------- flows
     def flow(self, s):
@@ -53,9 +56,18 @@ class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin):
     # ---------------------------------------------------------- inline
     def inline(self, s):
         """Convert text, commands, groups and math. Declarations such as
-        \\small open a <span> that is closed at the end of the current group."""
-        out, spans, i = [], 0, 0
+        \\small open a <span> that is closed at the end of the current group;
+        at a paragraph/block break (PARA) the open spans are closed and
+        reopened, so {\\scriptsize ... \\begin{table}...} applies to the block."""
+        out, opened_tags, i = [], [], 0
         s = s.replace("\r", "")
+
+        def add(piece):
+            if opened_tags and PARA in piece:
+                piece = piece.replace(PARA, "</span>" * len(opened_tags) + PARA
+                                      + "".join(opened_tags))
+            out.append(piece)
+
         while i < len(s):
             c = s[i]
             if c == "\\":
@@ -65,46 +77,49 @@ class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin):
                     continue
                 name, i = m.group(1), i + len(m.group(0))
                 res, i, opened = self.command(name, s, i)
-                out.append(res)
-                spans += opened
+                if opened:                         # res is the opening <span ...>
+                    out.append(res)
+                    opened_tags.append(res)
+                else:
+                    add(res)
             elif c == "{":
                 inner, i = read_group(s, i)
-                out.append(self.inline(inner))
+                add(self.inline(inner))
             elif c == "}":
                 i += 1
             elif c == "$":
                 if s.startswith("$$", i):
                     j = s.index("$$", i + 2)
-                    out.append("\\[" + html.escape(s[i + 2:j], quote=False) + "\\]")
+                    add("\\[" + html.escape(s[i + 2:j], quote=False) + "\\]")
                     i = j + 2
                 else:
                     j = i + 1
                     while s[j] != "$" or s[j - 1] == "\\":
                         j += 1
-                    out.append("\\(" + html.escape(s[i + 1:j], quote=False) + "\\)")
+                    add("\\(" + html.escape(s[i + 1:j], quote=False) + "\\)")
                     i = j + 1
             elif c == "~":
-                out.append("&nbsp;")
+                add("&nbsp;")
                 i += 1
             elif c == "\n" and re.match(r"\n[ \t]*\n", s[i:]):
-                out.append(PARA)
+                add(PARA)
                 i = re.match(r"\n[ \t]*\n\s*", s[i:]).end() + i
             elif s.startswith("---", i):
-                out.append("—"); i += 3
+                add("—"); i += 3
             elif s.startswith("--", i):
-                out.append("–"); i += 2
+                add("–"); i += 2
             elif s.startswith("``", i):
-                out.append("“"); i += 2
+                add("“"); i += 2
             elif s.startswith("''", i):
-                out.append("”"); i += 2
+                add("”"); i += 2
             elif c == "`":
-                out.append("‘"); i += 1
+                add("‘"); i += 1
             elif c == "'":
-                out.append("’"); i += 1
+                add("’"); i += 1
             else:
-                out.append(html.escape(c, quote=False))
+                add(html.escape(c, quote=False))
                 i += 1
-        return "".join(out) + "</span>" * spans
+        return "".join(out) + "</span>" * len(opened_tags)
 
     def expand(self, s):
         """Replace \\def'd macros in raw text (used for file paths)."""

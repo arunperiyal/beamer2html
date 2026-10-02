@@ -7,7 +7,7 @@ from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_opt
 from .units import length_css
 from .vocabulary import (CENTER, COLORS, DECLS, HFILL, IGNORE, PARA, PAUSE,
-                         SIZES, TEXT_SYMBOLS, WRAPS)
+                         REF_MARK, SIZES, TEXT_SYMBOLS, WRAPS)
 
 from .overlays import OVERLAY_CMDS
 
@@ -125,6 +125,8 @@ class CommandsMixin:
             return self.note(s, i), self.note_end, 0
 
         # ---- links, notes
+        if name == "caption":
+            return self.caption(s, i)
         if name in ("href", "url", "footnote", "label", "ref"):
             return self.reference(name, s, i)
         if name in OVERLAY_CMDS:
@@ -182,8 +184,23 @@ class CommandsMixin:
         return '<aside class="note"%s>%s</aside>' % (
             " data-item" if (opt or "").strip() == "item" else "", body)
 
+    def caption(self, s, i):
+        """\\caption[short]{text} in a figure/table: "Figure n: text"."""
+        _, i = read_opt(s, i)
+        text, i = read_arg(s, i)
+        if not self.floats:
+            warn("\\caption outside figure or table (kept as text)")
+            return self.inline(text), i, 0
+        f = self.floats[-1]
+        self.counters[f["kind"]] += 1
+        f["n"] = self.counters[f["kind"]]
+        name = {"figure": "Figure", "table": "Table"}[f["kind"]]
+        return PARA + ('<figcaption><span class="caption-name">%s&nbsp;%d:</span>&nbsp;%s</figcaption>'
+                       % (name, f["n"], self.inline(text).strip())) + PARA, i, 0
+
     def reference(self, name, s, i):
-        """\\href, \\url, \\footnote; \\label and \\ref are dropped."""
+        """\\href, \\url, \\footnote, \\label (after a \\caption: names its
+        number) and \\ref (resolved at the end of the document)."""
         if name == "href":
             url, i = read_arg(s, i)
             txt, i = read_arg(s, i)
@@ -193,6 +210,11 @@ class CommandsMixin:
             return '<a href="%s">%s</a>' % (html.escape(arg), html.escape(arg)), i, 0
         if name == "footnote":
             return '<span class="footnote">%s</span>' % self.inline(arg), i, 0
+        key = arg.strip()
+        if name == "ref":
+            return REF_MARK % html.escape(key), i, 0
+        if self.floats and self.floats[-1]["n"] is not None:    # \label after \caption
+            self.labels[key] = self.floats[-1]["n"]
         return "", i, 0
 
     def image(self, path, opts):

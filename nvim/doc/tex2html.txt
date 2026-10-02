@@ -125,6 +125,8 @@ through the fields; the default values can be accepted or typed over.
   pub        \pub[status]{key}
   note       \note{...}
   fig        \includegraphics[width=\linewidth]{figures/...}
+  figcap     figure with \caption and \label (fig:...)
+  tabcap     table with \caption above a slidetable, \label (tab:...)
   anim       animateinline + \multiframe
 
 For any other environment, the `begin` snippet of friendly-snippets gives
