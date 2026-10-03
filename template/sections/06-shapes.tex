@@ -7,7 +7,9 @@
 % Kinds: rect, ellipse (circle), line, arrow, text ({x,y}{text}).
 % Options: color (xcolor: red, green!60!black, ...), width (1pt), fill,
 % opacity (0.25), dashed, rounded, label, labelpos (above, below, left,
-% right), textsize. Shapes never move anything on the slide.
+% right), textsize. For text: fill = a background (opaque unless opacity
+% is given), border = a frame (border=black for another colour than the text).
+% Shapes never move anything on the slide.
 \begin{frame}{Shapes}{over a figure}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -25,7 +27,7 @@
           \shape[color=green!60!black]{rect}{0.43,0.12}{0.55,0.84}
           \shape<2->[color=blue, dashed, label=lowest A]{ellipse}{0.75,0.09}{0.86,0.25}
           \shape<3->[color=orange, width=1.5pt]{arrow}{0.25,0.95}{0.42,0.80}
-          \shape<3->[color=orange]{text}{0.2,0.97}{selected}
+          \shape<3->[color=orange, fill=white, border]{text}{0.2,0.97}{selected}
         \end{annotate}
         \caption{\texttt{rect}, then \texttt{ellipse} and \texttt{arrow} on later steps.}
       \end{figure}
