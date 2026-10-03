@@ -11,7 +11,7 @@ from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_group, read_opt, skip_ws
 from .source import read_tex
 from .units import length_px
-from .vocabulary import REF_RE
+from .vocabulary import REF_RE, SIZES
 
 # \SetX{...} in titletemplates.sty -> DECK_CONFIG key in deck.js
 SETTERS = {"SetTitle": "title", "SetSeminar": "seminar", "SetDegree": "degree",
@@ -95,6 +95,18 @@ def convert(tex_path, root):
 CLASS_SIZES = {"smaller": 10, "bigger": 12}
 
 
+# packages that set Times math -> MathJax's Times-like font (TeX Gyre Termes);
+# anything else gets its New Computer Modern font
+TIMES_MATH = ("newtxmath", "mathptmx", "txfonts", "pxfonts", "times", "newtx")
+
+
+def math_font(pre):
+    """MathJax font matching the preamble's math font."""
+    pkgs = re.findall(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}", pre)
+    names = {p.strip() for group in pkgs for p in group.split(",")}
+    return "mathjax-termes" if names & set(TIMES_MATH) else "mathjax-newcm"
+
+
 def class_font_size(pre):
     """Base font size in pt from \\documentclass[..., 8pt]{beamer} (default 11)."""
     m = re.search(r"\\documentclass\s*\[([^\]]*)\]", pre)
@@ -121,7 +133,8 @@ def resolve_refs(cv, html_text):
 
 def read_preamble(cv, pre):
     """\\SetX{...} fields and the option switches before \\begin{document}."""
-    config, state = {"fontSize": class_font_size(pre)}, dict(DEFAULTS)
+    config, state = {"fontSize": class_font_size(pre),
+                     "mathFont": math_font(pre)}, dict(DEFAULTS)
     i = 0
     for m in re.finditer(r"\\([A-Za-z]+)", pre):
         if m.start() < i:
@@ -138,8 +151,25 @@ def read_preamble(cv, pre):
             state[k] = v
         elif name in LENGTH_CMDS:
             i = length_setting(name, pre, m.end(), state)
+    size = caption_size(pre)
+    if size:
+        config["captionSize"] = size
     config.update(state)
     return config, state
+
+
+def caption_size(pre):
+    """Caption font size relative to the text, from \\SetCaptionSize{\\small}
+    or \\setbeamerfont{caption}{size=\\small} (the last one wins)."""
+    size = None
+    for m in re.finditer(r"\\SetCaptionSize\s*\{\s*\\(\w+)\s*\}"
+                         r"|\\setbeamerfont\s*\{caption\}\s*\{[^}]*?size\s*=\s*\\(\w+)", pre):
+        name = m.group(1) or m.group(2)
+        if name in SIZES:
+            size = SIZES[name]
+        else:
+            warn("unknown caption size \\%s (ignored)" % name)
+    return size
 
 
 def read_body(cv, body, state, default):

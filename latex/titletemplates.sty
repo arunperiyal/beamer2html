@@ -197,6 +197,9 @@
   % title (+ subtitle) block
   \sbox{\@ttTitleBox}{\parbox{\@ttTitleWd}{\raggedright
     \usebeamerfont{frametitle}%
+    % "(cont.)" of split frames in the title's colour (beamer would use blue)
+    \if@ttbar\setbeamercolor{frametitle continuation}{fg=bannertext}%
+    \else\setbeamercolor{frametitle continuation}{fg=black}\fi
     \if@ttbar\color{bannertext}\insertframetitle
     \else
       % underline: a rule as wide as the title (or the full title width
@@ -316,7 +319,9 @@
 \setbeamercolor{bibliography entry title}{fg=black}
 \setbeamercolor{bibliography entry location}{fg=darkgray}
 \setbeamercolor{bibliography entry note}{fg=darkgray}
-\setbeamertemplate{frametitle continuation}{(cont.)}
+% "(cont.)" from the second part of a split frame on; the first keeps its title
+\setbeamertemplate{frametitle continuation}{%
+  \ifnum\insertcontinuationcount>1 (cont.)\fi}
 \newcommand{\ReferencesFrame}[1][References]{%
   {\@ttsecnamefalse   % not part of any section
    \begin{frame}[t,allowframebreaks]{#1}
@@ -767,6 +772,9 @@
    \usebeamertemplate{caption label separator}}%
   \insertcaption\par}
 \setbeamerfont{caption}{size=\small}
+% caption size for the whole deck: \SetCaptionSize{\footnotesize}
+% (same as \setbeamerfont{caption}{size=\footnotesize}; the HTML reads both)
+\newcommand{\SetCaptionSize}[1]{\setbeamerfont{caption}{size=#1}}
 \setbeamerfont{caption name}{series=\bfseries}
 \setbeamercolor{caption name}{fg=bannerblue}
 \setlength{\abovecaptionskip}{4pt}

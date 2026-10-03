@@ -28,7 +28,7 @@
   }, window.DECK_CONFIG || {});
 
   const deck = document.querySelector(".deck");
-  const slides = Array.from(deck.querySelectorAll(":scope > section.slide"));
+  let slides = Array.from(deck.querySelectorAll(":scope > section.slide"));
   const esc = (s) => String(s).replace(/[&<>"]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -39,6 +39,7 @@
     if (C[key] != null) document.documentElement.style.setProperty(v, C[key] + "px");
   }
   document.documentElement.style.setProperty("--fs", (C.fontSize || 11) / 11);
+  if (C.captionSize) document.documentElement.style.setProperty("--caption-size", C.captionSize + "em");
 
   // ------------------------------------------------------------ live reload
   // Decks built with `tex2html --watch` check two files once a second:
@@ -81,21 +82,35 @@
 
   // ------------------------------------------------------------ citations
   // <cite data-ref="key1,key2"></cite>  ->  [1, 2]   (numbered in order of
-  // first citation, consecutive numbers compressed: [2-4])
+  // first citation, consecutive numbers compressed: [2-4]).
+  // data-style="text" (\textcite): "Liu et al. [13] and Xie et al. [14]";
+  // "author" (\citeauthor): "Liu et al.". Unknown keys are shown in bold
+  // and get no number, as with biblatex.
   const bib = parseBibtex(window.BIBTEX || "");
   const order = [];
+  const number = (k) => {
+    let i = order.indexOf(k);
+    if (i < 0) { order.push(k); i = order.length - 1; }
+    return i + 1;
+  };
+  const missing = (k) => `<b>${esc(k)}</b>`;
   deck.querySelectorAll("cite[data-ref]").forEach((el) => {
     const keys = el.dataset.ref.split(",").map((k) => k.trim()).filter(Boolean);
-    const nums = keys.map((k) => {
-      if (!bib[k]) console.warn("deck.js: unknown reference", k);
-      let i = order.indexOf(k);
-      if (i < 0) { order.push(k); i = order.length - 1; }
-      return i + 1;
-    }).sort((a, b) => a - b);
-    if (el.dataset.style === "authoryear") {       // literature table: "A et al. (Y)"
-      el.innerHTML = keys.map((k) => bib[k] ? authorYear(bib[k]) : esc(k)).join("<br>");
+    keys.filter((k) => !bib[k]).forEach((k) => console.warn("deck.js: unknown reference", k));
+    const style = el.dataset.style;
+    if (style === "authoryear") {                  // literature table: "A et al. (Y)"
+      keys.forEach((k) => { if (bib[k]) number(k); });
+      el.innerHTML = keys.map((k) => bib[k] ? authorYear(bib[k]) : missing(k)).join("<br>");
       return;
     }
+    if (style === "text" || style === "author") {
+      const found = keys.filter((k) => bib[k]);   // in number order, as sortcites
+      if (style === "text") found.forEach(number), found.sort((a, b) => number(a) - number(b));
+      el.innerHTML = andList([...found.map((k) => citeNames(bib[k]) +
+        (style === "text" ? ` [${number(k)}]` : "")), ...keys.filter((k) => !bib[k]).map(missing)]);
+      return;
+    }
+    const nums = keys.filter((k) => bib[k]).map(number).sort((a, b) => a - b);
     const parts = [];
     for (let i = 0; i < nums.length; i++) {
       let j = i;
@@ -104,7 +119,8 @@
                : j > i ? `${nums[i]}, ${nums[j]}` : `${nums[i]}`);
       i = j;
     }
-    el.innerHTML = `[${parts.join(", ")}]`;
+    el.innerHTML = [nums.length ? `[${parts.join(", ")}]` : "",
+                    ...keys.filter((k) => !bib[k]).map(missing)].filter(Boolean).join(" ");
   });
 
   // ------------------------------------------------------------ publications
@@ -213,12 +229,43 @@
     if (footer !== "off") {
       const f = document.createElement("div");
       f.className = "footer " + footer;
-      f.innerHTML = footer === "number" ? `<span>${i + 1}</span>`
+      f.innerHTML = footer === "number" ? `<span class="num"></span>`
         : `<span>${C.footAuthor}</span><span>${C.shortTitle}</span>
-           <span>${i + 1} / ${slides.length}</span>`;
+           <span class="num"></span>`;
       s.appendChild(f);
     }
   });
+
+  // ------------------------------------------------------------ long reference lists
+  // Like beamer's allowframebreaks: entries that do not fit move on to
+  // "<title> (cont.)" slides, as many as needed.
+  slides.filter((s) => s.dataset.template === "references").forEach(splitReferences);
+  slides = Array.from(deck.querySelectorAll(":scope > section.slide"));
+  slides.forEach((s, i) => s.querySelectorAll(".footer .num").forEach((n) => {
+    n.textContent = n.parentNode.classList.contains("number") ? i + 1
+      : `${i + 1} / ${slides.length}`;
+  }));
+
+  function splitReferences(s) {
+    const body = s.querySelector(".body"), list = s.querySelector("ol.references");
+    if (!body || !list) return;
+    const moved = [];
+    s.classList.add("active");                   // measure with the slide laid out
+    while (body.scrollHeight > body.clientHeight + 1 && list.children.length > 1) {
+      moved.unshift(list.lastElementChild);
+      list.lastElementChild.remove();
+    }
+    s.classList.remove("active");
+    if (!moved.length) return;
+    const next = s.cloneNode(true);
+    next._section = s._section;
+    next.querySelector("ol.references").replaceChildren(...moved);
+    const title = next.querySelector(".titlebar h2 span");
+    if (title && !s._continued) title.innerHTML += " (cont.)";
+    next._continued = true;
+    s.after(next);
+    splitReferences(next);
+  }
 
   // ------------------------------------------------------------ steps
   // Step s of a slide corresponds to beamer overlay s+1.
@@ -418,7 +465,10 @@
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((el) => {
       const c = d.createElement(el.tagName);
       if (el.tagName === "LINK") { c.rel = "stylesheet"; c.href = el.href; }
-      else c.textContent = el.textContent;
+      else {                                       // live rules: MathJax adds some by insertRule
+        try { c.textContent = [...el.sheet.cssRules].map((r) => r.cssText).join("\n"); }
+        catch (e) { c.textContent = el.textContent; }
+      }
       d.head.appendChild(c);
     });
     const css = d.createElement("style");
@@ -686,7 +736,7 @@
     return out;
   }
   function cleanTeX(s) {
-    return s.replace(/\\&/g, "&").replace(/\\%/g, "%").replace(/--/g, "–")
+    return s.replace(/\\relax\s*/g, "").replace(/\\&/g, "&").replace(/\\%/g, "%").replace(/--/g, "–")
             .replace(/~/g, " ").replace(/[{}]/g, "").replace(/\s+/g, " ");
   }
   // "Surname (Year)", "A & B (Year)" or "A et al. (Year)", as \citeauthor in
@@ -699,12 +749,25 @@
     return `${who} (${esc(e.year || "n.d.")})`;
   }
 
+  // surnames as biblatex prints them in citations (maxcitenames = 3)
+  function citeNames(e) {
+    const last = (e.author || e.editor || "").split(/\s+and\s+/).filter(Boolean)
+      .map((n) => esc(n.includes(",") ? n.split(",")[0].trim() : n.trim().split(" ").pop()));
+    return last.length > 3 ? last[0] + " et al." : andList(last);
+  }
+  // "A", "A and B", "A, B, and C"
+  function andList(xs) {
+    return xs.length < 3 ? xs.join(" and ")
+      : xs.slice(0, -1).join(", ") + ", and " + xs[xs.length - 1];
+  }
+
   function formatNames(s, max) {
     const names = s.split(/\s+and\s+/).map((n) => {
       let last, first;
       if (n.includes(",")) [last, first] = n.split(",").map((x) => x.trim());
       else { const p = n.trim().split(" "); last = p.pop(); first = p.join(" "); }
       const init = (first || "").split(/[\s.]+/).filter(Boolean)
+        .flatMap((w) => /^[A-Z]{2,3}$/.test(w) ? w.split("") : [w])   // "RK" -> R. K.
         .map((w) => w.split("-").map((x) => x[0] + ".").join("-")).join(" ");
       return (init ? init + " " : "") + last;
     });
@@ -713,7 +776,7 @@
       ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names[0];
   }
   function formatEntry(e, max) {
-    const A = e.author ? esc(formatNames(e.author, max)) + ". " : "";
+    const A = e.author ? esc(formatNames(e.author, max)).replace(/\.?$/, ". ") : "";
     const T = esc(e.title || "");
     const y = esc(e.year || ""), pp = e.pages ? ", " + esc(e.pages) : "";
     switch (e.type) {

@@ -24,15 +24,17 @@ window.DECK_CONFIG = {config};
 </div>
 <script src="html/references.js"></script>
 <script src="html/deck.js"></script>
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({{
-    tex2jax: {{ inlineMath: [["\\\\(", "\\\\)"]], displayMath: [["\\\\[", "\\\\]"], ["$$", "$$"]],
-               processEscapes: true, processEnvironments: true }},
-    CommonHTML: {{ scale: 100 }},
-    showMathMenu: false, messageStyle: "none",
-  }});
+<script>
+window.MathJax = {{
+  loader: {{ paths: {{ mathjax: "html/vendor/mathjax", fonts: "html/vendor/mathjax/fonts" }} }},
+  tex: {{ inlineMath: [["\\\\(", "\\\\)"]], displayMath: [["\\\\[", "\\\\]"], ["$$", "$$"]],
+         processEscapes: true, processEnvironments: true }},
+  output: {{ font: "{math_font}" }},
+  options: {{ enableMenu: false, enableEnrichment: false, enableSpeech: false,
+             enableBraille: false, enableExplorer: false }},
+}};
 </script>
-<script src="html/vendor/mathjax/MathJax.js?config=TeX-AMS_CHTML"></script>
+<script src="html/vendor/mathjax/tex-chtml-nofont.js"></script>
 </body>
 </html>
 """
@@ -42,4 +44,5 @@ def render_page(src, config, slides):
     title = re.sub(r"<[^>]+>", " ", config.get("title", "Presentation"))
     return PAGE.format(src=src, title=html.escape(" ".join(title.split())),
                        config=json.dumps(config, indent=2, ensure_ascii=False),
-                       slides="\n\n".join(slides))
+                       slides="\n\n".join(slides),
+                       math_font=config.get("mathFont", "mathjax-newcm"))

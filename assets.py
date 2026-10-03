@@ -36,6 +36,16 @@ def install_assets(root):
             if not os.path.isfile(dst) or not filecmp.cmp(src, dst, shallow=False):
                 shutil.copy2(src, dst)
                 copied += 1
+    # html/vendor/ is all ours: drop files a newer version no longer has
+    # (e.g. MathJax 2 after the move to MathJax 4)
+    vendor = os.path.join(dest_root, "vendor")
+    for dirpath, _, files in os.walk(vendor, topdown=False):
+        src_dir = os.path.join(ASSETS, os.path.relpath(dirpath, dest_root))
+        for name in files:
+            if not os.path.isfile(os.path.join(src_dir, name)):
+                os.remove(os.path.join(dirpath, name))
+        if not os.listdir(dirpath) and not os.path.isdir(src_dir):
+            os.rmdir(dirpath)
     return copied
 
 
