@@ -34,7 +34,6 @@ TEXT_SYMBOLS = {"&": "&amp;", "%": "%", "_": "_", "$": "$", "#": "#",
                 " ": " ", "!": "", "-": "&shy;", "/": ""}
 
 # colour names from titletemplates.sty -> CSS (others pass through: red, gray...)
-COLORS = {"bannerblue": "var(--blue)", "bannertext": "#fff"}
 
 # \pause -> empty marker element; html/deck.js hides whatever follows the
 # k-th marker of a slide until step k is reached.

@@ -418,3 +418,24 @@ cite a { color: var(--blue); text-decoration: none; }
   .anim-controls, .hud { display: none !important; }
   /* steps: deck.js shows each slide at its last step before printing */
 }
+
+/* ------------------------------------------------------------ shapes */
+/* \begin{annotate} / \shape / \slideshape: deck.js draws an SVG layer over
+   the annotated element or the slide; it never changes the layout */
+.annotate { position: relative; }
+.shape-layer { position: absolute; pointer-events: none; z-index: 5; }
+.shape-layer > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.shape-label {
+  position: absolute; white-space: nowrap; line-height: 1.15; padding: 5px;
+}
+.shape-label.text { padding: 3px; }
+.shape-grid line { stroke: rgba(211, 54, 130, 0.6); }
+.shape-grid-label {
+  position: absolute; font: 11px/1 sans-serif; color: rgb(211, 54, 130);
+  background: rgba(255, 255, 255, 0.7); padding: 1px;
+}
+.shape-grid-label.x { transform: translate(-50%, 2px); }
+.shape-grid-label.y { transform: translate(calc(-100% - 2px), -50%); }
+.shape-grid-label.x.inside { transform: translate(-50%, calc(-100% - 2px)); }
+.shape-grid-label.y.inside { transform: translate(2px, -50%); }
+

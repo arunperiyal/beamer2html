@@ -128,6 +128,9 @@ through the fields; the default values can be accepted or typed over.
   figcap     figure with \caption and \label (fig:...)
   tabcap     table with \caption above a slidetable, \label (tab:...)
   anim       figure with an animation environment (\animpanel, \N) and caption
+  annot      figure with an annotate environment (grid on) and a \shape
+  shape      \shape[color=..]{kind}{x1,y1}{x2,y2}
+  sshape     \slideshape[color=..]{kind}{x1,y1}{x2,y2}
 
 For any other environment, the `begin` snippet of friendly-snippets gives
 \begin{name} ... \end{name}, typing the name once (load friendly-snippets

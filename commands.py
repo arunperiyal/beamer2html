@@ -2,11 +2,12 @@
 import html
 import re
 
+from .colors import css_color
 from .images import resolve_image
 from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_opt
 from .units import length_css
-from .vocabulary import (CENTER, COLORS, DECLS, HFILL, IGNORE, PARA, PAUSE,
+from .vocabulary import (CENTER, DECLS, HFILL, IGNORE, PARA, PAUSE,
                          REF_MARK, SIZES, TEXT_SYMBOLS, WRAPS)
 
 from .overlays import OVERLAY_CMDS
@@ -51,11 +52,11 @@ class CommandsMixin:
             return '<span style="%s">' % DECLS[name], i, 1
         if name == "color":
             col, i = read_arg(s, i)
-            return '<span style="color:%s">' % COLORS.get(col, col), i, 1
+            return '<span style="color:%s">' % css_color(col), i, 1
         if name == "textcolor":
             col, i = read_arg(s, i)
             txt, i = read_arg(s, i)
-            return '<span style="color:%s">%s</span>' % (COLORS.get(col, col), self.inline(txt)), i, 0
+            return '<span style="color:%s">%s</span>' % (css_color(col), self.inline(txt)), i, 0
         if name in WRAPS:
             txt, i = read_arg(s, i)
             tag = WRAPS[name]
@@ -129,6 +130,12 @@ class CommandsMixin:
         if name == "note":
             return self.note(s, i), self.note_end, 0
 
+        # ---- shapes (\begin{annotate} is in environments.py)
+        if name in ("shape", "slideshape"):
+            return self.shape(name, s, i)
+        if name == "slidegrid":
+            return '<span class="slide-grid"></span>', i, 0
+
         # ---- links, notes
         if name == "caption":
             return self.caption(s, i)
@@ -189,6 +196,41 @@ class CommandsMixin:
         return '<aside class="note"%s>%s</aside>' % (
             " data-item" if (opt or "").strip() == "item" else "", body)
 
+    def shape(self, name, s, i):
+        """\\shape<spec>[options]{kind}{x1,y1}{x2,y2} (in annotate) and
+        \\slideshape (on the slide): a placeholder span that deck.js turns
+        into SVG. Coordinates are fractions, origin bottom left."""
+        spec, i = self.read_spec(s, i)
+        opt, i = read_opt(s, i)
+        kind, i = read_arg(s, i)
+        p1, i = read_arg(s, i)
+        p2, i = read_arg(s, i)
+        kind = kind.strip()
+        if kind not in SHAPES:
+            warn("\\%s: unknown shape '%s' (use %s)" % (name, kind, ", ".join(SHAPES)))
+            return "", i, 0
+        o = keyvals(opt)
+        size = (o.get("textsize") or "\\small").strip().lstrip("\\")
+        attrs = {
+            "kind": "ellipse" if kind == "circle" else kind,
+            "p1": point(p1),
+            "p2": "" if kind == "text" else point(p2),
+            "color": css_color(o.get("color") or "red"),
+            "width": shape_px(o.get("width"), 1),
+            "fill": "" if o.get("fill") in (None, True, "none") else css_color(o["fill"]),
+            "opacity": o.get("opacity") or "0.25",
+            "dashed": "" if o.get("dashed") in (None, "false") else "1",
+            "rounded": shape_px(o.get("rounded") if o.get("rounded") is not True else "3pt", 0),
+            "labelpos": o.get("labelpos") or "above",
+            "size": SIZES.get(size, 0.9),
+        }
+        text = p2 if kind == "text" else (o.get("label") if o.get("label") is not True else "")
+        cls = "shape" + (" slide-shape" if name == "slideshape" else "")
+        data = "".join(' data-%s="%s"' % (k, html.escape(str(v))) for k, v in attrs.items()
+                       if v != "")
+        return '<span class="%s"%s%s>%s</span>' % (
+            cls, data, self.spec_attr(spec), self.inline(text or "").strip()), i, 0
+
     def caption(self, s, i):
         """\\caption[short]{text} in a figure/table: "Figure n: text"."""
         _, i = read_opt(s, i)
@@ -235,3 +277,25 @@ class CommandsMixin:
             warn("image not found: %s" % path)
             found = path
         return '<img src="%s" style="%s" alt="">' % (html.escape(found), ";".join(style))
+
+
+SHAPES = ("rect", "ellipse", "circle", "line", "arrow", "text")
+
+
+def point(arg):
+    """'0.45, 0.05' -> '0.45,0.05' (fractions; warns on anything else)"""
+    try:
+        x, y = (float(v) for v in arg.split(","))
+        return "%g,%g" % (x, y)
+    except ValueError:
+        warn("shape point not understood: {%s} (expected {x,y})" % arg)
+        return "0,0"
+
+
+def shape_px(length, default_pt):
+    """Line width / corner radius in slide pixels (default given in pt)."""
+    css = length_css(length or "%gpt" % default_pt, quiet=True)
+    if css and css.endswith("px"):
+        return "%.2f" % float(css[:-2])
+    warn("shape length not understood: %s" % length)
+    return "%.2f" % float(length_css("%gpt" % default_pt)[:-2])
