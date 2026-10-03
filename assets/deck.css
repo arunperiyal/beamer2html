@@ -268,7 +268,7 @@ figure.float { margin: 0.2em 0; }
 figure.float .p { margin: 0; }
 .float figcaption:not(.anim-label) {
   display: table; margin: 4px auto 2px; text-align: left;
-  font-size: 0.91em; line-height: 1.3;
+  font-size: var(--caption-size, 0.91em); line-height: 1.3;   /* \SetCaptionSize */
 }
 .float .caption-name { color: var(--blue); font-weight: bold; }
 

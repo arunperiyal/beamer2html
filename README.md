@@ -46,7 +46,7 @@ project:
 | `titletemplates.sty` | `latex/` (the beamer templates)   |
 | `html/deck.js`, `html/deck.css`, `html/vendor/mathjax/` | `assets/` |
 | `html/references.js` | the `\addbibresource` `.bib` file |
-| `html/cache/*.png`   | PDF figures, converted with `pdftoppm` |
+| `html/cache/*.svg`, `*.png` | PDF figures: vector ones as SVG (`pdftocairo`, sharp at any size), ones with embedded bitmaps as PNG (`pdftoppm`, at least 2000 px on the longer side) |
 
 A project copy of `titletemplates.sty` that was edited in the project is kept as
 `titletemplates.sty.bak` before being replaced. Make lasting changes here, in
@@ -102,19 +102,22 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `\SetTitleHeight`, `\SectionNameOn/Off`, `\FooterOn/NumberOnly/Off`,
   `\SetTextMargins{left}{right}` (slide body; also between frames — beamer's
   `\setbeamersize{text margin left=…}` is read too, preamble only),
-  `\SetBarMargin{len}` (title bar and footer), `\slidetablestretch`,
+  `\SetBarMargin{len}` (title bar and footer), `\SetCaptionSize{\footnotesize}`
+  (or beamer's `\setbeamerfont{caption}{size=…}`; preamble), `\slidetablestretch`,
   `\showdividers`/`\hidedividers`, `rows`/`row`, `progress`/`\task`,
   `publications`/`\pub`/`\pubtext`/`\pubsection`, `litreview`/`\study`/`\studytext`,
   `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header),
-  `\FigurePlaceholder`
+  `\FigurePlaceholder`; a long `\ReferencesFrame` list continues on
+  "References (cont.)" slides, in the PDF and the HTML
 - beamer: frames (`[t]`, `[plain]`, `\frametitle`), `\section`, `\pause`, overlay
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
   `\invisible`, `\alt`, `\onslide`, environments with `<…>`), `columns`, `block`,
   `\note`, class font size option
 - LaTeX: `figure` / `table` with `\caption` ("Figure n:", numbered through the deck),
   `\label` and `\ref` (also forward references), lists, `minipage`, `center`,
-  `tabular`, math (MathJax), `\includegraphics`,
-  font sizes/styles, `\color`, `\cite`, `\href`, `\def`/`\newcommand` without arguments
+  `tabular`, math (MathJax 4, in a Times font when the preamble loads `newtxmath`,
+  `mathptmx`, `txfonts` or `times`, else New Computer Modern), `\includegraphics`,
+  font sizes/styles, `\color`, `\cite`, `\textcite`/`\citet`, `\citeauthor`, `\href`, `\def`/`\newcommand` without arguments
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
   (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,
@@ -139,9 +142,9 @@ defined in the document, `\alert<…>`.
 | `assets.py` | installs `assets/` and `latex/` into projects |
 | `pack.py` | `--pack`: zip of the deck and the files it uses |
 | `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
-| `assets/` | browser side: `deck.js`, `deck.css`, MathJax 2 (Apache-2.0, see `vendor/mathjax/COPYRIGHT`) |
+| `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
 | `latex/titletemplates.sty` | the beamer templates |
 | `template/` | starter deck using every template |
 | `nvim/` | Neovim plugin (`plugin/`, `lua/tex2html/`, `doc/`) |
 
-Requires Python 3.8+; `pdftoppm` (poppler) for PDF figures.
+Requires Python 3.8+; poppler (`pdftocairo`, `pdftoppm`, `pdfimages`, `pdfinfo`) for PDF figures.

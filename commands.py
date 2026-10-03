@@ -11,7 +11,9 @@ from .vocabulary import (CENTER, COLORS, DECLS, HFILL, IGNORE, PARA, PAUSE,
 
 from .overlays import OVERLAY_CMDS
 
-CITE_CMDS = ("cite", "citep", "citet", "parencite", "footcite", "autocite")
+CITE_CMDS = ("cite", "citep", "parencite", "footcite", "autocite")
+TEXTCITE_CMDS = ("textcite", "Textcite", "citet", "Citet")    # "Liu et al. [13]"
+AUTHORCITE_CMDS = ("citeauthor", "Citeauthor")                # "Liu et al."
 PUB_STATUSES = ("published", "accepted", "review", "submitted", "preparation")
 
 
@@ -60,11 +62,14 @@ class CommandsMixin:
             return "<%s>%s</%s>" % (tag, self.inline(txt), tag), i, 0
 
         # ---- citations, figures
-        if name in CITE_CMDS:
+        if name in CITE_CMDS + TEXTCITE_CMDS + AUTHORCITE_CMDS:
             _, i = read_opt(s, i)
             _, i = read_opt(s, i)
             keys, i = read_arg(s, i)
-            return '<cite data-ref="%s"></cite>' % html.escape(keys.replace(" ", "")), i, 0
+            style = (' data-style="text"' if name in TEXTCITE_CMDS
+                     else ' data-style="author"' if name in AUTHORCITE_CMDS else "")
+            return '<cite data-ref="%s"%s></cite>' % (
+                html.escape(keys.replace(" ", "")), style), i, 0
         if name == "includegraphics":
             opt, i = read_opt(s, i)
             path, i = read_arg(s, i)
