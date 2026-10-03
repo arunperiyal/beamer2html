@@ -114,9 +114,10 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   origin bottom left), `\slideshape` (fractions of the slide) and `\slidegrid`.
   Kinds `rect`, `ellipse`/`circle`, `line`, `arrow`, `text` (`{x,y}{text}`);
   options `color` (xcolor, e.g. `green!60!black`), `width`, `fill`, `opacity`,
-  `dashed`, `rounded`, `label`, `labelpos`, `textsize`. The grid (0.1 steps;
-  also on while `\showdividers`) helps read off coordinates. Shapes never
-  change the layout.
+  `dashed`, `rounded`, `label`, `labelpos`, `textsize`; for `text`, `fill` is a
+  background (opaque by default) and `border` (or `border=<colour>`) a frame.
+  The grid (0.1 steps; also on while `\showdividers`) helps read off
+  coordinates. Shapes never change the layout.
 - beamer: frames (`[t]`, `[plain]`, `\frametitle`), `\section`, `\pause`, overlay
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
   `\invisible`, `\alt`, `\onslide`, environments with `<…>`), `columns`, `block`,

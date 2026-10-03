@@ -391,6 +391,13 @@
           label.style.top = at[1] + "px";
           label.style.transform = `translate(${at[2]}, ${at[3]})`;
           label.classList.toggle("text", d.kind === "text");
+          if (d.kind === "text") {                   // fill = background, border = frame
+            label.style.background = d.fill
+              ? `color-mix(in srgb, ${d.fill} ${100 * (+d.opacity || 1)}%, transparent)` : "";
+            label.style.border = d.border ? `${sw}px ${d.dashed ? "dashed" : "solid"} ${d.border}` : "";
+            label.style.borderRadius = d.border || d.fill ? `${+d.rounded || 0}px` : "";
+            label.classList.toggle("boxed", !!(d.fill || d.border));
+          }
         }
       });
     };

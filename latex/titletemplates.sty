@@ -973,19 +973,22 @@
 %   \slidegrid                                  coordinate grid on this slide
 % Kinds: rect, ellipse (circle), line, arrow: {x1,y1}{x2,y2} (ellipse: its
 % bounding box); text: {x,y}{text}. Options: color (red), width (1pt),
-% fill (none), opacity (0.25, of the fill), dashed, rounded (3pt), label,
+% fill (none), opacity (of the fill: 0.25, text 1), dashed, rounded (3pt),
+% border (text only: a frame, in the text colour or border=<colour>), label,
 % labelpos (above/below/left/right), textsize (\small). <spec> as in beamer.
 % Shapes never change the layout. annotate shows a grid (0.1 steps) with
 % the grid option or while \showdividers is on, to read off coordinates.
 \usetikzlibrary{arrows.meta}
 \newif\ifttsh@dashed
 \def\ttsh@none{none}
+\def\ttsh@true{true}
 \newcommand{\@ttShapeStyle}{%
   \tikzset{ttshape/.style={draw=\ttsh@color, line width=\ttsh@width,
                            rounded corners=\ttsh@rounded}}%
   \ifttsh@dashed\tikzset{ttshape/.append style={dashed}}\fi
   \ifx\ttsh@fill\ttsh@none\else
-    \tikzset{ttshape/.append style={fill=\ttsh@fill, fill opacity=\ttsh@opacity}}\fi}
+    \tikzset{ttshape/.append style={fill=\ttsh@fill,
+      fill opacity=\ifx\ttsh@opacity\@empty 0.25\else\ttsh@opacity\fi}}\fi}
 \newcommand{\@ttShapeLabel}[3]{% anchor, x, y
   \ifx\ttsh@label\@empty\else
     \node[anchor=#1, text=\ttsh@color, font=\ttsh@size, inner sep=2pt]
@@ -1003,8 +1006,19 @@
   \@ttShapeLabelAt}
 \newcommand{\@ttShapeLine}[1]{\@ttShapeStyle
   \draw[ttshape, fill=none, #1] (\ttsh@xa,\ttsh@ya) -- (\ttsh@xb,\ttsh@yb);\@ttShapeLabelAt}
+% text: fill = background (opaque unless opacity is given), border = frame
+% (bare: in the text colour) drawn with width / dashed / rounded
 \newcommand{\@ttShapeText}[1]{%
-  \node[text=\ttsh@color, font=\ttsh@size, inner sep=1pt] at (\ttsh@xa,\ttsh@ya) {#1};}
+  \tikzset{ttshape/.style={text=\ttsh@color, font=\ttsh@size, inner sep=1pt}}%
+  \ifx\ttsh@fill\ttsh@none\else
+    \tikzset{ttshape/.append style={inner sep=2.5pt, fill=\ttsh@fill, text opacity=1,
+      fill opacity=\ifx\ttsh@opacity\@empty 1\else\ttsh@opacity\fi}}\fi
+  \ifx\ttsh@border\ttsh@none\else
+    \ifx\ttsh@border\ttsh@true\let\ttsh@border\ttsh@color\fi
+    \tikzset{ttshape/.append style={inner sep=2.5pt, draw=\ttsh@border,
+      line width=\ttsh@width, rounded corners=\ttsh@rounded}}%
+    \ifttsh@dashed\tikzset{ttshape/.append style={dashed}}\fi\fi
+  \node[ttshape] at (\ttsh@xa,\ttsh@ya) {#1};}
 % grid over \ttsh@W x \ttsh@H (origin bottom left, shifted by \ttsh@yo);
 % numbers outside an element, inside the page edge for \slidegrid
 \def\ttsh@xanchor{north}\def\ttsh@yanchor{east}
@@ -1051,7 +1065,10 @@
     fill     .tl_set:N   = \ttsh@fill,
     fill     .initial:n  = none,
     opacity  .tl_set:N   = \ttsh@opacity,
-    opacity  .initial:n  = 0.25,
+    opacity  .initial:n  = ,
+    border   .tl_set:N   = \ttsh@border,
+    border   .initial:n  = none,
+    border   .default:n  = true,
     dashed   .code:n     = { \str_if_eq:nnTF {#1} {false}
                                { \ttsh@dashedfalse } { \ttsh@dashedtrue } },
     dashed   .default:n  = true,

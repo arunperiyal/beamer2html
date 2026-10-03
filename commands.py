@@ -225,7 +225,10 @@ class CommandsMixin:
             "color": css_color(o.get("color") or "red"),
             "width": shape_px(o.get("width"), 1),
             "fill": "" if o.get("fill") in (None, True, "none") else css_color(o["fill"]),
-            "opacity": o.get("opacity") or "0.25",
+            "opacity": o.get("opacity") or ("1" if kind == "text" else "0.25"),
+            "border": ("" if o.get("border") in (None, "none") else
+                       css_color(o.get("color") or "red") if o.get("border") is True
+                       else css_color(o["border"])),
             "dashed": "" if o.get("dashed") in (None, "false") else "1",
             "rounded": shape_px(o.get("rounded") if o.get("rounded") is not True else "3pt", 0),
             "labelpos": o.get("labelpos") or "above",
