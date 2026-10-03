@@ -1,0 +1,51 @@
+\section{Layout}
+
+% columns: widths as fractions of \textwidth; [T] aligns their tops.
+% \showdividers in main.tex outlines every column and row with its size.
+\begin{frame}{Columns}
+  \begin{columns}[T]
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Column 1}
+        \cmd{begin\{column\}\{0.32\textbackslash textwidth\}}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Column 2}
+        Widths are shares of the text width.
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Column 3}
+        \texttt{[T]} aligns the tops.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% rows: heights as fractions of the slide body; a row can hold columns,
+% which makes a grid. \begin{row}[t]{0.55} aligns the row's content to its top.
+\begin{frame}{Rows and grids}
+  \begin{rows}
+    \begin{row}{0.35}
+      \centering A row takes a share of the slide height: \cmd{begin\{row\}\{0.35\}}
+    \end{row}
+    \begin{row}[t]{0.65}
+      \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+          \FigurePlaceholder{3cm}{Row 2, column 1}
+        \end{column}
+        \begin{column}{0.48\textwidth}
+          \FigurePlaceholder{3cm}{Row 2, column 2}
+        \end{column}
+      \end{columns}
+    \end{row}
+  \end{rows}
+\end{frame}
+
+% Side margins of the slide body for the frames after it (also in the
+% preamble): \SetTextMargins{left}{right}. Here: narrow margins for one frame.
+\SetTextMargins{0.3cm}{0.3cm}
+\begin{frame}{Margins}
+  \FigurePlaceholder{4cm}{\cmd{SetTextMargins\{0.3cm\}\{0.3cm\}} before this frame: wider body}
+\end{frame}
+\SetTextMargins{1cm}{1cm}

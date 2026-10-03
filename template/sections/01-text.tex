@@ -1,0 +1,48 @@
+\section{Text, lists and math}
+
+% Frame title and optional subtitle: \begin{frame}{Title}{Subtitle}.
+% \section{...} starts a section: its name appears at the top right of the
+% slides after it and in the Overview.
+\begin{frame}{Lists}{itemize, enumerate and description}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item A bullet point
+        \item Another one, with \textbf{bold}, \emph{emphasis} and
+              \textcolor{bannerblue}{colour}
+          \begin{itemize}
+            \item A nested point
+          \end{itemize}
+      \end{itemize}
+      \begin{enumerate}
+        \item A numbered point
+        \item Another numbered point
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{description}
+        \item[Term] Its explanation
+        \item[Other] Another explanation
+      \end{description}
+      {\small Size commands work too: \cmd{small}, \cmd{footnotesize}, \ldots}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% Inline math \( ... \) or $ ... $, display math \[ ... \], and the AMS
+% environments (align, equation, ...). The class option (11pt in main.tex)
+% scales all text, math included.
+\begin{frame}{Math and blocks}
+  Inline math such as \( Re = \rho U D / \mu \) sits in the text; displayed
+  equations get their own line:
+  \[ \rho \left( \frac{\partial \mathbf{u}}{\partial t}
+       + \mathbf{u} \cdot \nabla \mathbf{u} \right)
+     = -\nabla p + \mu \nabla^2 \mathbf{u} \]
+  \begin{align}
+    m \ddot{y} + c \dot{y} + k y &= F_y(t) \\
+    \omega_n &= \sqrt{k / m}
+  \end{align}
+  \begin{block}{A block}
+    Blocks frame a key message: \cmd{begin\{block\}\{Title\}} \ldots
+  \end{block}
+\end{frame}

@@ -1,0 +1,30 @@
+\section{Figures}
+
+% figure + \caption + \label: numbered "Figure n", referenced with \ref.
+% PDF figures stay vector in the PDF and become SVG in the HTML deck.
+\begin{frame}{Figures}{with captions and labels}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{figures/sample-plot}
+        \caption{A vector figure (PDF).}\label{fig:plot}
+      \end{figure}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{figure}
+        \includegraphics[width=\linewidth]{figures/sample-field}
+        \caption{A raster figure (PNG).}\label{fig:field}
+      \end{figure}
+    \end{column}
+  \end{columns}
+  \centering Refer to them: Fig.~\ref{fig:plot} and Fig.~\ref{fig:field}.
+\end{frame}
+
+% \FigurePlaceholder[width]{height}{text}: a dashed box until the figure exists.
+% Caption size for the whole deck: \SetCaptionSize{\footnotesize} (preamble).
+\begin{frame}{Placeholders}
+  \begin{figure}
+    \FigurePlaceholder[0.6\linewidth]{4cm}{\cmd{FigurePlaceholder[0.6\textbackslash linewidth]\{4cm\}\{text\}}}
+    \caption{A placeholder keeps the layout while the figure is being made.}
+  \end{figure}
+\end{frame}

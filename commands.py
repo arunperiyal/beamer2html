@@ -149,6 +149,13 @@ class CommandsMixin:
             return "…", i, 0
         if name == "LaTeX":
             return "LaTeX", i, 0
+        if name == "textbackslash":                # TeX drops the space after it
+            while i < len(s) and s[i] in " \t":
+                i += 1
+            return "\\", i, 0
+        if name == "cmd":                          # \cmd{shape} -> \shape in monospace
+            arg, i = read_arg(s, i)
+            return "<code>\\%s</code>" % self.inline(arg).strip(), i, 0
         if name in ("item", "today", "hline") or name in IGNORE:
             return "", i, 0                            # \item: handled by list envs
         warn("unknown command \\%s (kept its text)" % name)

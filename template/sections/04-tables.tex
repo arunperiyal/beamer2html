@@ -1,0 +1,45 @@
+\section{Tables}
+
+% \begin{slidetable}[style]{colspec}: rows end with \\, the first row is the
+% header. Styles: plain (default), lines, header, striped.
+% \renewcommand{\slidetablestretch}{1.3} changes the row height.
+\begin{frame}{Tables}{four slidetable styles}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{table}
+        \caption{\texttt{plain}}
+        \begin{slidetable}{lcc}
+          Case & A & B \\
+          C1   & 1.90 & 0.38 \\
+          C2   & 1.83 & 0.33 \\
+        \end{slidetable}
+      \end{table}
+      \begin{table}
+        \caption{\texttt{header}}
+        \begin{slidetable}[header]{lcc}
+          Case & A & B \\
+          C1   & 1.90 & 0.38 \\
+          C2   & 1.83 & 0.33 \\
+        \end{slidetable}
+      \end{table}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{table}
+        \caption{\texttt{lines}}
+        \begin{slidetable}[lines]{lcc}
+          Case & A & B \\
+          C1   & 1.90 & 0.38 \\
+          C2   & 1.83 & 0.33 \\
+        \end{slidetable}
+      \end{table}
+      \begin{table}
+        \caption{\texttt{striped}}\label{tab:striped}
+        \begin{slidetable}[striped]{lcc}
+          Case & A & B \\
+          C1   & 1.90 & 0.38 \\
+          C2   & 1.83 & 0.33 \\
+        \end{slidetable}
+      \end{table}
+    \end{column}
+  \end{columns}
+\end{frame}

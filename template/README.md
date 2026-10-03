@@ -1,7 +1,9 @@
-# Starter deck
+# Starter deck and tutorial
 
-A complete example deck using every template of `titletemplates.sty`, with
-placeholders to replace. Copy it to start a new presentation:
+A working deck that shows every element of `titletemplates.sty`, one
+section per element. Each slide is a live example, and the comments above
+each frame in the `.tex` files list the options. Copy it to start a new
+presentation:
 
 ```sh
 cp -r path/to/tex2html/template my-talk
@@ -12,15 +14,23 @@ latexmk -pdf main.tex  # -> main.pdf
 
 | File | Shows |
 |------|-------|
-| `main.tex` | all settings: title-slide fields, title bar / section name / footer switches, `\showdividers`, bibliography |
-| `sections/01-introduction.tex` | bullets, citations, block, `\pause`, `\item<3->`, speaker notes, columns with a figure |
-| `sections/02-research-progress.tex` | `progress` timeline |
-| `sections/03-literature-review.tex` | `litreview` table |
-| `sections/04-method.tex` | `rows` holding `columns` (grid), display math |
-| `sections/05-results.tex` | `slidetable`; an `animateinline` example (commented out: needs frame images) |
-| `sections/06-conclusion.tex` | numbered list, block |
-| `sections/07-publications.tex` | `publications` with status badges |
+| `main.tex` | all settings: title-slide fields, title bar / section name / footer switches, margins, caption size, `\showdividers`, bibliography |
+| `sections/01-text.tex` | `itemize`, `enumerate`, `description`, text styles and sizes, math (`align`), `block` |
+| `sections/02-layout.tex` | `columns`, `rows` holding columns (a grid), `\SetTextMargins` between frames |
+| `sections/03-figures.tex` | `figure` + `\caption` + `\label` / `\ref` (PDF and PNG figures), `\FigurePlaceholder` |
+| `sections/04-tables.tex` | `slidetable` in its four styles: `plain`, `lines`, `header`, `striped` |
+| `sections/05-animations.tex` | `animation` with panels in one row and in a grid (`columns=2`), `dt`, `timebar`, `controls=hover`, `subcaptions` |
+| `sections/06-shapes.tex` | `annotate` + `\shape` over a figure (with `grid`, overlays), `\slideshape`, `\slidegrid` |
+| `sections/07-overlays.tex` | `\item<2->`, `\only`, `\uncover`, `\alt`, `\pause` |
+| `sections/08-citations.tex` | `\cite`, `\textcite`, `\citeauthor`, `litreview` table |
+| `sections/09-research.tex` | `progress` timeline, `publications` with status badges |
+| `sections/10-slide-options.tex` | `\TitleBarOff`, `\FooterNumberOnly` between frames, speaker notes (`\note`) |
 | `references.bib` | placeholder entries |
-| `figures/` | put images (and the logo, `figures/logo.png`) here |
+| `figures/` | sample images (`make_samples.py` regenerates them); put your own figures and the logo (`figures/logo.png`) here |
 
-Delete the sections you do not need and their `\input` lines in `main.tex`.
+To make it your own: fill in the `[placeholders]` in `main.tex`, write your
+sections (copy the frames you need from the tutorial ones), change the
+`\input` lines, and delete the tutorial sections and the sample figures.
+
+`\cmd{name}` (used on these slides) prints `\name` in typewriter type, for
+slides that talk about LaTeX commands.

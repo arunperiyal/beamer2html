@@ -1,0 +1,32 @@
+\section{Step-by-step reveals}
+
+% Each click shows the next step, in the PDF (one page per step) and HTML.
+% Overlay specifications say on which steps something is shown:
+%   \item<2->                  an item from step 2 on (\begin{itemize}[<+->]: one per item)
+%   \only<2>{...}              only on step 2, takes no space otherwise
+%   \uncover<3->{...}          from step 3, keeps its space while hidden
+%   \alt<4>{on 4}{otherwise}   different content on step 4
+% Shapes, tasks and studies take them too (\shape<2->, \task<2->, \study<2->).
+\begin{frame}{Overlay specifications}
+  \begin{itemize}
+    \item Shown from the start
+    \item<2-> \cmd{item<2->}: from step 2
+    \item<3-> \cmd{item<3->}: from step 3
+  \end{itemize}
+  \only<2>{\cmd{only<2>}: this line is there on step 2 only.}
+
+  \uncover<3->{\cmd{uncover<3->}: from step 3; its space is kept before.}
+
+  \alt<4>{\textcolor{red}{\cmd{alt<4>}: the step-4 version.}}{\cmd{alt<4>}: the version on the other steps.}
+\end{frame}
+
+% \pause: everything after it appears on the next step.
+\begin{frame}{\cmd{pause}}
+  \begin{itemize}
+    \item First point
+    \pause
+    \item Appears after one click
+    \pause
+    \item And this after another
+  \end{itemize}
+\end{frame}

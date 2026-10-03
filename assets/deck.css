@@ -358,6 +358,11 @@ cite a { color: var(--blue); text-decoration: none; }
 .anim .panels figure { flex: 1; min-width: 0; }
 .anim .panels figcaption { margin: 0 0 6px; text-align: center; font-size: 0.9em; }  /* labels above, \small */
 .anim .panels img { width: 100%; cursor: pointer; }
+/* animation columns=N: rows of N panels, each label on its panel */
+.anim.anim-grid .panels { flex-wrap: wrap; row-gap: 0.4em; }
+.anim.anim-grid .panels figure {
+  flex: 0 0 calc((100% - 2% * (var(--anim-cols) - 1)) / var(--anim-cols));
+}
 
 /* time bar below the panels (animation timebar): track filled to the current frame */
 .anim-bar { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin-top: 8px; }

@@ -1,0 +1,47 @@
+\section{Animations}
+
+% \begin{animation}[options] with one \animpanel{label}{path} per panel; \N in
+% the path is the frame number (figures/anim/case1_0.png, _2, ... _22). The
+% panels play in sync. Options:
+%   fps=3  frames=first:last:step  width=  columns=N (rows of N panels)
+%   controls=all | none | hover | play,step,stop,speed   autoplay  loop
+%   subcaptions ((a), (b) before the labels)
+%   dt=0.05 (time = frame x dt below the panels)  timelabel={$t = $}
+%   timedigits=2  timeunit=s  timebar (progress bar, clickable in HTML)
+% In the PDF the animation plays in Acrobat/Okular; the HTML deck plays it
+% everywhere. Needs \usepackage{animate}.
+\begin{frame}{Animations}{panels in one row}
+  \begin{figure}
+    \begin{animation}[fps=4, frames=0:22:2, dt=0.1, timebar, controls=hover]
+      \animpanel{Case 1}{figures/anim/case1_\N}
+      \animpanel{Case 2}{figures/anim/case2_\N}
+      \animpanel{Case 3}{figures/anim/case3_\N}
+    \end{animation}
+    \caption{Three cases in sync; buttons appear on hover in the HTML deck.}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Animations}{panels in a grid: \texttt{columns=2}}
+  \begin{columns}[c]
+    \begin{column}{0.4\textwidth}
+      \begin{itemize}
+        \item \texttt{columns=2}: rows of two panels
+        \item Each label sits on its panel
+        \item \texttt{width=} makes the panels smaller
+        \item \texttt{subcaptions}: (a), (b), \ldots
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \begin{figure}
+        \begin{animation}[fps=4, frames=0:22:2, columns=2, width=0.35\linewidth,
+                          subcaptions, dt=0.1, timelabel={$\tau = $}]
+          \animpanel{Case 1}{figures/anim/case1_\N}
+          \animpanel{Case 2}{figures/anim/case2_\N}
+          \animpanel{Case 3}{figures/anim/case3_\N}
+          \animpanel{Case 4}{figures/anim/case4_\N}
+        \end{animation}
+        \caption{Four cases, two per row.}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
