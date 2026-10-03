@@ -109,6 +109,14 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header),
   `\FigurePlaceholder`; a long `\ReferencesFrame` list continues on
   "References (cont.)" slides, in the PDF and the HTML
+- shapes: `\begin{annotate}[grid] … \end{annotate}` around an image/table with
+  `\shape<spec>[options]{kind}{x1,y1}{x2,y2}` lines (fractions of the element,
+  origin bottom left), `\slideshape` (fractions of the slide) and `\slidegrid`.
+  Kinds `rect`, `ellipse`/`circle`, `line`, `arrow`, `text` (`{x,y}{text}`);
+  options `color` (xcolor, e.g. `green!60!black`), `width`, `fill`, `opacity`,
+  `dashed`, `rounded`, `label`, `labelpos`, `textsize`. The grid (0.1 steps;
+  also on while `\showdividers`) helps read off coordinates. Shapes never
+  change the layout.
 - beamer: frames (`[t]`, `[plain]`, `\frametitle`), `\section`, `\pause`, overlay
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
   `\invisible`, `\alt`, `\onslide`, environments with `<…>`), `columns`, `block`,

@@ -105,6 +105,21 @@ local snippets = {
 	\end{animation}
 	\caption{<>}\label{fig:<>}
 \end{figure}]], { i(1, "3"), i(2, "3000:5000:50"), i(3, "Label"), i(4, "frame"), i(5, "Caption."), i(0, "name") }),
+
+  snip("annot", "annotate: shapes over a figure (grid shows the 0..1 coordinates)", [[
+\begin{figure}
+	\begin{annotate}[grid]
+		\includegraphics[width=\textwidth]{figures/<>}
+		\shape[color=<>]{<>}{<>}{<>}
+	\end{annotate}
+	\caption{<>}\label{fig:<>}
+\end{figure}]], { i(1, "file"), i(2, "red"), i(3, "rect"), i(4, "0.4,0.1"), i(5, "0.6,0.9"), i(6, "Caption."), i(0, "name") }),
+
+  snip("shape", "\\shape inside annotate: rect, ellipse, line, arrow, text", [[
+\shape[color=<>]{<>}{<>}{<>}]], { i(1, "red"), i(2, "rect"), i(3, "0.4,0.1"), i(0, "0.6,0.9") }),
+
+  snip("sshape", "\\slideshape: a shape placed on the whole slide", [[
+\slideshape[color=<>]{<>}{<>}{<>}]], { i(1, "red"), i(2, "rect"), i(3, "0.1,0.1"), i(0, "0.3,0.3") }),
 }
 
 ls.add_snippets("tex", snippets, { key = "tex2html" })

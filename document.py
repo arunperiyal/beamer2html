@@ -4,7 +4,9 @@ import os
 import re
 
 from . import log
+from .assets import LATEX
 from .bibliography import bib_to_js
+from .colors import read_definecolors
 from .converter import Converter
 from .images import resolve_image
 from .log import warn
@@ -133,6 +135,9 @@ def resolve_refs(cv, html_text):
 
 def read_preamble(cv, pre):
     """\\SetX{...} fields and the option switches before \\begin{document}."""
+    with open(os.path.join(LATEX, "titletemplates.sty"), encoding="utf-8") as f:
+        read_definecolors(f.read())              # bannerblue, dividercolor, ...
+    read_definecolors(pre)
     config, state = {"fontSize": class_font_size(pre),
                      "mathFont": math_font(pre)}, dict(DEFAULTS)
     i = 0

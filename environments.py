@@ -73,6 +73,11 @@ class EnvironmentsMixin:
                 self.blocks(self.inline(body))) + PARA
         if env == "animation":
             return self.env_animation(body)
+        if env == "annotate":                      # \shape: commands.py
+            opt, j = read_opt(body, 0)
+            grid = ' data-grid' if "grid" in keyvals(opt) else ""
+            return PARA + '<div class="annotate"%s>%s</div>' % (
+                grid, self.inline(body[j:]).strip()) + PARA
         if env == "animateinline":
             return self.animation(body)
         warn("unknown environment {%s} (kept its content)" % env)

@@ -267,6 +267,140 @@
     splitReferences(next);
   }
 
+  // ------------------------------------------------------------ shapes
+  // \begin{annotate} -> <div class="annotate"> with <span class="shape"> place-
+  // holders (\shape), and <span class="shape slide-shape"> (\slideshape) /
+  // <span class="slide-grid"> anywhere on a slide. Drawn as SVG over the
+  // annotated element (its image, table, ...) or the whole slide, from
+  // fractions with the origin bottom left; redrawn when the element resizes.
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const PX_PER_PT = 80 / 28.45;                  // as units.py
+  let shapeIds = 0;
+  slides.forEach((s) => {
+    s.querySelectorAll(".annotate").forEach((ann) => {
+      const target = () => ann.querySelector(
+        ":scope img, :scope table, :scope .anim, :scope .figure-placeholder") || ann;
+      shapeLayer(ann, [...ann.querySelectorAll("span.shape:not(.slide-shape)")],
+        ann.hasAttribute("data-grid") || s.classList.contains("dividers"), target, false);
+    });
+    const grid = s.querySelector("span.slide-grid");
+    const own = [...s.querySelectorAll("span.slide-shape")];
+    if (own.length || grid) shapeLayer(s, own, !!grid, () => s, true);
+    s.querySelectorAll("span.slide-grid").forEach((g) => g.remove());
+  });
+
+  function shapeLayer(host, spans, grid, target, inside) {
+    const layer = document.createElement("div");
+    layer.className = "shape-layer";
+    const svg = document.createElementNS(SVGNS, "svg");
+    layer.appendChild(svg);
+    const items = spans.map((sp) => {
+      const g = document.createElementNS(SVGNS, "g");
+      const d = { ...sp.dataset }, html = sp.innerHTML.trim();
+      if (d.spec) g.dataset.spec = d.spec;
+      svg.appendChild(g);
+      let label = null;
+      if (html) {
+        label = document.createElement("div");
+        label.className = "shape-label";
+        label.innerHTML = html;
+        label.style.color = d.color;
+        label.style.fontSize = `calc(30px * var(--fs) * ${d.size || 0.9})`;
+        if (d.spec) label.dataset.spec = d.spec;
+        layer.appendChild(label);
+      }
+      sp.remove();
+      return { d, g, label };
+    });
+    const gridG = document.createElementNS(SVGNS, "g");
+    const gridLabels = [];
+    if (grid) {
+      svg.prepend(gridG);
+      for (let k = 0; k <= 10; k += 2) {
+        for (const axis of ["x", "y"]) {
+          const l = document.createElement("div");
+          l.className = `shape-grid-label ${axis}${inside ? " inside" : ""}`;
+          l.textContent = k === 0 ? "0" : k === 10 ? "1" : `0.${k}`;
+          layer.appendChild(l);
+          gridLabels.push({ l, axis, f: k / 10 });
+        }
+      }
+    }
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    host.appendChild(layer);
+
+    const draw = () => {
+      const t = target();
+      const hr = host.getBoundingClientRect(), tr = t.getBoundingClientRect();
+      if (!hr.width || !tr.width) return;           // not laid out (hidden slide)
+      const k = host.offsetWidth / hr.width;         // undo the deck's scaling
+      const w = tr.width * k, h = tr.height * k;
+      Object.assign(layer.style, { left: (tr.left - hr.left) * k + "px",
+        top: (tr.top - hr.top) * k + "px", width: w + "px", height: h + "px" });
+      const X = (f) => f * w, Y = (f) => (1 - f) * h;
+      if (grid) {
+        let lines = "";
+        for (let i = 0; i <= 10; i++) {
+          const sw = i % 2 ? 0.6 : 1.1;
+          lines += `<line x1="${X(i / 10)}" y1="0" x2="${X(i / 10)}" y2="${h}" stroke-width="${sw}"/>` +
+                   `<line x1="0" y1="${Y(i / 10)}" x2="${w}" y2="${Y(i / 10)}" stroke-width="${sw}"/>`;
+        }
+        gridG.innerHTML = lines;
+        gridG.setAttribute("class", "shape-grid");
+        gridLabels.forEach(({ l, axis, f }) => {
+          l.style.left = (axis === "x" ? X(f) : 0) + "px";
+          l.style.top = (axis === "x" ? h : Y(f)) + "px";
+        });
+      }
+      items.forEach(({ d, g, label }) => {
+        const [x1, y1] = d.p1.split(",").map(Number);
+        const [x2, y2] = (d.p2 || d.p1).split(",").map(Number);
+        const ax = X(x1), ay = Y(y1), bx = X(x2), by = Y(y2);
+        const sw = +d.width || PX_PER_PT;
+        const stroke = `stroke="${d.color}" stroke-width="${sw}"` +
+          (d.dashed ? ` stroke-dasharray="${3 * PX_PER_PT} ${3 * PX_PER_PT}"` : "");
+        const fill = d.fill ? `fill="${d.fill}" fill-opacity="${d.opacity}"` : `fill="none"`;
+        const minX = Math.min(ax, bx), maxX = Math.max(ax, bx);
+        const minY = Math.min(ay, by), maxY = Math.max(ay, by);
+        if (d.kind === "rect") {
+          g.innerHTML = `<rect x="${minX}" y="${minY}" width="${maxX - minX}" height="${maxY - minY}"` +
+            ` rx="${+d.rounded || 0}" ${stroke} ${fill}/>`;
+        } else if (d.kind === "ellipse") {
+          g.innerHTML = `<ellipse cx="${(ax + bx) / 2}" cy="${(ay + by) / 2}" rx="${(maxX - minX) / 2}"` +
+            ` ry="${(maxY - minY) / 2}" ${stroke} ${fill}/>`;
+        } else if (d.kind === "line" || d.kind === "arrow") {
+          let marker = "";
+          if (d.kind === "arrow") {
+            const id = `shape-arrow-${++shapeIds}`;
+            marker = ` marker-end="url(#${id})"`;
+            g.innerHTML = `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5"` +
+              ` markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">` +
+              `<path d="M0,0 L10,5 L0,10 L3,5 z" fill="${d.color}"/></marker></defs>`;
+          } else g.innerHTML = "";
+          g.insertAdjacentHTML("beforeend", `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"` +
+            ` ${stroke}${marker}/>`);
+        }
+        if (label) {
+          const at = d.kind === "text" ? [ax, ay, "-50%", "-50%"] : {
+            above: [(ax + bx) / 2, minY, "-50%", "-100%"],
+            below: [(ax + bx) / 2, maxY, "-50%", "0%"],
+            left:  [minX, (ay + by) / 2, "-100%", "-50%"],
+            right: [maxX, (ay + by) / 2, "0%", "-50%"],
+          }[d.labelpos] || [(ax + bx) / 2, minY, "-50%", "-100%"];
+          label.style.left = at[0] + "px";
+          label.style.top = at[1] + "px";
+          label.style.transform = `translate(${at[2]}, ${at[3]})`;
+          label.classList.toggle("text", d.kind === "text");
+        }
+      });
+    };
+    const ro = new ResizeObserver(draw);
+    ro.observe(host);
+    const t = target();
+    if (t !== host) ro.observe(t);
+    host.querySelectorAll("img").forEach((im) => im.addEventListener("load", draw));
+  }
+
   // ------------------------------------------------------------ steps
   // Step s of a slide corresponds to beamer overlay s+1.
   //  * <span class="pause">: everything after the k-th marker gets
