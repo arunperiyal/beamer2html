@@ -14,7 +14,7 @@ from .vocabulary import PARA
 class AnimationMixin:
     def env_animation(self, body):
         """\\begin{animation}[fps=3, frames=a:b:step, width=, controls=, autoplay=,
-        loop=, subcaptions] with \\animpanel{label}{path with \\N} lines
+        loop=, subcaptions, columns=N] with \\animpanel{label}{path with \\N} lines
         (titletemplates.sty). Panels play in sync, labels above them."""
         opt, j = read_opt(body, 0)
         o = keyvals(opt)
@@ -49,6 +49,14 @@ class AnimationMixin:
                         % (style, label, html.escape(self.frame_pattern(path, first))))
         fps = str(o.get("fps", "3")).strip()
         attrs = ' data-fps="%s" data-frames="%d:%d:%d"' % (html.escape(fps), first, last, step)
+        cls = "anim anim-labelled"
+        cols = str(o.get("columns", "")).strip()
+        if cols:                                   # rows of N panels
+            if not cols.isdigit() or int(cols) < 1:
+                warn("animation: columns=%s should be a whole number" % cols)
+            elif int(cols) < len(panels):
+                cls += " anim-grid"
+                attrs += ' style="--anim-cols:%s"' % cols
         if flag("autoplay", True):
             attrs += " data-autoplay"
         if flag("loop", True):
@@ -84,8 +92,8 @@ class AnimationMixin:
                              for n in (first, last))
             bar = ('<div class="anim-bar">%s<div class="anim-bar-track" title="Click to go to a frame">'
                    '<div class="anim-bar-fill"></div></div>%s</div>' % ends)
-        return PARA + '<div class="anim anim-labelled"%s><div class="panels">%s</div>%s%s</div>' % (
-            attrs, "".join(figs), bar, time) + PARA
+        return PARA + '<div class="%s"%s><div class="panels">%s</div>%s%s</div>' % (
+            cls, attrs, "".join(figs), bar, time) + PARA
 
     def animation(self, body):
         """animateinline + \\multiframe{N}{iT=a+b}{...\\includegraphics{..\\iT}...}

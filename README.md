@@ -12,7 +12,7 @@ kept as plain text and reported as a warning.
 ## Starting a new deck
 
 ```sh
-cp -r path/to/tex2html/template my-talk     # example deck using every template
+cp -r path/to/tex2html/template my-talk     # tutorial deck: every element, one section each
 ```
 
 See [`template/README.md`](template/README.md).
@@ -131,7 +131,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,
   `subcaptions`, `dt` to show the time (frame number × dt) below the panels
   with `timelabel`, `timedigits`, `timeunit`, `timebar` for a progress bar
-  under the panels (clickable in HTML); put it in a `figure` for a
+  under the panels (clickable in HTML), `columns=N` for rows of N panels
+  (each label on its panel); put it in a `figure` for a
   caption), and `animate`'s own
   `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 

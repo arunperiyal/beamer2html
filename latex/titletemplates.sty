@@ -539,6 +539,7 @@
 % ((a), (b), ... before the labels), dt (show the time below the panels:
 % frame number x dt), timelabel ($t = $), timedigits (2), timeunit (),
 % timebar (a progress bar below the panels; with dt, first/last times at its ends).
+% columns (all in one row; columns=3: rows of 3, each label on its panel).
 % Put it in a figure for \caption / \label. Needs animate.
 \ExplSyntaxOn
 \seq_new:N  \g__tt_anim_labels_seq
@@ -559,6 +560,8 @@
 \tl_new:N   \l__tt_anim_timelabel_tl
 \tl_new:N   \l__tt_anim_timeunit_tl
 \int_new:N  \l__tt_anim_timedigits_int
+\int_new:N  \l__tt_anim_cols_int
+\bool_new:N \l__tt_anim_grid_bool
 \bool_new:N \l__tt_anim_bar_bool
 \int_new:N  \l__tt_anim_first_int
 \int_new:N  \l__tt_anim_last_int
@@ -591,6 +594,8 @@
     timebar     .bool_set:N = \l__tt_anim_bar_bool,
     timebar     .initial:n  = false,
     timebar     .default:n  = true,
+    columns     .int_set:N  = \l__tt_anim_cols_int,
+    columns     .initial:n  = 0,
   }
 
 \cs_generate_variant:Nn \seq_set_split:Nnn { NVV }
@@ -628,25 +633,35 @@
     \tl_set:Nx \l_tmpa_tl { \seq_item:Nn \l_tmpa_seq { 3 } }
     \int_set:Nn \l_tmpb_int { \tl_if_blank:VTF \l_tmpa_tl { 1 } { \l_tmpa_tl } }
     \int_set:Nn \l__tt_anim_n_int { \seq_count:N \g__tt_anim_paths_seq }
-    % panel width and the gap between panels
+    % columns = N: panels in rows of N, each with its label on top (grid);
+    % otherwise one row with the labels above it
+    \bool_set:Nn \l__tt_anim_grid_bool
+      { \int_compare_p:nNn \l__tt_anim_cols_int > 0
+        && \int_compare_p:nNn \l__tt_anim_cols_int < \l__tt_anim_n_int }
+    \bool_if:NF \l__tt_anim_grid_bool
+      { \int_set_eq:NN \l__tt_anim_cols_int \l__tt_anim_n_int }
+    % panel width and the gap between panels (per row)
     \tl_if_blank:VTF \l__tt_anim_width_tl
       {
         \dim_set:Nn \l__tt_anim_gap_dim { 0.02 \linewidth }
         \dim_set:Nn \l__tt_anim_w_dim
-          { ( \linewidth - \l__tt_anim_gap_dim * ( \l__tt_anim_n_int - 1 ) ) / \l__tt_anim_n_int }
+          { ( \linewidth - \l__tt_anim_gap_dim * ( \l__tt_anim_cols_int - 1 ) ) / \l__tt_anim_cols_int }
       }
       {
         \dim_set:Nn \l__tt_anim_w_dim { \l__tt_anim_width_tl }
         \dim_set:Nn \l__tt_anim_gap_dim
           {
-            \int_compare:nNnTF \l__tt_anim_n_int > 1
-              { ( \linewidth - \l__tt_anim_w_dim * \l__tt_anim_n_int ) / ( \l__tt_anim_n_int - 1 ) }
+            \int_compare:nNnTF \l__tt_anim_cols_int > 1
+              { ( \linewidth - \l__tt_anim_w_dim * \l__tt_anim_cols_int ) / ( \l__tt_anim_cols_int - 1 ) }
               { 0pt }
           }
         \dim_compare:nNnT \l__tt_anim_gap_dim < { 0pt } { \dim_zero:N \l__tt_anim_gap_dim }
+        \bool_if:NT \l__tt_anim_grid_bool         % grid rows: packed and centred
+          { \dim_set:Nn \l__tt_anim_gap_dim { \dim_min:nn { \l__tt_anim_gap_dim } { 0.02 \linewidth } } }
       }
-    % labels row
+    % labels row (in a grid, every panel carries its own label)
     \par \noindent
+    \bool_if:NF \l__tt_anim_grid_bool {
     \hbox_to_wd:nn { \linewidth }
       {
         \seq_map_indexed_inline:Nn \g__tt_anim_labels_seq
@@ -662,6 +677,7 @@
         \hfil
       }
     \par \nointerlineskip \vspace { 0.25em }
+    }
     % the animation: one \multiframe frame holds every panel
     \tl_set:Nx \l__tt_anim_out_tl
       {
@@ -680,7 +696,8 @@
           { iN = \int_use:N \l_tmpa_int + \int_use:N \l_tmpb_int }
           {
             \exp_not:n { \def \N { \iN } }
-            \bool_if:nTF { \l__tt_anim_bar_bool || ! \tl_if_blank_p:V \l__tt_anim_dt_tl }
+            \bool_if:nTF { \l__tt_anim_bar_bool || \l__tt_anim_grid_bool
+                           || ! \tl_if_blank_p:V \l__tt_anim_dt_tl }
               {                                    % panels, time bar, time below them
                 \exp_not:N \parbox { \dim_use:N \linewidth }
                   {
@@ -752,8 +769,27 @@
 % one panel inside the \multiframe body (expanded into \l__tt_anim_out_tl)
 \cs_new:Npn \__tt_anim_panel:nn #1 #2
   {
-    \int_compare:nNnF {#1} = { 1 } { \exp_not:N \hspace* { \dim_use:N \l__tt_anim_gap_dim } }
-    \exp_not:N \includegraphics [ width = \dim_use:N \l__tt_anim_w_dim ] { \exp_not:n {#2} }
+    \bool_if:NTF \l__tt_anim_grid_bool
+      {
+        \int_compare:nNnF {#1} = { 1 }
+          {
+            \int_compare:nNnTF { \int_mod:nn { #1 - 1 } { \l__tt_anim_cols_int } } = { 0 }
+              { \exp_not:N \par \exp_not:N \vspace { 0.4em } }      % next row
+              { \exp_not:N \hspace* { \dim_use:N \l__tt_anim_gap_dim } }
+          }
+        \exp_not:N \parbox [ b ] { \dim_use:N \l__tt_anim_w_dim }
+          {
+            \exp_not:N \centering \exp_not:N \small
+            \bool_if:NT \l__tt_anim_sub_bool { ( \int_to_alph:n {#1} ) ~ }
+            \seq_item:Nn \g__tt_anim_labels_seq {#1}
+            \exp_not:N \par \exp_not:N \vspace { 0.15em }
+            \exp_not:N \includegraphics [ width = \dim_use:N \l__tt_anim_w_dim ] { \exp_not:n {#2} }
+          }
+      }
+      {
+        \int_compare:nNnF {#1} = { 1 } { \exp_not:N \hspace* { \dim_use:N \l__tt_anim_gap_dim } }
+        \exp_not:N \includegraphics [ width = \dim_use:N \l__tt_anim_w_dim ] { \exp_not:n {#2} }
+      }
   }
 \ExplSyntaxOff
 
@@ -924,6 +960,9 @@
   \item[]\vspace{0.4em}{\normalsize\bfseries\color{bannerblue}#1}}
 \newcommand{\pub}[2][]{\item[]\@ttPubBadge{#1}\ \fullcite{#2}}
 \newcommand{\pubtext}[2][]{\item[]\@ttPubBadge{#1}\ #2}
+
+% \cmd{shape} -> \shape in typewriter type (for slides about LaTeX itself)
+\newcommand{\cmd}[1]{\texttt{\textbackslash #1}}
 
 % ---------------------------------------------------------------- Shapes
 %   \begin{annotate}[grid]            shapes over an element: fractions of its

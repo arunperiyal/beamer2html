@@ -1,0 +1,35 @@
+\section{Slide options}
+
+% Switches work in the preamble (for the whole deck) or between frames (for
+% the frames after them):
+%   \TitleBarOn / \TitleBarOff          blue bar, or underlined black title
+%   \SetTitleHeight{1.1cm}              height of the title area
+%   \SectionNameOn / \SectionNameOff    section name at the top right
+%   \FooterOn / \FooterNumberOnly / \FooterOff
+%   \SetBarMargin{0.4cm}                side margin of title bar and footer
+\TitleBarOff
+\FooterNumberOnly
+\begin{frame}{Slide options}{\cmd{TitleBarOff} and \cmd{FooterNumberOnly}}
+  \begin{itemize}
+    \item This frame follows \cmd{TitleBarOff} and \cmd{FooterNumberOnly}
+    \item \cmd{TitleBarOn} and \cmd{FooterOn} switch back
+    \item \cmd{SetTitleHeight\{1.1cm\}} changes the title area
+    \item \cmd{showdividers} outlines rows and columns while editing
+  \end{itemize}
+\end{frame}
+\TitleBarOn
+\FooterOn
+
+% Speaker notes: shown only in the presenter view of the HTML deck (press S)
+% and not in the PDF. \note[item]{...} adds a bullet.
+\begin{frame}{Speaker notes}
+  \begin{itemize}
+    \item Press \texttt{S} in the HTML deck for the presenter view
+    \item It shows the notes, the next slide and a timer
+    \item \texttt{F} full screen, \texttt{P} play/pause animations, \texttt{H} help,
+          a number + \texttt{Enter} goes to that slide
+  \end{itemize}
+  \note{What to say on this slide.}
+  \note[item]{A talking point}
+  \note[item]{Another talking point}
+\end{frame}

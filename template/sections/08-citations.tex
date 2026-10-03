@@ -1,0 +1,27 @@
+\section{Citations}
+
+% biblatex with references.bib (see main.tex). Cited entries are listed by
+% \ReferencesFrame, which continues on "References (cont.)" slides when long.
+%   \cite{key}           [1]       several keys: [1, 2] or [1-3]
+%   \textcite{key}       Surname et al. [1]
+%   \citeauthor{key}     Surname et al.
+\begin{frame}{Citations}
+  \begin{itemize}
+    \item \cmd{cite}: a result \cite{placeholder_article}, or several
+          \cite{placeholder_conference,placeholder_book}
+    \item \cmd{textcite}: as shown by \textcite{placeholder_article}
+    \item \cmd{citeauthor}: \citeauthor{placeholder_book} argued \ldots
+  \end{itemize}
+\end{frame}
+
+% Literature table: "Author et al. (Year)" on the left, the finding on the
+% right; the studies go to the References slide too.
+%   \begin{litreview}{0.25\textwidth}   width of the left column (default 0.3)
+%   \study{key1,key2}{finding}   \studytext{Author (Year)}{finding}   \study<2->...
+\begin{frame}{Literature review table}
+  \begin{litreview}{0.25\textwidth}
+    \study{placeholder_article,placeholder_conference}{What these studies found.}
+    \study{placeholder_book}{What this study found.}
+    \studytext{Author et al. (Year)}{A study written directly, not from the .bib file.}
+  \end{litreview}
+\end{frame}
