@@ -2,6 +2,8 @@
 import html
 import re
 
+from .colors import css_color
+from .commands import shape_px
 from .log import warn
 from .parsing import keyvals, read_arg, read_group, read_opt, skip_ws, split_items
 from .units import length_css
@@ -73,15 +75,54 @@ class EnvironmentsMixin:
                 self.blocks(self.inline(body))) + PARA
         if env == "animation":
             return self.env_animation(body)
+        if env == "floatbox":
+            return self.env_floatbox(body)
         if env == "annotate":                      # \shape: commands.py
             opt, j = read_opt(body, 0)
             grid = ' data-grid' if "grid" in keyvals(opt) else ""
-            return PARA + '<div class="annotate"%s>%s</div>' % (
-                grid, self.inline(body[j:]).strip()) + PARA
+            return PARA + '<div class="annotate"%s>%s</div>' % (   # flow: blocks
+                grid, self.flow(body[j:])) + PARA                  # (animation) stay inside
         if env == "animateinline":
             return self.animation(body)
         warn("unknown environment {%s} (kept its content)" % env)
         return self.inline(body)
+
+    def env_floatbox(self, body):
+        """\\begin{floatbox}<spec>[options]{x,y}{w,h}: a box floating over the
+        slide (fractions, origin bottom left); deck.js positions it and draws
+        its \\shape lines in the box's own coordinates."""
+        spec, j = self.read_spec(body, 0)
+        opt, j = read_opt(body, j)
+        pos, j = read_arg(body, j)
+        size, j = read_arg(body, j)
+        o = keyvals(opt)
+        try:
+            x, y = (float(v) for v in pos.split(","))
+            w, h = (float(v) for v in size.split(","))
+        except ValueError:
+            warn("floatbox: position {x,y} and size {w,h} should be fractions: {%s}{%s}"
+                 % (pos, size))
+            return self.flow(body[j:])
+        pad = shape_px(o.get("padding"), 3)
+        style = ["left:%g%%" % (100 * x), "bottom:%g%%" % (100 * y),
+                 "width:%g%%" % (100 * w), "height:%g%%" % (100 * h), "padding:%spx" % pad]
+        border = o.get("border")
+        if border not in (None, "none"):
+            style.append("--fb-border:%spx solid %s" % (   # drawn over the content
+                shape_px(o.get("width"), 0.8), css_color("black" if border is True else border)))
+        if o.get("fill") not in (None, True, "none"):
+            op = float(o.get("opacity") or 1)
+            style.append("background:color-mix(in srgb, %s %g%%, transparent)"
+                         % (css_color(o["fill"]), 100 * op))
+        if o.get("rounded"):
+            style.append("border-radius:%spx" % shape_px(
+                "3pt" if o["rounded"] is True else o["rounded"], 0))
+        align = {"left": "left", "right": "right"}.get(str(o.get("align", "")), "center")
+        valign = {"top": "flex-start", "bottom": "flex-end"}.get(str(o.get("valign", "")), "center")
+        style += ["text-align:%s" % align, "justify-content:%s" % valign]
+        grid = " data-grid" if o.get("grid") else ""
+        return PARA + '<div class="floatbox"%s%s style="%s">%s</div>' % (
+            grid, self.spec_attr(spec), ";".join(style), self.flow(body[j:])) + PARA
 
     def env_list(self, env, body):
         """itemize / enumerate / description -> <ul> / <ol>. Overlay specs:

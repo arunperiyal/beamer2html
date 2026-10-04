@@ -283,6 +283,13 @@
       shapeLayer(ann, [...ann.querySelectorAll("span.shape:not(.slide-shape)")],
         ann.hasAttribute("data-grid") || s.classList.contains("dividers"), target, false);
     });
+    // \begin{floatbox}: moved onto the slide itself (its left/bottom/width/
+    // height are percentages of the slide); its shapes use the box's 0..1
+    s.querySelectorAll(".floatbox").forEach((fb) => {
+      s.appendChild(fb);
+      shapeLayer(fb, [...fb.querySelectorAll("span.shape:not(.slide-shape)")],
+        fb.hasAttribute("data-grid") || s.classList.contains("dividers"), () => fb, false);
+    });
     const grid = s.querySelector("span.slide-grid");
     const own = [...s.querySelectorAll("span.slide-shape")];
     if (own.length || grid) shapeLayer(s, own, !!grid, () => s, true);
@@ -296,21 +303,27 @@
     layer.appendChild(svg);
     const items = spans.map((sp) => {
       const g = document.createElementNS(SVGNS, "g");
-      const d = { ...sp.dataset }, html = sp.innerHTML.trim();
+      const d = { ...sp.dataset };
       if (d.spec) g.dataset.spec = d.spec;
       svg.appendChild(g);
-      let label = null;
-      if (html) {
-        label = document.createElement("div");
-        label.className = "shape-label";
-        label.innerHTML = html;
-        label.style.color = d.color;
-        label.style.fontSize = `calc(30px * var(--fs) * ${d.size || 0.9})`;
-        if (d.spec) label.dataset.spec = d.spec;
-        layer.appendChild(label);
-      }
+      const makeLabel = (html) => {
+        const l = document.createElement("div");
+        l.className = "shape-label";
+        l.innerHTML = html;
+        l.style.color = d.color;
+        l.style.fontSize = `calc(30px * var(--fs) * ${d.size || 0.9})`;
+        if (d.spec) l.dataset.spec = d.spec;
+        layer.appendChild(l);
+        return l;
+      };
+      let label = null, axisLabels = {};
+      if (d.kind === "axes") {                     // one label per axis
+        sp.querySelectorAll(".axis-label").forEach((a) => {
+          axisLabels[a.dataset.axis] = makeLabel(a.innerHTML);
+        });
+      } else if (sp.innerHTML.trim()) label = makeLabel(sp.innerHTML.trim());
       sp.remove();
-      return { d, g, label };
+      return { d, g, label, axisLabels };
     });
     const gridG = document.createElementNS(SVGNS, "g");
     const gridLabels = [];
@@ -352,7 +365,7 @@
           l.style.top = (axis === "x" ? h : Y(f)) + "px";
         });
       }
-      items.forEach(({ d, g, label }) => {
+      items.forEach(({ d, g, label, axisLabels }) => {
         const [x1, y1] = d.p1.split(",").map(Number);
         const [x2, y2] = (d.p2 || d.p1).split(",").map(Number);
         const ax = X(x1), ay = Y(y1), bx = X(x2), by = Y(y2);
@@ -368,6 +381,29 @@
         } else if (d.kind === "ellipse") {
           g.innerHTML = `<ellipse cx="${(ax + bx) / 2}" cy="${(ay + by) / 2}" rx="${(maxX - minX) / 2}"` +
             ` ry="${(maxY - minY) / 2}" ${stroke} ${fill}/>`;
+        } else if (d.kind === "axes") {
+          // x at rotate degrees, y at +90, z (0.7 long) at +225; length is a
+          // fraction of the width for every axis
+          const L = (+d.p2 || 0.1) * w, rot = +d.rotate || 0;
+          const id = `shape-arrow-${++shapeIds}`;
+          let out = `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5"` +
+            ` markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">` +
+            `<path d="M0,0 L10,5 L0,10 L3,5 z" fill="${d.color}"/></marker></defs>`;
+          for (const [axis, deg, f] of [["x", rot, 1], ["y", rot + 90, 1], ["z", rot + 225, 0.7]]) {
+            if (axis === "z" && !axisLabels.z) continue;
+            const t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+            const tx = ax + c * f * L, ty = ay - s * f * L;
+            out += `<line x1="${ax}" y1="${ay}" x2="${tx}" y2="${ty}" ${stroke} marker-end="url(#${id})"/>`;
+            const l = axisLabels[axis];
+            if (l) {                                 // like a TikZ anchor at deg+180
+              l.style.left = tx + "px";
+              l.style.top = ty + "px";
+              l.style.padding = "0";
+              l.style.transform = `translate(calc(${-50 + 50 * c}% + ${4 * c}px),` +
+                ` calc(${-50 - 50 * s}% - ${4 * s}px))`;
+            }
+          }
+          g.innerHTML = out;
         } else if (d.kind === "line" || d.kind === "arrow") {
           let marker = "";
           if (d.kind === "arrow") {
@@ -704,24 +740,32 @@
    *   </div>
    * data-frames = "first:last:step" (or "first:last"); {n} in data-src is
    * replaced by the frame number ({n:4} zero-pads to 4 digits). All panels share
-   * one clock, so they always show the same frame.
+   * one clock. An <img> may carry its own data-frames / data-dt (\animpanel
+   * [frames=, dt=]): at clock step i it shows its i-th frame, holding its last
+   * one when it has fewer; its time goes to the .anim-ptime-value of its figure.
    * data-controls (as animate's `controls` key): "all", or any of
    *   play (play/pause)  step (prev/next frame, slider)  stop (first/last)
    *   speed (slower/faster); omitted -> no control bar. Clicking an image or
    *   pressing P always plays / pauses.
    */
+  function frameList(spec) {
+    const [a, b, st] = (spec || "0:0").split(":").map(Number);
+    const step = st || 1, out = [];
+    for (let n = a; step > 0 ? n <= b : n >= b; n += step) out.push(n);
+    return out;
+  }
   function Anim(el) {
     this.el = el;
-    const [a, b, st] = (el.dataset.frames || "0:0").split(":").map(Number);
-    const step = st || 1;
-    this.nums = [];
-    for (let n = a; step > 0 ? n <= b : n >= b; n += step) this.nums.push(n);
+    this.nums = frameList(el.dataset.frames);
     this.fps = parseFloat(el.dataset.fps || "10");
     this.speed = 1;
     this.loop = el.hasAttribute("data-loop");
     this.autoplay = el.hasAttribute("data-autoplay");
     this.imgs = Array.from(el.querySelectorAll("img[data-src]"));
-    this.urls = this.imgs.map((img) => this.nums.map((n) =>
+    this.pnums = this.imgs.map((img) =>               // each panel's frame numbers
+      img.dataset.frames ? frameList(img.dataset.frames) : this.nums);
+    this.count = Math.max(this.nums.length, ...this.pnums.map((l) => l.length));
+    this.urls = this.imgs.map((img, p) => this.pnums[p].map((n) =>
       img.dataset.src.replace(/\{n(?::(\d+))?\}/g,
         (_, w) => w ? String(n).padStart(+w, "0") : String(n))));
     this.cache = [];                     // keeps preloaded frames alive
@@ -738,7 +782,7 @@
       has("play") ? btn("play", "▶", "Play / pause (P)") : "",
       has("step") ? btn("next", "▶|", "Next frame") : "",
       has("stop") ? btn("last", "⏭", "Last frame") : "",
-      has("step") ? `<input type="range" min="0" max="${this.nums.length - 1}" value="0">` : "",
+      has("step") ? `<input type="range" min="0" max="${this.count - 1}" value="0">` : "",
       has("speed") ? btn("slower", "−", "Slower") : "",
       has("step") || has("speed") ? `<span class="readout"></span>` : "",
       has("speed") ? btn("faster", "+", "Faster") : "",
@@ -755,11 +799,15 @@
       track.addEventListener("click", (e) => {             // click: go to that frame
         const r = track.getBoundingClientRect();
         this.pause();
-        this.go(Math.round((e.clientX - r.left) / r.width * (this.nums.length - 1)));
+        this.go(Math.round((e.clientX - r.left) / r.width * (this.count - 1)));
       });
     }
     this.dt = parseFloat(el.dataset.dt || "0");
     this.digits = parseInt(el.dataset.timeDigits || "2", 10);
+    this.ptimes = this.imgs.map((img) => {           // per-panel time (own ranges)
+      const v = img.closest("figure") && img.closest("figure").querySelector(".anim-ptime-value");
+      return v ? { el: v, dt: parseFloat(img.dataset.dt || el.dataset.dt || "0") } : null;
+    });
 
     bar.addEventListener("mousedown", (e) => {
       if (e.target.tagName === "BUTTON") e.preventDefault();   // keep keys for slides
@@ -772,7 +820,7 @@
       else if (act === "faster") this.setSpeed(this.speed * 2);
       else {
         this.pause();
-        const last = this.nums.length - 1;
+        const last = this.count - 1;
         this.go({ first: 0, last, prev: this.i - 1, next: this.i + 1 }[act]);
       }
     });
@@ -792,12 +840,20 @@
     }));
   };
   Anim.prototype.go = function (i) {
-    const n = this.nums.length;
+    const n = this.count;
     i = this.loop ? (i + n) % n : Math.max(0, Math.min(n - 1, i));
     this.i = i;
-    this.imgs.forEach((img, p) => { img.src = this.urls[p][i]; });
+    this.imgs.forEach((img, p) => {      // a shorter panel holds its last frame
+      img.src = this.urls[p][Math.min(i, this.urls[p].length - 1)];
+      const t = this.ptimes[p];
+      if (t) {
+        const l = this.pnums[p];
+        t.el.textContent = (l[Math.min(i, l.length - 1)] * t.dt).toFixed(this.digits);
+      }
+    });
     if (this.timeEl) {                    // time = frame number x dt (data-dt)
-      this.timeEl.textContent = (this.nums[i] * this.dt).toFixed(this.digits);
+      this.timeEl.textContent = (this.nums[Math.min(i, this.nums.length - 1)] * this.dt)
+        .toFixed(this.digits);
     }
     if (this.barFill) {
       this.barFill.style.width = (n > 1 ? i / (n - 1) * 100 : 100) + "%";
@@ -808,13 +864,13 @@
   Anim.prototype.updateReadout = function () {
     if (!this.readout) return;
     this.readout.textContent =
-      `${this.i + 1} / ${this.nums.length} · ×${+this.speed.toFixed(2)}`;
+      `${this.i + 1} / ${this.count} · ×${+this.speed.toFixed(2)}`;
   };
   Anim.prototype.play = function () {
     this.preload();
     clearInterval(this.timer);
     this.timer = setInterval(() => {
-      if (!this.loop && this.i >= this.nums.length - 1) return this.pause();
+      if (!this.loop && this.i >= this.count - 1) return this.pause();
       this.go(this.i + 1);
     }, 1000 / (this.fps * this.speed));
     if (this.playBtn) this.playBtn.textContent = "⏸";

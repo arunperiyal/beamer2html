@@ -8,6 +8,9 @@
 %   subcaptions ((a), (b) before the labels)
 %   dt=0.05 (time = frame x dt below the panels)  timelabel={$t = $}
 %   timedigits=2  timeunit=s  timebar (progress bar, clickable in HTML)
+% \animpanel[frames=a:b:s, dt=...]{label}{path}: a panel with its own range;
+% the panels step together (a shorter one holds its last frame) and each
+% shows its own time below it.
 % In the PDF the animation plays in Acrobat/Okular; the HTML deck plays it
 % everywhere. Needs \usepackage{animate}.
 \begin{frame}{Animations}{panels in one row}
@@ -44,4 +47,15 @@
       \end{figure}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}{Animations}{panels with their own frames}
+  \begin{figure}
+    \begin{animation}[fps=4, frames=0:22:2, dt=0.1, timebar, controls=hover]
+      \animpanel{Frames 0--22}{figures/anim/case1_\N}
+      \animpanel[frames=4:22:2]{Frames 4--22}{figures/anim/case2_\N}
+      \animpanel[frames=0:10:2, dt=0.5]{Frames 0--10, own dt}{figures/anim/case3_\N}
+    \end{animation}
+    \caption{\texttt{\textbackslash animpanel[frames=4:22:2]}: each panel shows its own time.}
+  \end{figure}
 \end{frame}
