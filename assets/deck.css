@@ -359,9 +359,9 @@ cite a { color: var(--blue); text-decoration: none; }
 .anim .panels figcaption { margin: 0 0 6px; text-align: center; font-size: 0.9em; }  /* labels above, \small */
 .anim .panels img { width: 100%; cursor: pointer; }
 /* animation columns=N: rows of N panels, each label on its panel */
-.anim.anim-grid .panels { flex-wrap: wrap; row-gap: 0.4em; }
-.anim.anim-grid .panels figure {
-  flex: 0 0 calc((100% - 2% * (var(--anim-cols) - 1)) / var(--anim-cols));
+.anim.anim-grid .panels {
+  display: grid; justify-content: center; column-gap: 2%; row-gap: 0.4em;
+  grid-template-columns: repeat(var(--anim-cols), var(--anim-w, 1fr));
 }
 
 /* time bar below the panels (animation timebar): track filled to the current frame */
@@ -371,6 +371,8 @@ cite a { color: var(--blue); text-decoration: none; }
 .anim-bar-track::after { content: ""; position: absolute; inset: -6px 0; }  /* easier to click */
 .anim-bar-fill { height: 100%; width: 0; background: var(--blue); }
 .anim-bar-end { font-size: 0.7em; color: #555; font-variant-numeric: tabular-nums; }
+/* a panel's own time below its image (\animpanel[frames=..] / [dt=..]) */
+.anim .panels .anim-ptime { text-align: center; font-size: 0.9em; margin-top: 2px; }
 /* time below the panels (animation dt=...) */
 .anim-time { text-align: center; font-size: 0.9em; margin-top: 4px; font-variant-numeric: tabular-nums; }
 /* controls=hover: the button bar floats over the bottom of the panels (taking
@@ -444,4 +446,15 @@ cite a { color: var(--blue); text-decoration: none; }
 .shape-grid-label.y { transform: translate(calc(-100% - 2px), -50%); }
 .shape-grid-label.x.inside { transform: translate(-50%, calc(-100% - 2px)); }
 .shape-grid-label.y.inside { transform: translate(2px, -50%); }
+
+/* \begin{floatbox}{x,y}{w,h}: a box over the slide, positioned in % of it */
+.floatbox {
+  position: absolute; box-sizing: border-box; z-index: 4;
+  display: flex; flex-direction: column; overflow: visible;
+}
+.floatbox img { max-width: 100%; }
+.floatbox::after {                      /* border on top of the content, as in the PDF */
+  content: ""; position: absolute; inset: 0; border: var(--fb-border, none);
+  border-radius: inherit; pointer-events: none; z-index: 6;
+}
 

@@ -221,7 +221,7 @@ class CommandsMixin:
         attrs = {
             "kind": "ellipse" if kind == "circle" else kind,
             "p1": point(p1),
-            "p2": "" if kind == "text" else point(p2),
+            "p2": "" if kind == "text" else axes_length(p2) if kind == "axes" else point(p2),
             "color": css_color(o.get("color") or "red"),
             "width": shape_px(o.get("width"), 1),
             "fill": "" if o.get("fill") in (None, True, "none") else css_color(o["fill"]),
@@ -233,13 +233,21 @@ class CommandsMixin:
             "rounded": shape_px(o.get("rounded") if o.get("rounded") is not True else "3pt", 0),
             "labelpos": o.get("labelpos") or "above",
             "size": SIZES.get(size, 0.9),
+            "rotate": number(o.get("rotate"), "rotate") if kind == "axes" else "",
         }
-        text = p2 if kind == "text" else (o.get("label") if o.get("label") is not True else "")
         cls = "shape" + (" slide-shape" if name == "slideshape" else "")
         data = "".join(' data-%s="%s"' % (k, html.escape(str(v))) for k, v in attrs.items()
                        if v != "")
-        return '<span class="%s"%s%s>%s</span>' % (
-            cls, data, self.spec_attr(spec), self.inline(text or "").strip()), i, 0
+        if kind == "axes":                         # one label per axis
+            labels = [("x", o.get("xlabel", "$x$")), ("y", o.get("ylabel", "$y$")),
+                      ("z", o.get("zlabel", ""))]
+            inner = "".join('<span class="axis-label" data-axis="%s">%s</span>'
+                            % (a, self.inline(t).strip())
+                            for a, t in labels if isinstance(t, str) and t.strip())
+        else:
+            text = p2 if kind == "text" else (o.get("label") if o.get("label") is not True else "")
+            inner = self.inline(text or "").strip()
+        return '<span class="%s"%s%s>%s</span>' % (cls, data, self.spec_attr(spec), inner), i, 0
 
     def caption(self, s, i):
         """\\caption[short]{text} in a figure/table: "Figure n: text"."""
@@ -289,7 +297,7 @@ class CommandsMixin:
         return '<img src="%s" style="%s" alt="">' % (html.escape(found), ";".join(style))
 
 
-SHAPES = ("rect", "ellipse", "circle", "line", "arrow", "text")
+SHAPES = ("rect", "ellipse", "circle", "line", "arrow", "text", "axes")
 
 
 def point(arg):
@@ -300,6 +308,21 @@ def point(arg):
     except ValueError:
         warn("shape point not understood: {%s} (expected {x,y})" % arg)
         return "0,0"
+
+
+def axes_length(arg):
+    """axes length: a fraction of the width, e.g. '0.12'"""
+    return number(arg, "axes length") or "0.1"
+
+
+def number(v, what):
+    if v in (None, True) or not str(v).strip():
+        return ""
+    try:
+        return "%g" % float(v)
+    except ValueError:
+        warn("shape %s not understood: %s (expected a number)" % (what, v))
+        return ""
 
 
 def shape_px(length, default_pt):

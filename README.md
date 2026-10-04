@@ -112,12 +112,21 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
 - shapes: `\begin{annotate}[grid] … \end{annotate}` around an image/table with
   `\shape<spec>[options]{kind}{x1,y1}{x2,y2}` lines (fractions of the element,
   origin bottom left), `\slideshape` (fractions of the slide) and `\slidegrid`.
-  Kinds `rect`, `ellipse`/`circle`, `line`, `arrow`, `text` (`{x,y}{text}`);
+  Kinds `rect`, `ellipse`/`circle`, `line`, `arrow`, `text` (`{x,y}{text}`),
+  `axes` (`{x,y}{length}`: a coordinate indicator with `xlabel`, `ylabel`,
+  `zlabel` for an oblique z axis, `rotate`);
   options `color` (xcolor, e.g. `green!60!black`), `width`, `fill`, `opacity`,
   `dashed`, `rounded`, `label`, `labelpos`, `textsize`; for `text`, `fill` is a
   background (opaque by default) and `border` (or `border=<colour>`) a frame.
   The grid (0.1 steps; also on while `\showdividers`) helps read off
   coordinates. Shapes never change the layout.
+- floatbox: `\begin{floatbox}<spec>[options]{x,y}{w,h} … \end{floatbox}`, a box
+  floating over the slide (lower-left corner and size in fractions of the
+  slide) holding text, images or `\shape` lines in its own 0..1 coordinates;
+  options `border`, `fill`, `opacity`, `width`, `rounded`, `padding`, `align`,
+  `valign`, `grid`. Shapes, floatboxes and slide shapes stay visible over an
+  animation in the PDF too (drawn as a read-only stamp annotation on pages with
+  an animation; pdfLaTeX).
 - beamer: frames (`[t]`, `[plain]`, `\frametitle`), `\section`, `\pause`, overlay
   specifications (`\item<2->`, `[<+->]`, `\only`, `\uncover`, `\visible`,
   `\invisible`, `\alt`, `\onslide`, environments with `<…>`), `columns`, `block`,
@@ -133,7 +142,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `subcaptions`, `dt` to show the time (frame number × dt) below the panels
   with `timelabel`, `timedigits`, `timeunit`, `timebar` for a progress bar
   under the panels (clickable in HTML), `columns=N` for rows of N panels
-  (each label on its panel); put it in a `figure` for a
+  (each label on its panel), `\animpanel[frames=a:b:s, dt=]` for a panel with
+  its own range (each panel then shows its own time); put it in a `figure` for a
   caption), and `animate`'s own
   `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 

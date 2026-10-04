@@ -30,9 +30,21 @@ class AnimationMixin:
         panels = []
         rest = body[j:]
         for m in re.finditer(r"\\animpanel", rest):
-            label, k = read_arg(rest, m.end())
+            popt, k = read_opt(rest, m.end())       # \animpanel[frames=a:b:s, dt=]
+            label, k = read_arg(rest, k)
             path, k = read_arg(rest, k)
-            panels.append((label, path.strip().replace("\\N", "{n}")))
+            po = keyvals(popt)
+            own = None
+            if isinstance(po.get("frames"), str):
+                pf = re.match(r"\s*(-?\d+)\s*:\s*(-?\d+)\s*(?::\s*(-?\d+))?\s*$", po["frames"])
+                if pf:
+                    own = (int(pf.group(1)), int(pf.group(2)), int(pf.group(3) or 1))
+                else:
+                    warn("\\animpanel: frames=first:last[:step] not understood: %s" % po["frames"])
+            pdt = po.get("dt") if isinstance(po.get("dt"), str) and po["dt"].strip() else None
+            panels.append((label, path.strip().replace("\\N", "{n}"), own, pdt))
+        # panels with their own range or dt: each shows its own time
+        per_panel = any(own or pdt for _, _, own, pdt in panels)
         if not panels:
             warn("animation: no \\animpanel")
             return ""
@@ -40,13 +52,30 @@ class AnimationMixin:
         css = length_css(width) if isinstance(width, str) else None
         style = ' style="flex:0 0 %s"' % css if css else ""
         figs = []
-        for n, (label, path) in enumerate(panels, 1):
+        dt = o.get("dt")
+        dt = dt.strip() if isinstance(dt, str) and dt.strip() else None
+        tlabel = o.get("timelabel", "$t = $")
+        tlabel = self.inline(tlabel if isinstance(tlabel, str) else "").strip()
+        unit = o.get("timeunit", "")
+        unit = ("&nbsp;" + self.inline(unit).strip()) if isinstance(unit, str) and unit.strip() else ""
+        for n, (label, path, own, pdt) in enumerate(panels, 1):
             label = self.inline(label).strip()
             if flag("subcaptions", False):
                 label = "(%s)&nbsp;%s" % (chr(96 + n), label)
+            pattrs = ""
+            if own:
+                pattrs += ' data-frames="%d:%d:%d"' % own
+            if pdt:
+                pattrs += ' data-dt="%s"' % html.escape(pdt.strip())
+            ptime = ""
+            if per_panel and (pdt or dt):
+                ptime = ('<div class="anim-ptime"><span class="anim-time-label">%s</span>&nbsp;'
+                         '<span class="anim-ptime-value"></span>%s</div>' % (tlabel, unit))
             figs.append('<figure%s><figcaption class="anim-label">%s</figcaption>'
-                        '<img data-src="%s" alt=""></figure>'
-                        % (style, label, html.escape(self.frame_pattern(path, first))))
+                        '<img data-src="%s"%s alt="">%s</figure>'
+                        % (style, label,
+                           html.escape(self.frame_pattern(path, own[0] if own else first)),
+                           pattrs, ptime))
         fps = str(o.get("fps", "3")).strip()
         attrs = ' data-fps="%s" data-frames="%d:%d:%d"' % (html.escape(fps), first, last, step)
         cls = "anim anim-labelled"
@@ -55,8 +84,8 @@ class AnimationMixin:
             if not cols.isdigit() or int(cols) < 1:
                 warn("animation: columns=%s should be a whole number" % cols)
             elif int(cols) < len(panels):
-                cls += " anim-grid"
-                attrs += ' style="--anim-cols:%s"' % cols
+                cls += " anim-grid"                # exactly N per row, width= per column
+                attrs += ' style="--anim-cols:%s%s"' % (cols, ";--anim-w:%s" % css if css else "")
         if flag("autoplay", True):
             attrs += " data-autoplay"
         if flag("loop", True):
@@ -68,25 +97,21 @@ class AnimationMixin:
         elif controls != "none":
             attrs += ' data-controls="%s"' % html.escape(controls)
         time = bar = ""
-        dt = o.get("dt")
-        if isinstance(dt, str) and dt.strip():     # time = frame number x dt
+        if dt:                                     # time = frame number x dt
             try:
                 float(dt)
             except ValueError:
                 warn("animation: dt=%s is not a number" % dt)
             else:
-                label = o.get("timelabel", "$t = $")
-                unit = o.get("timeunit", "")
                 digits = str(o.get("timedigits", "2")).strip()
                 attrs += ' data-dt="%s" data-time-digits="%s"' % (html.escape(dt.strip()),
                                                                   html.escape(digits))
-                time = ('<div class="anim-time"><span class="anim-time-label">%s</span>&nbsp;'
-                        '<span class="anim-time-value"></span>%s</div>'
-                        % (self.inline(label if isinstance(label, str) else "").strip(),
-                           ("&nbsp;" + self.inline(unit).strip()) if isinstance(unit, str) and unit.strip() else ""))
+                if not per_panel:                  # else: below each panel
+                    time = ('<div class="anim-time"><span class="anim-time-label">%s</span>&nbsp;'
+                            '<span class="anim-time-value"></span>%s</div>' % (tlabel, unit))
         if flag("timebar", False):                 # progress bar, first/last times
             ends = ("", "")
-            if time:
+            if time:                               # end times: shared range only
                 d = int(str(o.get("timedigits", "2")).strip() or 2)
                 ends = tuple('<span class="anim-bar-end">%.*f</span>' % (d, n * float(dt))
                              for n in (first, last))
