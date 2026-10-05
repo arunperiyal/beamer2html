@@ -91,6 +91,13 @@ Open `slides.html` and use:
 | S | presenter view: notes, next slide, timer (second window) |
 | P | play / pause the animation on the slide |
 | H | help |
+| swipe left / right | next / previous step or slide (touch screens) |
+| tap right / left third | next / previous; a tap on an animation plays / pauses it |
+
+On a phone or tablet, open the deck through a web server rather than as a
+file (browsers there do not load `html/` and `figures/` next to a local
+file): `python3 -m http.server 8000` in the deck folder, then
+`http://<computer's IP>:8000/slides.html` on the device (same Wi-Fi).
 
 Copy the `--pack` zip (or the whole project folder) to the presenting computer.
 Ctrl+P → Save as PDF gives a static backup, one page per slide.
