@@ -560,12 +560,46 @@
   addEventListener("resize", fit);
   fit();
 
+  // ------------------------------------------------------------ touch
+  // Swipe left (next) / right (previous); a tap on the right two thirds of
+  // the screen goes forward, on the left third back. Taps on links, buttons,
+  // the animation controls / time bar and animation images (play / pause)
+  // keep their own meaning. Ignored while two fingers are down or the page is
+  // pinch-zoomed in.
+  const TOUCH_OWN = "a, button, input, select, textarea, video, " +
+    ".anim-controls, .anim-bar, .anim img";
+  const zoomed = () => window.visualViewport && visualViewport.scale > 1.01;
+  let touch = null, fingers = 0;
+  addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse") return;
+    fingers++;
+    touch = fingers === 1 && !zoomed() ? { x: e.clientX, y: e.clientY, t: Date.now(),
+      own: !!(e.target.closest && e.target.closest(TOUCH_OWN)) } : null;
+  });
+  addEventListener("pointercancel", (e) => {
+    if (e.pointerType !== "mouse") { fingers = Math.max(0, fingers - 1); touch = null; }
+  });
+  addEventListener("pointerup", (e) => {
+    if (e.pointerType === "mouse") return;
+    fingers = Math.max(0, fingers - 1);
+    const t = touch;
+    touch = null;
+    if (!t) return;
+    const dx = e.clientX - t.x, dy = e.clientY - t.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {        // swipe
+      dx < 0 ? next() : prev();
+    } else if (!t.own && Math.hypot(dx, dy) < 12 && Date.now() - t.t < 500) {   // tap
+      e.clientX < innerWidth / 3 ? prev() : next();
+    }
+  });
+
   const hud = document.createElement("div");
   hud.className = "hud";
   hud.textContent = "→ / Space / PgDn   next step / slide\n← / PgUp          previous\n" +
     "Home / End        first / last\n<number> Enter    go to slide\n" +
     "F                 fullscreen\nP                 play / pause animation\n" +
-    "S                 presenter view (notes)\nH                 this help";
+    "S                 presenter view (notes)\nH                 this help\n" +
+    "Touch: swipe left / right, or tap the right / left side";
   document.body.appendChild(hud);
 
   let typed = "";

@@ -27,6 +27,7 @@ html, body {
   margin: 0; height: 100%;
   background: #1b1b1b;                 /* letterbox around the slide */
   overflow: hidden;
+  touch-action: pinch-zoom;            /* swipes reach deck.js (no panning) */
 }
 
 .deck {
