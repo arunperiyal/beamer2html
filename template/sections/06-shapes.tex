@@ -39,7 +39,9 @@
 % axes: a coordinate indicator. \shape[options]{axes}{x,y}{length}: origin
 % and arrow length (a fraction of the width, the same for every axis).
 % Options: xlabel ($x$), ylabel ($y$), zlabel (adds an oblique z axis),
-% rotate (degrees), plus color, width, textsize.
+% oblique (its angle from x, 225: out of the page), rotate (degrees), plus
+% color, width, textsize. An empty label leaves that axis out. For an x-z
+% plane: ylabel=$z$, and zlabel=$y$ with oblique=45 (y into the page).
 \begin{frame}{Shapes}{coordinate axes}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -57,39 +59,13 @@
         \begin{annotate}
           \includegraphics[width=\linewidth]{figures/sample-plot}
           \shape[color=bannerblue, zlabel=$z$, textsize=\footnotesize]{axes}{0.32,0.3}{0.1}
+          \shape<2->[color=bannerblue, ylabel=$z$, zlabel=$y$, oblique=45,
+                    textsize=\footnotesize]{axes}{0.7,0.3}{0.1}
         \end{annotate}
-        \caption{Three axes with \texttt{zlabel=\$z\$}.}
+        \caption{\texttt{zlabel}; an x--z plane (step 2).}
       \end{figure}
     \end{column}
   \end{columns}
-\end{frame}
-
-% floatbox: a box floating over the slide, placed by its lower-left corner
-% and size (fractions of the slide). It holds text, images or \shape lines in
-% the box's own 0..1 coordinates, and never moves the slide's content.
-%   \begin{floatbox}<spec>[options]{x,y}{w,h} ... \end{floatbox}
-% Options: border (black) or border=<colour>, fill, opacity (of the fill, 1),
-% width (border, 0.8pt), rounded, padding (3pt), align (left/center/right),
-% valign (top/center/bottom), grid. Over an animation it still shows on top.
-\begin{frame}{Floatbox}{a box anywhere on the slide}
-  \begin{columns}[T]
-    \begin{column}{0.5\textwidth}
-      \includegraphics[width=\linewidth]{figures/sample-field}
-    \end{column}
-    \begin{column}{0.45\textwidth}
-      \begin{itemize}
-        \item The slide is laid out as usual
-        \item Floatboxes sit on top of it
-        \item Use them for axes, callouts or an inset
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \begin{floatbox}{0.1,0.26}{0.1,0.17}
-    \shape[color=black, width=1.2pt]{axes}{0.15,0.15}{0.6}
-  \end{floatbox}
-  \begin{floatbox}<2->[border=red, fill=yellow!20, rounded, width=1pt]{0.58,0.18}{0.35,0.16}
-    \small A floatbox with text, a border and a fill (step 2).
-  \end{floatbox}
 \end{frame}
 
 % \slideshape: the same, in fractions of the whole slide (anywhere in a

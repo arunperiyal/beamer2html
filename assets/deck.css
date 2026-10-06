@@ -448,14 +448,3 @@ cite a { color: var(--blue); text-decoration: none; }
 .shape-grid-label.x.inside { transform: translate(-50%, calc(-100% - 2px)); }
 .shape-grid-label.y.inside { transform: translate(2px, -50%); }
 
-/* \begin{floatbox}{x,y}{w,h}: a box over the slide, positioned in % of it */
-.floatbox {
-  position: absolute; box-sizing: border-box; z-index: 4;
-  display: flex; flex-direction: column; overflow: visible;
-}
-.floatbox img { max-width: 100%; }
-.floatbox::after {                      /* border on top of the content, as in the PDF */
-  content: ""; position: absolute; inset: 0; border: var(--fb-border, none);
-  border-radius: inherit; pointer-events: none; z-index: 6;
-}
-

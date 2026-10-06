@@ -538,7 +538,8 @@
 % HTML deck -- none in the PDF), autoplay (true), loop (true), subcaptions
 % ((a), (b), ... before the labels), dt (show the time below the panels:
 % frame number x dt), timelabel ($t = $), timedigits (2), timeunit (),
-% timebar (a progress bar below the panels; with dt, first/last times at its ends).
+% timebar (a progress bar below the panels; with dt, first/last times at its ends),
+% time (true; time=false hides the current time, the timebar keeps its ends).
 % columns (all in one row; columns=3: rows of 3, each label on its panel).
 % \animpanel[frames=a:b:s, dt=]{label}{path}: a panel with its own range (and
 % time step); the panels still step together, a shorter one holds its last
@@ -576,6 +577,7 @@
 \int_new:N  \l__tt_anim_cols_int
 \bool_new:N \l__tt_anim_grid_bool
 \bool_new:N \l__tt_anim_bar_bool
+\bool_new:N \l__tt_anim_time_bool
 \int_new:N  \l__tt_anim_first_int
 \int_new:N  \l__tt_anim_last_int
 \dim_new:N  \l__tt_anim_barw_dim
@@ -607,6 +609,9 @@
     timebar     .bool_set:N = \l__tt_anim_bar_bool,
     timebar     .initial:n  = false,
     timebar     .default:n  = true,
+    time        .bool_set:N = \l__tt_anim_time_bool,
+    time        .initial:n  = true,
+    time        .default:n  = true,
     columns     .int_set:N  = \l__tt_anim_cols_int,
     columns     .initial:n  = 0,
   }
@@ -780,7 +785,8 @@
                     \seq_map_indexed_function:NN \g__tt_anim_paths_seq \__tt_anim_panel:nn
                     \bool_if:NT \l__tt_anim_bar_bool
                       { \exp_not:N \par \exp_not:N \vspace { 0.3em } \exp_not:N \__tt_anim_bar: }
-                    \bool_if:nT { ! \l__tt_anim_ptime_bool && ! \tl_if_blank_p:V \l__tt_anim_dt_tl }
+                    \bool_if:nT { \l__tt_anim_time_bool && ! \l__tt_anim_ptime_bool
+                                   && ! \tl_if_blank_p:V \l__tt_anim_dt_tl }
                       { \exp_not:N \par \exp_not:N \vspace { 0.15em } \exp_not:N \__tt_anim_time: }
                   }
               }
@@ -874,7 +880,7 @@
               }
             \__tt_anim_frame:n {#1}
             \exp_not:N \includegraphics [ width = \dim_use:N \l__tt_anim_w_dim ] { \exp_not:n {#2} }
-            \bool_if:nT { \l__tt_anim_ptime_bool
+            \bool_if:nT { \l__tt_anim_time_bool && \l__tt_anim_ptime_bool
                           && ! \tl_if_blank_p:e { \seq_item:Nn \l__tt_anim_pdt_seq {#1} } }
               {                                              % its own time below it
                 \exp_not:N \par \exp_not:N \vspace { 0.1em }
@@ -1081,7 +1087,8 @@
 % Kinds: rect, ellipse (circle), line, arrow: {x1,y1}{x2,y2} (ellipse: its
 % bounding box); text: {x,y}{text}; axes: {x,y}{length} -- a coordinate
 % indicator, length a fraction of the width (xlabel=$x$, ylabel=$y$,
-% zlabel= adds an oblique z axis, rotate=degrees). Options: color (red), width (1pt),
+% zlabel= adds an oblique z axis, oblique=its angle from x (225), rotate=
+% degrees; an empty label leaves that axis out). Options: color (red), width (1pt),
 % fill (none), opacity (of the fill: 0.25, text 1), dashed, rounded (3pt),
 % border (text only: a frame, in the text colour or border=<colour>), label,
 % labelpos (above/below/left/right), textsize (\small). <spec> as in beamer.
@@ -1129,16 +1136,16 @@
     \ifttsh@dashed\tikzset{ttshape/.append style={dashed}}\fi\fi
   \node[ttshape] at (\ttsh@xa,\ttsh@ya) {#1};}
 % axes: arrows from (\ttsh@xa,\ttsh@ya), \ttsh@len long, x at \ttsh@rot degrees,
-% y at +90, an oblique z (0.7 long, at +225) when zlabel is given; the labels
-% sit just beyond the arrow tips
+% y at +90, an oblique z (0.7 long, at +\ttsh@obl); an axis with an empty
+% label is left out; the labels sit just beyond the arrow tips
 \newcommand{\@ttShapeAxis}[3]{% angle, length factor, label
   \pgfmathsetmacro\ttsh@a{#1}\pgfmathsetmacro\ttsh@b{#1+180}%
   \draw[ttshape, fill=none, -{Stealth}] (\ttsh@xa,\ttsh@ya) -- ++(\ttsh@a:#2*\ttsh@len)
     node[anchor=\ttsh@b, text=\ttsh@color, font=\ttsh@size, inner sep=1.5pt] {#3};}
 \newcommand{\@ttShapeAxes}{\@ttShapeStyle
-  \@ttShapeAxis{\ttsh@rot}{1}{\ttsh@xlabel}%
-  \@ttShapeAxis{\ttsh@rot+90}{1}{\ttsh@ylabel}%
-  \ifx\ttsh@zlabel\@empty\else\@ttShapeAxis{\ttsh@rot+225}{0.7}{\ttsh@zlabel}\fi}
+  \ifx\ttsh@xlabel\@empty\else\@ttShapeAxis{\ttsh@rot}{1}{\ttsh@xlabel}\fi
+  \ifx\ttsh@ylabel\@empty\else\@ttShapeAxis{\ttsh@rot+90}{1}{\ttsh@ylabel}\fi
+  \ifx\ttsh@zlabel\@empty\else\@ttShapeAxis{\ttsh@rot+\ttsh@obl}{0.7}{\ttsh@zlabel}\fi}
 % grid over \ttsh@W x \ttsh@H (origin bottom left, shifted by \ttsh@yo);
 % numbers outside an element, inside the page edge for \slidegrid
 \def\ttsh@xanchor{north}\def\ttsh@yanchor{east}
@@ -1160,18 +1167,6 @@
 % #1: the shapes; a picture whose origin is the current point
 \newcommand{\@ttShapePicture}[1]{%
   \begin{tikzpicture}[overlay]#1\end{tikzpicture}}
-% floatbox: fill behind the content, border on top (\ttfb@... from its keys)
-\newcommand{\@ttFloatPicture}[3]{% box, shapes, grid?
-  \begin{tikzpicture}[baseline=(ttbox.south)]
-    \ifx\ttfb@fill\ttsh@none\else
-      \fill[\ttfb@fill, fill opacity=\ttfb@opacity, rounded corners=\ttfb@rounded]
-        (0,0) rectangle (\ttsh@W,\ttsh@H);\fi
-    \node[inner sep=0pt, anchor=south west] (ttbox) at (0,0) {\usebox{#1}};
-    \begin{scope}[overlay]#3#2\end{scope}
-    \ifx\ttfb@border\ttsh@none\else
-      \draw[\ttfb@border, line width=\ttfb@width, rounded corners=\ttfb@rounded]
-        (0,0) rectangle (\ttsh@W,\ttsh@H);\fi
-  \end{tikzpicture}}
 % the shapes alone, in a picture of the annotated element's size
 \newcommand{\@ttShapesPicture}[2]{% shapes, grid?
   \begin{tikzpicture}
@@ -1186,7 +1181,7 @@
 
 \ExplSyntaxOn
 % animate shows its frames as PDF widget annotations, which viewers draw above
-% all page content. Shapes, floatboxes and slide shapes on a page with an
+% all page content. Shapes and slide shapes on a page with an
 % animation therefore become an annotation of their own (a read-only stamp
 % whose appearance is the drawing), added after animate's so it is drawn on
 % top. pdfTeX only; elsewhere, and on pages without animations, the drawing
@@ -1219,7 +1214,6 @@
       }
       { \box_use:N #1 }
   }
-\cs_generate_variant:Nn \__tt_over:N { c }
 \dim_new:N  \l__tt_sh_w_dim
 \dim_new:N  \l__tt_sh_h_dim
 \dim_new:N  \l__tt_sh_yo_dim
@@ -1260,6 +1254,8 @@
     ylabel   .initial:n  = $y$,
     zlabel   .tl_set:N   = \ttsh@zlabel,
     zlabel   .initial:n  = ,
+    oblique  .tl_set:N   = \ttsh@obl,
+    oblique  .initial:n  = 225,
     rotate   .tl_set:N   = \ttsh@rot,
     rotate   .initial:n  = 0,
   }
@@ -1382,121 +1378,9 @@
     \tl_gclear:N \g__tt_sh_ann_tl
   }
 
-% ---------------------------------------------------------------- Floatbox
-%   \begin{floatbox}<spec>[options]{x,y}{w,h} ... \end{floatbox}
-% A box floating over the slide: lower-left corner (x,y) and size (w,h) in
-% fractions of the slide (origin bottom left). It holds text, images or
-% \shape lines; the shapes use the box's own 0..1 coordinates. It never moves
-% the slide's content. Options: border (in black, or border=<colour>),
-% fill (none), opacity (of the fill, 1), width (border, 0.8pt), rounded
-% (3pt), padding (3pt), align (left/center/right), valign (top/center/
-% bottom), grid (also while \showdividers).
-\tl_new:N  \g__tt_fb_page_tl
-\int_new:N \g__tt_fb_n_int
-\dim_new:N \l__tt_fb_x_dim
-\dim_new:N \l__tt_fb_y_dim
-\dim_new:N \l__tt_fb_pad_dim
-\tl_new:N  \l__tt_fb_align_tl
-\tl_new:N  \l__tt_fb_valign_tl
-\keys_define:nn { tt / floatbox }
-  {
-    border  .tl_set:N   = \ttfb@border,
-    border  .initial:n  = none,
-    border  .default:n  = black,
-    fill    .tl_set:N   = \ttfb@fill,
-    fill    .initial:n  = none,
-    opacity .tl_set:N   = \ttfb@opacity,
-    opacity .initial:n  = 1,
-    width   .tl_set:N   = \ttfb@width,
-    width   .initial:n  = 0.8pt,
-    rounded .tl_set:N   = \ttfb@rounded,
-    rounded .initial:n  = 0pt,
-    rounded .default:n  = 3pt,
-    padding .tl_set:N   = \ttfb@pad,
-    padding .initial:n  = 3pt,
-    align   .tl_set:N   = \l__tt_fb_align_tl,
-    align   .initial:n  = center,
-    valign  .tl_set:N   = \l__tt_fb_valign_tl,
-    valign  .initial:n  = center,
-    grid    .bool_set:N = \l__tt_sh_grid_bool,
-    grid    .default:n  = true,
-    grid    .initial:n  = false,
-  }
-\NewDocumentEnvironment { floatbox } { d<> O{} m m +b }
-  {
-    \IfNoValueTF {#1}
-      { \__tt_fb:nnnn {#2} {#3} {#4} {#5} }
-      { \only<#1>{ \__tt_fb:nnnn {#2} {#3} {#4} {#5} } }
-  }
-  { \ignorespacesafterend }
-
-\cs_new_protected:Npn \__tt_fb:nnnn #1#2#3#4
-  {
-    \group_begin:
-    \keys_set:nn { tt / floatbox } {#1}
-    \if@ttdividers \bool_set_true:N \l__tt_sh_grid_bool \fi
-    \seq_set_split:Nnn \l_tmpa_seq { , } {#2}
-    \dim_set:Nn \l__tt_fb_x_dim { \fp_to_dim:n { ( \seq_item:Nn \l_tmpa_seq { 1 } ) * \paperwidth } }
-    \dim_set:Nn \l__tt_fb_y_dim { \fp_to_dim:n { ( \seq_item:Nn \l_tmpa_seq { 2 } ) * \paperheight } }
-    \seq_set_split:Nnn \l_tmpa_seq { , } {#3}
-    \dim_set:Nn \l__tt_sh_w_dim { \fp_to_dim:n { ( \seq_item:Nn \l_tmpa_seq { 1 } ) * \paperwidth } }
-    \dim_set:Nn \l__tt_sh_h_dim { \fp_to_dim:n { ( \seq_item:Nn \l_tmpa_seq { 2 } ) * \paperheight } }
-    \dim_zero:N \l__tt_sh_yo_dim
-    \dim_set:Nn \l__tt_fb_pad_dim { \ttfb@pad }
-    \tl_set:Nx \ttsh@W  { \dim_use:N \l__tt_sh_w_dim }
-    \tl_set:Nx \ttsh@H  { \dim_use:N \l__tt_sh_h_dim }
-    \tl_set:Nn \ttsh@yo { 0pt }
-    % the content: a minipage inside the padding; \shape lines are queued
-    \tl_set:Nx \l_tmpb_tl { \str_case:VnF \l__tt_fb_valign_tl { {top} {t} {bottom} {b} } {c} }
-    \tl_gclear:N \g__tt_sh_ann_tl
-    \sbox \l__tt_sh_box
-      {
-        \hspace* { \l__tt_fb_pad_dim }
-        \raisebox { \l__tt_fb_pad_dim } [ \l__tt_sh_h_dim ] [ 0pt ]
-          {
-            \begin{minipage}
-              [ b ] [ \dim_eval:n { \l__tt_sh_h_dim - 2 \l__tt_fb_pad_dim } ]
-              [ \l_tmpb_tl ]
-              { \dim_eval:n { \l__tt_sh_w_dim - 2 \l__tt_fb_pad_dim } }
-              \str_case:VnF \l__tt_fb_align_tl
-                { {left} { \raggedright } {right} { \raggedleft } } { \centering }
-              #4
-            \end{minipage}
-          }
-        \hspace* { \l__tt_fb_pad_dim }
-      }
-    % into a box of the page's pool, placed when the page is shipped out
-    \int_gincr:N \g__tt_fb_n_int
-    \box_if_exist:cF { g__tt_fb_ \int_use:N \g__tt_fb_n_int _box }
-      { \box_new:c { g__tt_fb_ \int_use:N \g__tt_fb_n_int _box } }
-    \hbox_gset:cn { g__tt_fb_ \int_use:N \g__tt_fb_n_int _box }
-      {
-        \@ttFloatPicture { \l__tt_sh_box } { \g__tt_sh_ann_tl }
-          { \bool_if:NT \l__tt_sh_grid_bool { \@ttShapeGrid } }
-      }
-    \tl_gclear:N \g__tt_sh_ann_tl
-    \tl_gput_right:Nx \g__tt_fb_page_tl
-      {
-        \exp_not:N \__tt_fb_put:nnn { \dim_use:N \l__tt_fb_x_dim } { \dim_use:N \l__tt_fb_y_dim }
-          { g__tt_fb_ \int_use:N \g__tt_fb_n_int _box }
-      }
-    \group_end:
-  }
-\cs_new_protected:Npn \__tt_fb_put:nnn #1#2#3
-  {
-    \put(0,0){ \rlap { \hspace* {#1} \raisebox { \dim_eval:n { #2 - \paperheight } }
-      { \__tt_over:c {#3} } } }
-  }
-
 % slide shapes go on top of the finished page (origin: its top left corner)
 \AddToHook { shipout / foreground }
   {
-    \tl_if_empty:NF \g__tt_fb_page_tl
-      {
-        \g__tt_fb_page_tl
-        \tl_gclear:N \g__tt_fb_page_tl
-      }
-    \int_gzero:N \g__tt_fb_n_int
     \tl_if_empty:NF \g__tt_sh_page_tl
       {
         \dim_set_eq:NN \l__tt_sh_w_dim \paperwidth
