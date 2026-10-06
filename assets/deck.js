@@ -283,13 +283,6 @@
       shapeLayer(ann, [...ann.querySelectorAll("span.shape:not(.slide-shape)")],
         ann.hasAttribute("data-grid") || s.classList.contains("dividers"), target, false);
     });
-    // \begin{floatbox}: moved onto the slide itself (its left/bottom/width/
-    // height are percentages of the slide); its shapes use the box's 0..1
-    s.querySelectorAll(".floatbox").forEach((fb) => {
-      s.appendChild(fb);
-      shapeLayer(fb, [...fb.querySelectorAll("span.shape:not(.slide-shape)")],
-        fb.hasAttribute("data-grid") || s.classList.contains("dividers"), () => fb, false);
-    });
     const grid = s.querySelector("span.slide-grid");
     const own = [...s.querySelectorAll("span.slide-shape")];
     if (own.length || grid) shapeLayer(s, own, !!grid, () => s, true);
@@ -382,15 +375,16 @@
           g.innerHTML = `<ellipse cx="${(ax + bx) / 2}" cy="${(ay + by) / 2}" rx="${(maxX - minX) / 2}"` +
             ` ry="${(maxY - minY) / 2}" ${stroke} ${fill}/>`;
         } else if (d.kind === "axes") {
-          // x at rotate degrees, y at +90, z (0.7 long) at +225; length is a
-          // fraction of the width for every axis
+          // x at rotate degrees, y at +90, z (0.7 long) at +oblique (225);
+          // length is a fraction of the width; an axis without a label is left out
           const L = (+d.p2 || 0.1) * w, rot = +d.rotate || 0;
+          const obl = d.oblique === undefined ? 225 : +d.oblique;
           const id = `shape-arrow-${++shapeIds}`;
           let out = `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5"` +
             ` markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">` +
             `<path d="M0,0 L10,5 L0,10 L3,5 z" fill="${d.color}"/></marker></defs>`;
-          for (const [axis, deg, f] of [["x", rot, 1], ["y", rot + 90, 1], ["z", rot + 225, 0.7]]) {
-            if (axis === "z" && !axisLabels.z) continue;
+          for (const [axis, deg, f] of [["x", rot, 1], ["y", rot + 90, 1], ["z", rot + obl, 0.7]]) {
+            if (!axisLabels[axis]) continue;
             const t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
             const tx = ax + c * f * L, ty = ay - s * f * L;
             out += `<line x1="${ax}" y1="${ay}" x2="${tx}" y2="${ty}" ${stroke} marker-end="url(#${id})"/>`;

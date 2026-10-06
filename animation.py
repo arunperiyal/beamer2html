@@ -68,7 +68,7 @@ class AnimationMixin:
             if pdt:
                 pattrs += ' data-dt="%s"' % html.escape(pdt.strip())
             ptime = ""
-            if per_panel and (pdt or dt):
+            if per_panel and (pdt or dt) and flag("time", True):
                 ptime = ('<div class="anim-ptime"><span class="anim-time-label">%s</span>&nbsp;'
                          '<span class="anim-ptime-value"></span>%s</div>' % (tlabel, unit))
             figs.append('<figure%s><figcaption class="anim-label">%s</figcaption>'
@@ -97,21 +97,23 @@ class AnimationMixin:
         elif controls != "none":
             attrs += ' data-controls="%s"' % html.escape(controls)
         time = bar = ""
+        timed = False                              # a valid dt for the shared range
         if dt:                                     # time = frame number x dt
             try:
                 float(dt)
             except ValueError:
                 warn("animation: dt=%s is not a number" % dt)
             else:
+                timed = not per_panel
                 digits = str(o.get("timedigits", "2")).strip()
                 attrs += ' data-dt="%s" data-time-digits="%s"' % (html.escape(dt.strip()),
                                                                   html.escape(digits))
-                if not per_panel:                  # else: below each panel
+                if timed and flag("time", True):   # else: below each panel
                     time = ('<div class="anim-time"><span class="anim-time-label">%s</span>&nbsp;'
                             '<span class="anim-time-value"></span>%s</div>' % (tlabel, unit))
         if flag("timebar", False):                 # progress bar, first/last times
             ends = ("", "")
-            if time:                               # end times: shared range only
+            if timed:                              # end times: shared range only
                 d = int(str(o.get("timedigits", "2")).strip() or 2)
                 ends = tuple('<span class="anim-bar-end">%.*f</span>' % (d, n * float(dt))
                              for n in (first, last))

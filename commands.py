@@ -234,11 +234,12 @@ class CommandsMixin:
             "labelpos": o.get("labelpos") or "above",
             "size": SIZES.get(size, 0.9),
             "rotate": number(o.get("rotate"), "rotate") if kind == "axes" else "",
+            "oblique": number(o.get("oblique"), "oblique") if kind == "axes" else "",
         }
         cls = "shape" + (" slide-shape" if name == "slideshape" else "")
         data = "".join(' data-%s="%s"' % (k, html.escape(str(v))) for k, v in attrs.items()
                        if v != "")
-        if kind == "axes":                         # one label per axis
+        if kind == "axes":                         # one label per axis (none: no axis)
             labels = [("x", o.get("xlabel", "$x$")), ("y", o.get("ylabel", "$y$")),
                       ("z", o.get("zlabel", ""))]
             inner = "".join('<span class="axis-label" data-axis="%s">%s</span>'
