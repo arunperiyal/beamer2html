@@ -113,7 +113,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   (or beamer's `\setbeamerfont{caption}{size=…}`; preamble), `\slidetablestretch`,
   `\showdividers`/`\hidedividers`, `rows`/`row`, `progress`/`\task`,
   `publications`/`\pub`/`\pubtext`/`\pubsection`, `litreview`/`\study`/`\studytext`,
-  `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header),
+  `slidetable` (styles `plain`, `lines`, `header`, `striped`; first row = header;
+  `p{3cm}`/`m{..}`/`b{..}` column widths carry over to the HTML),
   `\FigurePlaceholder`; a long `\ReferencesFrame` list continues on
   "References (cont.)" slides, in the PDF and the HTML
 - shapes: `\begin{annotate}[grid] … \end{annotate}` around an image/table with
