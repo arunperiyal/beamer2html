@@ -175,7 +175,11 @@ class EnvironmentsMixin:
         if style not in ("plain", "lines", "header", "striped"):
             warn("slidetable: unknown style '%s' (plain, lines, header, striped)" % style)
         spec, j = read_arg(body, j)
-        aligns = column_aligns(spec)
+        cols = column_specs(spec)
+        # p/m/b columns: their width; the row's cells line up as in LaTeX
+        # (p: first lines at the top, m: middle, b: bottom)
+        valign = next(({"p": "top", "b": "bottom"}.get(k, "middle")
+                       for _, _, k in cols if k in "pmb"), None)
         rows = []
         for r in re.split(r"\\\\(?:\[[^\]]*\])?", body[j:]):
             r = re.sub(r"\\(hline|toprule|midrule|bottomrule|cline\{[^}]*\})", "", r)
@@ -184,10 +188,14 @@ class EnvironmentsMixin:
         if not rows:
             return ""
 
+        def cell_style(k):
+            align, width, _ = cols[k] if k < len(cols) else ("left", None, "l")
+            return "text-align:%s%s%s" % (align, ";width:%s" % width if width else "",
+                                          ";vertical-align:%s" % valign if valign else "")
+
         def tr(cells, tag):
             return "<tr>%s</tr>" % "".join(
-                '<%s style="text-align:%s">%s</%s>' % (
-                    tag, aligns[k] if k < len(aligns) else "left", c, tag)
+                '<%s style="%s">%s</%s>' % (tag, cell_style(k), c, tag)
                 for k, c in enumerate(cells))
         stretch = self.macros.get("slidetablestretch", "1.3").strip()
         try:
@@ -220,9 +228,10 @@ class EnvironmentsMixin:
         return PARA + '<table class="tab">%s</table>' % "".join(trs) + PARA
 
 
-def column_aligns(spec):
-    """'l c >{\\bfseries}r p{3cm} @{}' -> ['left', 'center', 'right', 'left']"""
-    aligns, i, pre = [], 0, None
+def column_specs(spec):
+    """'l >{\\bfseries}r p{3cm} @{}' -> [('left', None, 'l'), ('right', None, 'r'),
+    ('left', '240px', 'p')]: alignment, CSS width (p/m/b columns), column type"""
+    cols, i, pre = [], 0, None
     while i < len(spec):
         c = spec[i]
         if c in "lcrpmbX":
@@ -231,11 +240,13 @@ def column_aligns(spec):
                 align = "center"
             elif pre and "\\raggedleft" in pre:
                 align = "right"
-            aligns.append(align)
             pre = None
             i += 1
-            if c in "pmb":                         # skip the {width}
-                _, i = read_arg(spec, i)
+            width = None
+            if c in "pmb":                         # {width}
+                w, i = read_arg(spec, i)
+                width = length_css(w)
+            cols.append((align, width, c))
         elif c == ">":                             # >{..}: applies to the next column
             pre, i = read_arg(spec, i + 1)
         elif c in "@!<":                           # @{..} !{..} <{..}
@@ -243,7 +254,10 @@ def column_aligns(spec):
         elif c == "*":                             # *{3}{c}
             n, i = read_arg(spec, i + 1)
             sub, i = read_arg(spec, i)
-            aligns += column_aligns(sub) * int(n) if n.strip().isdigit() else []
+            cols += column_specs(sub) * int(n) if n.strip().isdigit() else []
+        elif c == "{":                             # c{1cm}: a width needs p/m/b
+            w, i = read_arg(spec, i)
+            warn("column spec: {%s} after a column without a width (use p{%s})" % (w, w))
         else:
             i += 1                                 # | and spaces
-    return aligns
+    return cols
