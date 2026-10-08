@@ -36,19 +36,31 @@ def referenced_files(page, root, config):
         add(logo)
 
     # animations: data-src="…_{n}.png" for every frame in data-frames="a:b:step"
-    for m in re.finditer(r'<div class="anim"([^>]*)>', page):
-        fr = re.search(r'data-frames="(-?\d+):(-?\d+)(?::(-?\d+))?"', m.group(1))
+    # of the animation, or of the panel's own <img> (\animpanel[frames=..]);
+    # class "anim", plus anim-labelled / anim-grid from \begin{animation}
+    start = re.compile(r'<div class="anim(?: [^"]*)?"([^>]*)>')
+    frames = re.compile(r'data-frames="(-?\d+):(-?\d+)(?::(-?\d+))?"')
+
+    def frame_nums(fr):
+        first, last, step = int(fr.group(1)), int(fr.group(2)), int(fr.group(3) or 1)
+        return range(first, last + (1 if step > 0 else -1), step)
+
+    for m in start.finditer(page):
+        fr = frames.search(m.group(1))
         if not fr:
             continue
-        first, last, step = int(fr.group(1)), int(fr.group(2)), int(fr.group(3) or 1)
-        nums = range(first, last + (1 if step > 0 else -1), step)
-        end = page.find('<div class="anim"', m.end())
-        block = page[m.end():end if end > 0 else len(page)]
-        for src in re.findall(r'data-src="([^"]+)"', block):
-            for n in nums:
+        nums = frame_nums(fr)
+        nxt = start.search(page, m.end())
+        block = page[m.end():nxt.start() if nxt else len(page)]
+        for img in re.finditer(r'<img\b[^>]*>', block):
+            src = re.search(r'data-src="([^"]+)"', img.group(0))
+            if not src:
+                continue
+            own = frames.search(img.group(0))
+            for n in frame_nums(own) if own else nums:
                 add(re.sub(r"\{n(?::(\d+))?\}",
                            lambda mm: str(n).zfill(int(mm.group(1))) if mm.group(1) else str(n),
-                           src))
+                           src.group(1)))
 
     # the whole html/ folder (engine, MathJax, references.js), except the
     # PDF-figure cache: only the images actually used from it are added above
