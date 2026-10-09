@@ -1407,4 +1407,37 @@
   }
 \ExplSyntaxOff
 
+% ---------------------------------------------------------------- Flow diagrams
+% TikZ styles for flowcharts in the deck's colours:
+%   \begin{tikzpicture}[flow]
+%     \node[flowstart]                     (s) {Start};
+%     \node[flowbox, below=of s]           (a) {Mesh};
+%     \node[flowdecision, below=of a]      (d) {Converged?};
+%     \draw[flowarrow] (s) -- (a);
+%     \draw[flowarrow] (a) -- (d);
+%     \draw[flowarrow] (d.east) -- ++(6mm,0) |- node[flowlabel, near start] {no} (a);
+%   \end{tikzpicture}
+% flow (on the picture): node distance 6mm and 10mm, \small. Nodes: flowbox
+% (a step), flowstart (start/end), flowdecision (a question), flowio (input/
+% output). flowarrow for the arrows, flowlabel for text on them. Step by
+% step: \node<2->[...] (takes its space only from step 2), or visible on=<2->
+% (overlay-beamer-styles: keeps its space, so nothing moves).
+\usetikzlibrary{shapes.geometric, shapes.misc, positioning, graphs}
+\IfFileExists{tikzlibraryoverlay-beamer-styles.code.tex}
+  {\usetikzlibrary{overlay-beamer-styles}}{}
+\tikzset{
+  flow/.style={node distance=6mm and 10mm, font=\small},
+  flownode/.style={draw=bannerblue, line width=0.8pt, align=center, text=black,
+                   minimum height=8mm, inner sep=4pt},
+  flowbox/.style={flownode, rectangle, rounded corners=2pt, fill=bannerblue!8,
+                  minimum width=24mm},
+  flowstart/.style={flownode, rounded rectangle, fill=bannerblue!22, minimum width=20mm},
+  flowdecision/.style={flownode, diamond, aspect=2, inner sep=1pt,
+                       draw=statusongoing!80!black, fill=statusongoing!15},
+  flowio/.style={flownode, trapezium, trapezium left angle=70, trapezium right angle=110,
+                 trapezium stretches body, fill=white, minimum width=22mm},
+  flowarrow/.style={draw=black!70, line width=0.8pt, -{Stealth[length=2.2mm]}},
+  flowlabel/.style={font=\footnotesize, fill=white, inner sep=1pt, text=black!70},
+}
+
 \endinput

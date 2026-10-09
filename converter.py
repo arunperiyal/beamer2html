@@ -14,16 +14,18 @@ from .commands import CommandsMixin
 from .environments import EnvironmentsMixin
 from .overlays import OverlayMixin
 from .parsing import read_group
+from .tikz import TikzMixin
 from .vocabulary import CENTER, HFILL, PARA
 
 
-class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin):
+class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin, TikzMixin):
     def __init__(self, root):
         self.root = root          # project folder; image paths are relative to it
         self.macros = {}          # \def\name{value}
         self.counters = {"figure": 0, "table": 0}   # \caption numbers, deck-wide
         self.floats = []          # open figure/table environments
         self.labels = {}          # \label key -> number (\ref is resolved at the end)
+        self.tikz_used = set()    # cache keys of the TikZ pictures (tikz.py)
 
     # ---------------------------------------------------------- flows
     def flow(self, s):

@@ -132,6 +132,7 @@ through the fields; the default values can be accepted or typed over.
   shape      \shape[color=..]{kind}{x1,y1}{x2,y2}
   sshape     \slideshape[color=..]{kind}{x1,y1}{x2,y2}
   axes       \shape[..]{axes}{x,y}{length}: coordinate axes indicator
+  flow       tikzpicture with flowstart / flowbox nodes and a flowarrow
 
 For any other environment, the `begin` snippet of friendly-snippets gives
 \begin{name} ... \end{name}, typing the name once (load friendly-snippets

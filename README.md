@@ -47,6 +47,7 @@ project:
 | `html/deck.js`, `html/deck.css`, `html/vendor/mathjax/` | `assets/` |
 | `html/references.js` | the `\addbibresource` `.bib` file |
 | `html/cache/*.svg`, `*.png` | PDF figures: vector ones as SVG (`pdftocairo`, sharp at any size), ones with embedded bitmaps as PNG (`pdftoppm`, at least 2000 px on the longer side) |
+| `html/cache/tikz-*` | TikZ pictures: one SVG per overlay step, compiled by LaTeX (see diagrams below); kept until the picture changes |
 
 A project copy of `titletemplates.sty` that was edited in the project is kept as
 `titletemplates.sty.bak` before being replaced. Make lasting changes here, in
@@ -152,8 +153,21 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   caption), and `animate`'s own
   `animateinline` + `\multiframe` (synchronised panels, `controls` option)
 
-Not supported: TikZ drawings (export them as images), commands with arguments
-defined in the document, `\alert<…>`.
+- diagrams: `tikzpicture` and `\tikz … ;` are drawn by LaTeX itself. Each picture
+  is compiled on its own with the deck's preamble (class options, fonts,
+  colours, `\usetikzlibrary`, `\tikzset`), cropped and turned into one SVG per
+  overlay step, so the HTML matches the PDF. Overlays work as in beamer:
+  `\node<2->`, `visible on=<2->` (keeps the node's space), `<+->`, `\pause`
+  inside the picture, and a picture after `\pause` starts at that step.
+  `titletemplates.sty` has flowchart styles in the deck's colours: `[flow]` on
+  the picture, nodes `flowbox`, `flowstart`, `flowdecision`, `flowio`, and
+  `flowarrow` / `flowlabel`. Pictures are cached in `html/cache/` and only
+  re-drawn when they, the preamble or a project `.sty` change; a picture that
+  does not compile is reported with LaTeX's error (log in `html/cache/`) and
+  shown as a placeholder. Needs `pdflatex` (or `lualatex` with `fontspec`),
+  Ghostscript (`gs`) and `pdfcrop`.
+
+Not supported: commands with arguments defined in the document, `\alert<…>`.
 
 ## Code layout
 
@@ -162,7 +176,7 @@ defined in the document, `\alert<…>`.
 | `cli.py`, `__main__.py` | command line |
 | `document.py` | preamble settings, sections, frames, template slides |
 | `converter.py` | core: inline text and block flow |
-| `commands.py`, `environments.py`, `animation.py`, `overlays.py` | LaTeX commands, environments, animations, overlay specs |
+| `commands.py`, `environments.py`, `animation.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, overlay specs, TikZ pictures |
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
 | `pack.py` | `--pack`: zip of the deck and the files it uses |
@@ -172,4 +186,5 @@ defined in the document, `\alert<…>`.
 | `template/` | starter deck using every template |
 | `nvim/` | Neovim plugin (`plugin/`, `lua/tex2html/`, `doc/`) |
 
-Requires Python 3.8+; poppler (`pdftocairo`, `pdftoppm`, `pdfimages`, `pdfinfo`) for PDF figures.
+Requires Python 3.8+; poppler (`pdftocairo`, `pdftoppm`, `pdfimages`, `pdfinfo`) for PDF figures;
+a TeX distribution (`pdflatex`, `pdfcrop`) and Ghostscript (`gs`) for TikZ pictures.
