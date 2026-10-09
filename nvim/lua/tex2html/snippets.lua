@@ -121,6 +121,13 @@ local snippets = {
   snip("axes", "\\shape axes: coordinate indicator (origin, length as a fraction of the width)", [[
 \shape[color=<>, xlabel=<>, ylabel=<>]{axes}{<>}{<>}]], { i(1, "black"), i(2, "$x$"), i(3, "$y$"), i(4, "0.1,0.1"), i(0, "0.1") }),
 
+  snip("flow", "TikZ flowchart with the deck's flow styles", [[
+\begin{tikzpicture}[flow]
+	\node[flowstart] (start) {<>};
+	\node[flowbox, below=of start] (step) {<>};
+	\draw[flowarrow] (start) -- (step);<>
+\end{tikzpicture}]], { i(1, "Start"), i(2, "Step"), i(0, "") }),
+
   snip("sshape", "\\slideshape: a shape placed on the whole slide", [[
 \slideshape[color=<>]{<>}{<>}{<>}]], { i(1, "red"), i(2, "rect"), i(3, "0.1,0.1"), i(0, "0.3,0.3") }),
 }

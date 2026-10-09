@@ -26,7 +26,7 @@ class EnvironmentsMixin:
         if env == "columns":
             opt, j = read_opt(body, 0)
             o = keyvals(opt)
-            cls = " center" if "c" in o else ""
+            cls = " middle" if "c" in o else ""    # [c]: vertically centred
             if "onlytextwidth" in o:               # space only between columns
                 cls += " otw"
             return PARA + '<div class="columns%s">%s</div>' % (
@@ -66,6 +66,8 @@ class EnvironmentsMixin:
             return self.env_progress(body)
         if env == "slidetable":
             return self.env_slidetable(body)
+        if env == "tikzpicture":                   # compiled by LaTeX: tikz.py
+            return self.tikz_env(body)
         if env == "litreview":
             return self.env_litreview(body)
         if env == "publications":                  # \pub.. commands: commands.py

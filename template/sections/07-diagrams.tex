@@ -1,0 +1,58 @@
+\section{Diagrams}
+
+% Diagrams are TikZ pictures. titletemplates.sty has flowchart styles in the
+% deck's colours: put [flow] on the picture, then flowbox (a step),
+% flowstart (start/end), flowdecision (a question), flowio (input/output),
+% flowarrow and flowlabel (text on an arrow). Place nodes with
+% below=of a, right=of b (positioning).
+% Step by step: visible on=<2-> shows a node or an arrow from step 2 and
+% keeps its space, so nothing moves; \node<2-> also works but takes its space
+% only from step 2. \pause inside a picture continues the slide's count.
+% The HTML deck shows the same picture: tex2html compiles each one with
+% LaTeX (pdflatex, gs, pdfcrop, pdftocairo) and caches it in html/cache/.
+\begin{frame}{Diagrams}{a flowchart, step by step}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \centering
+      \begin{tikzpicture}[flow]
+        \node[flowstart]                                    (start) {Start};
+        \node[flowio, below=of start]                       (case)  {Case setup};
+        \node[flowbox, below=of case, visible on=<2->]      (solve) {Flow solver};
+        \node[flowdecision, below=of solve, visible on=<3->] (conv) {Converged?};
+        \node[flowbox, right=of conv, visible on=<4->]      (post)  {Post-processing};
+        \draw[flowarrow] (start) -- (case);
+        \draw[flowarrow, visible on=<2->] (case) -- (solve);
+        \draw[flowarrow, visible on=<3->] (solve) -- (conv);
+        \draw[flowarrow, visible on=<3->] (conv.west) -- ++(-6mm,0)
+          |- node[flowlabel, near start, left] {no} (solve.west);
+        \draw[flowarrow, visible on=<4->] (conv) -- node[flowlabel, above] {yes} (post);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item The case is set up first
+        \item<2-> The solver runs
+        \item<3-> Until it converges
+        \item<4-> Then the results are processed
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% \tikz \graph{...}; draws a chain in one line (graphs library). A picture
+% after \pause starts at that step, and a \pause inside it adds one more.
+\begin{frame}{Diagrams}{continuing the slide's steps}
+  \begin{itemize}
+    \item \texttt{\textbackslash graph}: a chain of boxes in one line
+    \item The picture below comes after a \cmd{pause}
+  \end{itemize}
+  \pause
+  \begin{center}
+    \begin{tikzpicture}[flow]
+      \graph [grow right sep=10mm, nodes=flowbox, edges=flowarrow] { Mesh -> Solver };
+      \pause
+      \node[flowbox, right=10mm of Solver] (post) {Post};
+      \draw[flowarrow] (Solver) -- (post);
+    \end{tikzpicture}
+  \end{center}
+\end{frame}

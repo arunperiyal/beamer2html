@@ -150,7 +150,7 @@ html, body {
 .columns { display: flex; justify-content: space-evenly; align-items: flex-start; }
 .columns.otw { justify-content: space-between; }
 .columns > .col { flex: 1; min-width: 0; }
-.columns.center { align-items: center; }
+.columns.middle { align-items: center; }   /* [c] */
 
 /* figures */
 figure { margin: 0; text-align: center; }
@@ -222,6 +222,11 @@ aside.note { display: none !important; }
   text-align: center; font-weight: bold;
 }
 .litreview td.lit-who cite { font-style: normal; }
+
+/* TikZ pictures (tikz.py): one SVG per overlay step, at the PDF's size */
+.tikz { display: inline-block; max-width: 100%; vertical-align: bottom; }
+.tikz img { display: block; width: 100%; height: auto; }
+.center .tikz, figure .tikz { display: block; margin: 0 auto; }
 
 /* slide tables (\begin{slidetable}[style]{colspec}): first row = header */
 .slidetable-wrap { display: flex; justify-content: center; margin: 0.2em 0 0.5em; }

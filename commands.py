@@ -107,7 +107,11 @@ class CommandsMixin:
         # ---- step-by-step reveals
         if name == "pause":
             _, i = read_opt(s, i)                      # \pause[n]: number ignored
+            self.pauses += 1
             return PAUSE, i, 0
+        if name == "tikz":                             # \tikz ...; : tikz.py
+            res, i = self.tikz_command(s, i)
+            return res, i, 0
 
         # ---- publications list (inside \begin{publications})
         if name == "pubsection":

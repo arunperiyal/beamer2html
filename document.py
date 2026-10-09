@@ -12,6 +12,7 @@ from .images import resolve_image
 from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_group, read_opt, skip_ws
 from .source import read_tex
+from .tikz import clean_cache, diagram_preamble, local_packages
 from .units import length_px
 from .vocabulary import REF_RE, SIZES
 
@@ -82,10 +83,13 @@ def convert(tex_path, root):
     pre, _, body = src.partition("\\begin{document}")
     body = body.partition("\\end{document}")[0]
     cv = Converter(root)
+    cv.tikz_preamble = diagram_preamble(pre)
+    cv.tikz_deps = local_packages(pre, root)
 
     config, state = read_preamble(cv, pre)
     slides = read_body(cv, body, state, default=dict(state))
     slides = [resolve_refs(cv, sl) for sl in slides]
+    clean_cache(root, cv.tikz_used)
 
     bibs = re.findall(r"\\addbibresource\{([^}]*)\}", pre)
     bib_to_js(bibs, root)
@@ -255,6 +259,7 @@ def frame_html(cv, s, state, default, section):
     opts = keyvals(opt)
     title, sub, rest = frame_titles(s, i)
     cv.plus = 0                                    # `+` in overlay specs restarts
+    cv.pauses = 0                                  # and so does \pause's count
 
     attrs = []
     if section:
