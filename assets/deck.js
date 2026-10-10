@@ -587,12 +587,15 @@
     }
   });
 
+  // ?nopresenter: where no second window can open (tex2html viewer's Android
+  // app), the presenter view is left out of the help and S does nothing
+  const noPresenter = new URLSearchParams(location.search).has("nopresenter");
   const hud = document.createElement("div");
   hud.className = "hud";
   hud.textContent = "→ / Space / PgDn   next step / slide\n← / PgUp          previous\n" +
     "Home / End        first / last\n<number> Enter    go to slide\n" +
     "F                 fullscreen\nP                 play / pause animation\n" +
-    "S                 presenter view (notes)\nH                 this help\n" +
+    (noPresenter ? "" : "S                 presenter view (notes)\n") + "H                 this help\n" +
     "Touch: swipe left / right, or tap the right / left side";
   document.body.appendChild(hud);
 
@@ -615,7 +618,7 @@
     } else if (k === "p" || k === "P") {
       anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
     } else if (k === "h" || k === "H") hud.classList.toggle("show");
-    else if (k === "s" || k === "S") openPresenter();
+    else if ((k === "s" || k === "S") && !noPresenter) openPresenter();
     else return;
     e.preventDefault();
   }
