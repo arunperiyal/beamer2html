@@ -420,6 +420,29 @@ cite a { color: var(--blue); text-decoration: none; }
 }
 .hud.show { display: block; }
 
+/* G: the slide grid -- thumbnails are the slides scaled by --k (deck.js) */
+.deck-grid {
+  position: fixed; inset: 0; z-index: 20; overflow-y: auto; box-sizing: border-box;
+  padding: 24px; background: #20242b; display: grid; gap: 22px 18px; align-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 40vw), 1fr));
+}
+.deck-grid-cell {
+  position: relative; aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: 3px;
+  overflow: visible; background: #fff; cursor: pointer;
+  outline: 3px solid transparent; outline-offset: 3px;
+}
+.deck-grid-cell:hover, .deck-grid-cell:focus-visible { outline-color: rgba(138, 180, 248, 0.6); }
+.deck-grid-cell.current { outline-color: #8ab4f8; }
+.deck-grid-thumb {
+  position: absolute; top: 0; left: 0; transform: scale(var(--k, 0.2));
+  pointer-events: none; overflow: hidden; border-radius: 3px;
+}
+.deck-grid-thumb .slide { display: flex; }
+.deck-grid-num {
+  position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px;
+  font: 12px/1.2 sans-serif; color: #aab; text-align: center;
+}
+
 /* ------------------------------------------------------------ print / PDF */
 @media print {
   @page { size: 1280px 720px; margin: 0; }
@@ -429,7 +452,7 @@ cite a { color: var(--blue); text-decoration: none; }
     position: relative; display: flex !important;
     width: 1280px; height: 720px; break-after: page;
   }
-  .anim-controls, .hud { display: none !important; }
+  .anim-controls, .hud, .deck-grid { display: none !important; }
   /* steps: deck.js shows each slide at its last step before printing */
 }
 

@@ -7,6 +7,7 @@
  *        Home / End           first / last slide
  *        F                    fullscreen
  *        P                    play / pause the animations and videos on the current slide
+ *        G                    slide grid: every slide as a thumbnail, click one to go there
  *        S                    presenter view (notes, next slide, timer) in a new window
  *        H                    show / hide this help
  *        <number> Enter       go to slide <number>
@@ -566,7 +567,7 @@
   const zoomed = () => window.visualViewport && visualViewport.scale > 1.01;
   let touch = null, fingers = 0;
   addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse") return;
+    if (e.pointerType === "mouse" || grid) return;
     fingers++;
     touch = fingers === 1 && !zoomed() ? { x: e.clientX, y: e.clientY, t: Date.now(),
       own: !!(e.target.closest && e.target.closest(TOUCH_OWN)) } : null;
@@ -575,7 +576,7 @@
     if (e.pointerType !== "mouse") { fingers = Math.max(0, fingers - 1); touch = null; }
   });
   addEventListener("pointerup", (e) => {
-    if (e.pointerType === "mouse") return;
+    if (e.pointerType === "mouse" || grid) { touch = null; return; }
     fingers = Math.max(0, fingers - 1);
     const t = touch;
     touch = null;
@@ -596,6 +597,7 @@
   hud.textContent = "→ / Space / PgDn   next step / slide\n← / PgUp          previous\n" +
     "Home / End        first / last\n<number> Enter    go to slide\n" +
     "F                 fullscreen\nP                 play / pause animation, video\n" +
+    "G                 slide grid\n" +
     (noPresenter ? "" : "S                 presenter view (notes)\n") + "H                 this help\n" +
     "Touch: swipe left / right, or tap the right / left side";
   document.body.appendChild(hud);
@@ -606,6 +608,7 @@
     if (e.target.matches && e.target.matches("input")) e.target.blur();
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
+    if (grid) { gridKey(e); return; }
     if (/^[0-9]$/.test(k)) { typed += k; return; }
     if (k === "Enter" && typed) { show(parseInt(typed, 10) - 1); typed = ""; return; }
     typed = "";
@@ -620,7 +623,8 @@
       anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
       const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
       on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
-    } else if (k === "h" || k === "H") hud.classList.toggle("show");
+    } else if (k === "g" || k === "G") openGrid();
+    else if (k === "h" || k === "H") hud.classList.toggle("show");
     else if ((k === "s" || k === "S") && !noPresenter) openPresenter();
     else return;
     e.preventDefault();
@@ -1026,6 +1030,83 @@
         return `${A}“${T}”. ${esc(e.howpublished || e.note || "")} ${y}.`;
     }
   }
+
+  // ------------------------------------------------------------ slide grid
+  // G: every slide as a thumbnail at its last step, the current one marked;
+  // click (or arrow keys and Enter) to go to a slide, G or Esc to close.
+  // The thumbnails are copies made on opening and dropped on closing.
+  // window.deckGrid lets a page showing the deck in a frame (tex2html
+  // viewer) open and close it too.
+  let grid = null;
+  function frameSrc(img) {                     // an animation panel's first frame
+    const anim = img.closest(".anim");
+    const n = frameList(img.dataset.frames || (anim && anim.dataset.frames))[0];
+    return img.dataset.src.replace(/\{n(?::(\d+))?\}/g,
+      (_, w) => w ? String(n).padStart(+w, "0") : String(n));
+  }
+  function openGrid() {
+    if (grid) return;
+    grid = document.createElement("div");
+    grid.className = "deck-grid";
+    slides.forEach((s, i) => {
+      const cell = document.createElement("button");
+      cell.className = "deck-grid-cell" + (i === idx ? " current" : "");
+      cell.title = "Slide " + (i + 1);
+      const wrap = document.createElement("div");
+      wrap.className = "deck deck-grid-thumb";
+      const c = s.cloneNode(true);
+      c.classList.remove("active");
+      c.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+      c.querySelectorAll("img[data-src]:not([src])").forEach((img) => { img.src = frameSrc(img); });
+      c.querySelectorAll("video").forEach((v) => { v.removeAttribute("controls"); v.preload = "none"; });
+      c.querySelectorAll(".anim-controls").forEach((el) => el.remove());
+      showStep(c, s._steps);
+      wrap.appendChild(c);
+      const num = document.createElement("span");
+      num.className = "deck-grid-num";
+      num.textContent = i + 1;
+      cell.append(wrap, num);
+      cell.addEventListener("click", () => { closeGrid(); show(i, 0); });
+      grid.appendChild(cell);
+    });
+    document.body.appendChild(grid);
+    sizeGrid();
+    const cur = grid.querySelector(".current");
+    cur.scrollIntoView({ block: "center" });
+    cur.focus({ preventScroll: true });
+  }
+  function closeGrid() {
+    if (!grid) return;
+    grid.remove();
+    grid = null;
+  }
+  function sizeGrid() {                        // thumbnails: the slide scaled to a cell
+    if (grid) grid.style.setProperty("--k", grid.firstChild.clientWidth / 1280);
+  }
+  addEventListener("resize", sizeGrid);
+  function gridKey(e) {
+    const cells = [...grid.children];
+    let i = cells.indexOf(document.activeElement);
+    if (i < 0) i = idx;
+    const cols = cells.filter((c) => c.offsetTop === cells[0].offsetTop).length;
+    const k = e.key;
+    if (k === "Escape" || k === "g" || k === "G") closeGrid();
+    else if (k === "Enter" || k === " ") cells[i].click();
+    else if (k === "ArrowRight") i++;
+    else if (k === "ArrowLeft") i--;
+    else if (k === "ArrowDown") i += cols;
+    else if (k === "ArrowUp") i -= cols;
+    else if (k === "Home") i = 0;
+    else if (k === "End") i = cells.length - 1;
+    else return;
+    e.preventDefault();
+    if (grid) cells[Math.max(0, Math.min(cells.length - 1, i))].focus();
+  }
+  window.deckGrid = {
+    open: openGrid, close: closeGrid,
+    toggle: () => (grid ? closeGrid() : openGrid()),
+    isOpen: () => !!grid,
+  };
 
   // ------------------------------------------------------------ videos
   // \slidevideo -> <video class="video" data-autoplay data-loop data-start
