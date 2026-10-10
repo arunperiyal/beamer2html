@@ -6,7 +6,7 @@
  *        ← ↑ PageUp           previous step / slide
  *        Home / End           first / last slide
  *        F                    fullscreen
- *        P                    play / pause the animation on the current slide
+ *        P                    play / pause the animations and videos on the current slide
  *        S                    presenter view (notes, next slide, timer) in a new window
  *        H                    show / hide this help
  *        <number> Enter       go to slide <number>
@@ -533,6 +533,7 @@
     }
     step = Math.max(0, Math.min(slides[idx]._steps, st));
     showStep(slides[idx], step);
+    syncVideos();
     history.replaceState(null, "", "#" + (idx + 1) + (step ? "." + step : ""));
     renderPresenter();
   }
@@ -594,7 +595,7 @@
   hud.className = "hud";
   hud.textContent = "→ / Space / PgDn   next step / slide\n← / PgUp          previous\n" +
     "Home / End        first / last\n<number> Enter    go to slide\n" +
-    "F                 fullscreen\nP                 play / pause animation\n" +
+    "F                 fullscreen\nP                 play / pause animation, video\n" +
     (noPresenter ? "" : "S                 presenter view (notes)\n") + "H                 this help\n" +
     "Touch: swipe left / right, or tap the right / left side";
   document.body.appendChild(hud);
@@ -617,6 +618,8 @@
         : document.documentElement.requestFullscreen();
     } else if (k === "p" || k === "P") {
       anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
+      const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
+      on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
     } else if (k === "h" || k === "H") hud.classList.toggle("show");
     else if ((k === "s" || k === "S") && !noPresenter) openPresenter();
     else return;
@@ -717,6 +720,7 @@
     wrap.style.transform = `scale(${frame.clientWidth / 1280})`;
     const c = slide.cloneNode(true);
     c.classList.add("active");
+    c.querySelectorAll("video").forEach((v) => { v.removeAttribute("controls"); v.preload = "none"; });
     showStep(c, st);
     wrap.appendChild(c);
     frame.appendChild(wrap);
@@ -1023,8 +1027,52 @@
     }
   }
 
+  // ------------------------------------------------------------ videos
+  // \slidevideo -> <video class="video" data-autoplay data-loop data-start
+  // data-end>. A video is "on" while its slide is shown and it is not hidden
+  // by a step: it pauses when it goes off, and with data-autoplay starts
+  // (from data-start) when it comes on. data-start..data-end bound playback.
+  // Without controls, a click on it plays / pauses.
+  function videoShown(v) {
+    for (let el = v; el && el !== deck; el = el.parentElement) {
+      if (el.style.display === "none" || el.style.visibility === "hidden") return false;
+    }
+    return true;
+  }
+  function playVideo(v) {
+    const p = v.play();
+    if (p) p.catch(() => {});                    // autoplay with sound refused: stays paused
+  }
+  function syncVideos() {
+    videos.forEach((v) => {
+      const on = slides[idx].contains(v) && videoShown(v);
+      if (on && !v._on && v.hasAttribute("data-autoplay")) {
+        if (v.dataset.start) v.currentTime = +v.dataset.start;
+        playVideo(v);
+      } else if (!on && v._on) v.pause();
+      v._on = on;
+    });
+  }
+  let videos = [];
+
   // ================================================================ start
   anims = Array.from(deck.querySelectorAll(".anim")).map((el) => new Anim(el));
+  videos = Array.from(deck.querySelectorAll("video.video"));
+  videos.forEach((v) => {
+    const start = +(v.dataset.start || 0), end = +(v.dataset.end || Infinity);
+    v.addEventListener("timeupdate", () => {
+      if (v.currentTime < end) return;
+      if (v.hasAttribute("data-loop")) { v.currentTime = start; playVideo(v); }
+      else v.pause();
+    });
+    v.addEventListener("ended", () => {          // to the end of the file
+      if (v.hasAttribute("data-loop")) { v.currentTime = start; playVideo(v); }
+    });
+    if (!v.controls) {
+      v.style.cursor = "pointer";
+      v.addEventListener("click", () => (v.paused ? playVideo(v) : v.pause()));
+    }
+  });
   const [hs, hst] = location.hash.slice(1).split(".").map((x) => parseInt(x, 10));
   show(Number.isFinite(hs) ? hs - 1 : 0, Number.isFinite(hst) ? hst : 0);
 })();
