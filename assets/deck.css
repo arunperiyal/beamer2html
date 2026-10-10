@@ -424,7 +424,7 @@ cite a { color: var(--blue); text-decoration: none; }
 .deck-grid {
   position: fixed; inset: 0; z-index: 20; overflow-y: auto; box-sizing: border-box;
   padding: 24px; background: #20242b; display: grid; gap: 22px 18px; align-content: start;
-  grid-template-columns: repeat(auto-fill, minmax(min(240px, 40vw), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 20vw), 1fr));
 }
 .deck-grid-cell {
   position: relative; aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: 3px;
