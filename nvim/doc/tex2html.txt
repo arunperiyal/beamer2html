@@ -128,6 +128,7 @@ through the fields; the default values can be accepted or typed over.
   figcap     figure with \caption and \label (fig:...)
   tabcap     table with \caption above a slidetable, \label (tab:...)
   anim       figure with an animation environment (\animpanel, \N) and caption
+  video      figure with a \slidevideo (poster) and caption
   annot      figure with an annotate environment (grid on) and a \shape
   shape      \shape[color=..]{kind}{x1,y1}{x2,y2}
   sshape     \slideshape[color=..]{kind}{x1,y1}{x2,y2}

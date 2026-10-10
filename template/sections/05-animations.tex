@@ -60,3 +60,28 @@
     \caption{\texttt{\textbackslash animpanel[frames=4:22:2]}: each panel shows its own time.}
   \end{figure}
 \end{frame}
+
+% \slidevideo[options]{file}: a video (MP4 or WebM). Options: width, height,
+% poster (image shown until it plays, and in the PDF), autoplay (when the
+% slide or step comes up), loop, muted, controls (true), start, end (seconds).
+% It pauses when you leave the slide. In the PDF: the poster linking to the
+% file -- or, with \usepackage{multimedia}, a \movie (plays in Okular, ...).
+\begin{frame}{Videos}{\texttt{\textbackslash slidevideo}}
+  \begin{columns}[c]
+    \begin{column}{0.4\textwidth}
+      \begin{itemize}
+        \item MP4 or WebM, with the browser's controls
+        \item \texttt{autoplay}, \texttt{loop}, \texttt{muted}
+        \item \texttt{start=}, \texttt{end=}: play part of it
+        \item Pauses when you leave the slide
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \begin{figure}
+        \slidevideo[width=\linewidth, poster=figures/sample-video.png,
+                    autoplay, loop, muted]{figures/sample-video.mp4}
+        \caption{A video that plays with its slide.}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}

@@ -906,6 +906,123 @@
   }
 \ExplSyntaxOff
 
+% ---------------------------------------------------------------- Videos
+%   \slidevideo[width=0.7\linewidth, poster=figures/flow.png]{figures/flow.mp4}
+% In the HTML deck, a video player. It pauses when you leave the slide, and
+% with autoplay it plays whenever its slide (or step) comes up. Options:
+% width (\linewidth), height, poster (an image shown until it plays, and in
+% the PDF), autoplay, loop, muted (browsers play sound only after a click or
+% key press on the page), controls (true; false: click the video or press P
+% to play / pause), start, end (in seconds: play only that part).
+% \slidevideo<2->{...}: shown from step 2 on. Put it in a figure for \caption.
+% In the PDF: the poster -- or a box with the file name -- linking to the
+% video; with \usepackage{multimedia}, a \movie instead, which plays in the
+% PDF viewers that support it (Okular, ...).
+\ExplSyntaxOn
+\dim_new:N \l__tt_video_w_dim
+\dim_new:N \l__tt_video_h_dim
+\box_new:N \l__tt_video_box
+\clist_new:N \l__tt_video_movie_clist
+\tl_new:N \l__tt_video_file_tl
+\keys_define:nn { tt / video }
+  {
+    width    .tl_set:N   = \l__tt_video_width_tl,
+    width    .initial:n  = \linewidth,
+    height   .tl_set:N   = \l__tt_video_height_tl,
+    poster   .tl_set:N   = \l__tt_video_poster_tl,
+    autoplay .bool_set:N = \l__tt_video_autoplay_bool,
+    autoplay .initial:n  = false,
+    autoplay .default:n  = true,
+    loop     .bool_set:N = \l__tt_video_loop_bool,
+    loop     .initial:n  = false,
+    loop     .default:n  = true,
+    muted    .bool_set:N = \l__tt_video_muted_bool,
+    muted    .initial:n  = false,
+    muted    .default:n  = true,
+    controls .bool_set:N = \l__tt_video_controls_bool,
+    controls .initial:n  = true,
+    controls .default:n  = true,
+    start    .tl_set:N   = \l__tt_video_start_tl,
+    end      .tl_set:N   = \l__tt_video_end_tl,
+  }
+\NewDocumentCommand \slidevideo { d<> O{} m }
+  {
+    \group_begin:
+    \keys_set:nn { tt / video } {#2}
+    \tl_set:Nn \l__tt_video_file_tl {#3}           % the extension may be left out
+    \clist_map_inline:nn { .mp4, .webm, .m4v, .mov, .ogv }
+      {
+        \file_if_exist:nT { #3 ##1 }
+          { \tl_set:Nn \l__tt_video_file_tl { #3 ##1 } \clist_map_break: }
+      }
+    \IfNoValueTF {#1}
+      { \__tt_video:V \l__tt_video_file_tl }
+      {                                              % hidden: its space only, no link
+        \alt<#1> { \__tt_video:V \l__tt_video_file_tl }
+          { \phantom { \__tt_video:V \l__tt_video_file_tl } }
+      }
+    \group_end:
+  }
+\cs_new_protected:Npn \__tt_video:n #1
+  {
+    \dim_set:Nn \l__tt_video_w_dim { \l__tt_video_width_tl }
+    \tl_if_empty:NTF \l__tt_video_height_tl
+      { \dim_set:Nn \l__tt_video_h_dim { 0.5625 \l__tt_video_w_dim } }   % 16:9
+      { \dim_set:Nn \l__tt_video_h_dim { \l__tt_video_height_tl } }
+    \hbox_set:Nn \l__tt_video_box
+      {
+        \tl_if_empty:NTF \l__tt_video_poster_tl
+          {                                          % a box with a play sign
+            \tikz
+              {
+                \node [ draw = gray, minimum~width = \l__tt_video_w_dim,
+                        minimum~height = \l__tt_video_h_dim,
+                        inner~sep = 0pt, outer~sep = 0pt ] (v) { };
+                \fill [ gray!70 ] (v.center) ++ (-0.5em, 0.7em) -- ++ (1.3em, -0.7em)
+                  -- ++ (-1.3em, -0.7em) -- cycle;
+                \node [ above, font = \scriptsize\ttfamily, text = gray ] at (v.south)
+                  { \tl_to_str:n {#1} };
+              }
+          }
+          {
+            \tl_if_empty:NTF \l__tt_video_height_tl
+              { \includegraphics [ width = \l__tt_video_w_dim ] { \l__tt_video_poster_tl } }
+              { \includegraphics [ width = \l__tt_video_w_dim, height = \l__tt_video_h_dim,
+                                   keepaspectratio ] { \l__tt_video_poster_tl } }
+          }
+      }
+    \cs_if_exist:NTF \movie                         % multimedia: play in the PDF
+      {
+        \clist_clear:N \l__tt_video_movie_clist
+        \bool_if:NT \l__tt_video_autoplay_bool
+          { \clist_put_right:Nn \l__tt_video_movie_clist { autostart } }
+        \bool_if:NT \l__tt_video_loop_bool
+          { \clist_put_right:Nn \l__tt_video_movie_clist { loop } }
+        \bool_if:NT \l__tt_video_controls_bool
+          { \clist_put_right:Nn \l__tt_video_movie_clist { showcontrols } }
+        \tl_if_empty:NF \l__tt_video_start_tl
+          { \clist_put_right:Nx \l__tt_video_movie_clist { start = \l__tt_video_start_tl s } }
+        \tl_if_empty:NF \l__tt_video_end_tl
+          {
+            \clist_put_right:Nx \l__tt_video_movie_clist
+              { duration = \fp_eval:n { \l__tt_video_end_tl
+                  - ( \tl_if_empty:NTF \l__tt_video_start_tl { 0 } { \l__tt_video_start_tl } ) } s }
+          }
+        \use:e
+          {
+            \exp_not:N \movie [ \clist_use:Nn \l__tt_video_movie_clist { , } ]
+              { \exp_not:N \box_use:N \exp_not:N \l__tt_video_box } { \exp_not:n {#1} }
+          }
+      }
+      {                                              % ":" is a letter here: hyperref
+        \use:e                                       % needs a real one to see run:
+          { \exp_not:N \href { run \c_colon_str \exp_not:n {#1} } }
+          { \box_use:N \l__tt_video_box }
+      }
+  }
+\cs_generate_variant:Nn \__tt_video:n { V }
+\ExplSyntaxOff
+
 % ---------------------------------------------------------------- Captions
 %   \begin{figure}                       % (or table) -- centred, does not float
 %     \includegraphics[width=0.8\linewidth]{figures/...}

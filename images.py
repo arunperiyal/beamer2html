@@ -22,6 +22,20 @@ def resolve_image(path, root):
     return None
 
 
+VIDEO_EXTS = [".mp4", ".webm", ".m4v", ".mov", ".ogv"]
+
+
+def resolve_video(path, root):
+    """Find the file for a \\slidevideo path (extension optional), relative
+    to `root`."""
+    cands = [path] if os.path.splitext(path)[1].lower() in VIDEO_EXTS else \
+        [path + e for e in VIDEO_EXTS]
+    for c in cands:
+        if os.path.isfile(os.path.join(root, c)):
+            return c
+    return None
+
+
 # a PNG gets at least this many pixels on its longer side, however small the
 # PDF page is (a 2-inch plot at a fixed 200 dpi was only 400 px wide)
 PNG_MIN_PX = 2000

@@ -106,6 +106,12 @@ local snippets = {
 	\caption{<>}\label{fig:<>}
 \end{figure}]], { i(1, "3"), i(2, "3000:5000:50"), i(3, "Label"), i(4, "frame"), i(5, "Caption."), i(0, "name") }),
 
+  snip("video", "slidevideo: a video with a poster, in a figure with caption and label", [[
+\begin{figure}
+	\slidevideo[width=<>, poster=figures/<>]{figures/<>}
+	\caption{<>}\label{fig:<>}
+\end{figure}]], { i(1, "0.8\\linewidth"), i(2, "poster.png"), i(3, "video.mp4"), i(4, "Caption."), i(0, "name") }),
+
   snip("annot", "annotate: shapes over a figure (grid shows the 0..1 coordinates)", [[
 \begin{figure}
 	\begin{annotate}[grid]

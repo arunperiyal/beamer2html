@@ -34,7 +34,7 @@ good `slides.html` in place. Ctrl+C stops it. For the PDF, run
 `latexmk -pdf -pvc main.tex` alongside.
 
 `--pack` (default name: the HTML file's name with `.zip`) collects the deck,
-`html/` and exactly the images and animation frames the slides use into a zip
+`html/` and exactly the images, animation frames and videos the slides use into a zip
 that unpacks to one folder; open `slides.html` inside it. Sources, the `.bib`,
 PDFs and unused figures are left out.
 
@@ -90,7 +90,7 @@ Open `slides.html` and use:
 | Home / End, *number* Enter | first / last / go to slide |
 | F | fullscreen |
 | S | presenter view: notes, next slide, timer (second window) |
-| P | play / pause the animation on the slide |
+| P | play / pause the animations and videos on the slide |
 | H | help |
 | swipe left / right | next / previous step or slide (touch screens) |
 | tap right / left third | next / previous; a tap on an animation plays / pauses it |
@@ -144,6 +144,12 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `tabular`, math (MathJax 4, in a Times font when the preamble loads `newtxmath`,
   `mathptmx`, `txfonts` or `times`, else New Computer Modern), `\includegraphics`,
   font sizes/styles, `\color`, `\cite`, `\textcite`/`\citet`, `\citeauthor`, `\href`, `\def`/`\newcommand` without arguments
+- videos: `\slidevideo[options]{file}` (MP4, WebM; `width`, `height`,
+  `poster`, `autoplay` when its slide or step comes up, `loop`, `muted`,
+  `controls`, `start` / `end` in seconds; `\slidevideo<2->` for a step). It
+  pauses when you leave the slide. In the PDF it is the poster, or a box with
+  the file name, linking to the video — or with `\usepackage{multimedia}` a
+  `\movie` that plays in viewers that support it (Okular, …)
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
   (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,

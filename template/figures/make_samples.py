@@ -51,3 +51,28 @@ for k, speed in enumerate((1.0, 1.5, 2.0, 3.0), 1):
         fig.tight_layout(pad=0.2)
         fig.savefig(os.path.join(HERE, "anim", "case%d_%d.png" % (k, n)), dpi=100)
         plt.close(fig)
+
+# a video (MP4, needs ffmpeg): the field travelling for 4 s -> sample-video.mp4,
+# its first frame -> sample-video.png (the poster)
+import shutil
+import subprocess
+import tempfile
+if shutil.which("ffmpeg"):
+    with tempfile.TemporaryDirectory() as tmp:
+        for n in range(100):
+            ph = n * 2 * np.pi / 100
+            f = np.sin(2 * x - ph) * np.exp(-y ** 2) + 0.5 * np.cos(3 * y + x + ph)
+            fig = plt.figure(figsize=(4.8, 2.7), dpi=100)
+            ax = fig.add_axes((0, 0, 1, 1))
+            ax.contourf(x, y, f, 24, cmap="RdBu_r")
+            ax.set_axis_off()
+            fig.savefig(os.path.join(tmp, "f%03d.png" % n))
+            if n == 0:
+                fig.savefig(os.path.join(HERE, "sample-video.png"))
+            plt.close(fig)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", "25",
+                        "-i", os.path.join(tmp, "f%03d.png"), "-c:v", "libx264",
+                        "-pix_fmt", "yuv420p", "-crf", "28", "-movflags", "+faststart",
+                        os.path.join(HERE, "sample-video.mp4")], check=True)
+else:
+    print("ffmpeg not found: sample-video.mp4 not made")

@@ -3,6 +3,7 @@
     slides.html                       the deck
     html/                             deck.js, deck.css, references.js, MathJax
     images the slides refer to        <img src>, the title-slide logo
+    videos                            <video src>, and their poster images
     animation frames                  every frame of each animateinline
 
 The zip holds one folder named after the zip (talk.zip -> talk/), so it
@@ -16,7 +17,8 @@ import zipfile
 
 from .log import warn
 
-STORED = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".mp4", ".zip"}
+STORED = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".mp4", ".zip",
+          ".webm", ".m4v", ".mov", ".ogv"}
 
 
 def referenced_files(page, root, config):
@@ -29,7 +31,7 @@ def referenced_files(page, root, config):
             return                                     # URL, data:, absolute
         files.add(os.path.normpath(path))
 
-    for m in re.finditer(r'\s(?:src|href)="([^"]+)"', page):
+    for m in re.finditer(r'\s(?:src|href|poster)="([^"]+)"', page):
         add(m.group(1))
     logo = config.get("logo")
     if logo and os.path.isfile(os.path.join(root, logo)):   # missing: placeholder shown

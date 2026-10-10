@@ -3,7 +3,7 @@ import html
 import re
 
 from .colors import css_color
-from .images import resolve_image
+from .images import resolve_image, resolve_video
 from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_opt
 from .units import length_css
@@ -75,6 +75,14 @@ class CommandsMixin:
             opt, i = read_opt(s, i)
             path, i = read_arg(s, i)
             return self.image(self.expand(path), keyvals(opt)), i, 0
+        if name == "slidevideo":
+            spec, i = self.read_spec(s, i)             # \slidevideo<2->[..]{file}
+            opt, i = read_opt(s, i)
+            path, i = read_arg(s, i)
+            res = self.video(self.expand(path).strip(), keyvals(opt))
+            if spec:
+                res = res.replace("<video ", '<video data-spec="%s" ' % spec, 1)
+            return res, i, 0
         if name == "FigurePlaceholder":
             w, i = read_opt(s, i)
             h, i = read_arg(s, i)
@@ -300,6 +308,53 @@ class CommandsMixin:
             warn("image not found: %s" % path)
             found = path
         return '<img src="%s" style="%s" alt="">' % (html.escape(found), ";".join(style))
+
+    def video(self, path, opts):
+        """<video> for \\slidevideo (titletemplates.sty); deck.js plays it with
+        its slide (data-autoplay), pauses it on leaving and keeps it to
+        data-start..data-end."""
+        found = resolve_video(path, self.root)
+        if not found:
+            warn("video not found: %s" % path)
+            found = path
+
+        def flag(name, default):
+            v = opts.get(name, default)
+            return v is True or str(v).strip().lower() in ("true", "")
+        style = ["width:%s" % (length_css(opts["width"]) if isinstance(opts.get("width"), str)
+                               and length_css(opts["width"]) else "100%")]
+        if isinstance(opts.get("height"), str) and length_css(opts["height"]):
+            style.append("height:%s" % length_css(opts["height"]))
+        attrs = ' preload="metadata" playsinline'
+        poster = opts.get("poster")
+        if isinstance(poster, str) and poster.strip():
+            img = resolve_image(self.expand(poster).strip(), self.root)
+            if img:
+                attrs += ' poster="%s"' % html.escape(img)
+            else:
+                warn("video poster not found: %s" % poster)
+        times = {}
+        for k in ("start", "end"):
+            v = opts.get(k)
+            if isinstance(v, str) and v.strip():
+                try:
+                    float(v)
+                except ValueError:
+                    warn("\\slidevideo: %s=%s is not a number of seconds" % (k, v))
+                    continue
+                times[k] = v.strip()
+                attrs += ' data-%s="%s"' % (k, html.escape(times[k]))
+        src = found + ("#t=" + times["start"] if "start" in times else "")   # its first frame shown
+        if flag("controls", True):
+            attrs += " controls"
+        if flag("autoplay", False):
+            attrs += " data-autoplay"
+        if flag("loop", False):
+            attrs += " data-loop"
+        if flag("muted", False):
+            attrs += " muted"
+        return '<video class="video" src="%s" style="%s"%s></video>' % (
+            html.escape(src), ";".join(style), attrs)
 
 
 SHAPES = ("rect", "ellipse", "circle", "line", "arrow", "text", "axes")
