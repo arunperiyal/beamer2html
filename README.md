@@ -95,10 +95,13 @@ Open `slides.html` and use:
 | swipe left / right | next / previous step or slide (touch screens) |
 | tap right / left third | next / previous; a tap on an animation plays / pauses it |
 
-On a phone or tablet, open the deck through a web server rather than as a
-file (browsers there do not load `html/` and `figures/` next to a local
-file): `python3 -m http.server 8000` in the deck folder, then
-`http://<computer's IP>:8000/slides.html` on the device (same Wi-Fi).
+On a phone or tablet, opening `slides.html` as a file does not work (browsers
+there do not load `html/` and `figures/` next to a local file). Use
+[tex2html viewer](https://github.com/arunperiyal/tex2html-viewer) instead: open
+the `--pack` zip in it ([web app](https://arunperiyal.github.io/tex2html-viewer/)
+or Android app) and present it full screen, offline. Inside the Android app,
+where no second window can open, the deck is opened as
+`slides.html?nopresenter`, which leaves S out of the help.
 
 Copy the `--pack` zip (or the whole project folder) to the presenting computer.
 Ctrl+P → Save as PDF gives a static backup, one page per slide.
