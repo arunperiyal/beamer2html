@@ -91,6 +91,7 @@ Open `slides.html` and use:
 | F | fullscreen |
 | S | presenter view: notes, next slide, timer (second window) |
 | P | play / pause the animations and videos on the slide |
+| G | slide grid: every slide as a thumbnail; click one (or arrows, Enter) to go there, G / Esc to close |
 | H | help |
 | swipe left / right | next / previous step or slide (touch screens) |
 | tap right / left third | next / previous; a tap on an animation plays / pauses it |
