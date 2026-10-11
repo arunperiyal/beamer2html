@@ -160,7 +160,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   line. The data is embedded in `slides.html`, so the deck needs no data files.
   Options `width`, `height`, `xlabel`, `ylabel`, `xmin`, `xmax`, `ymin`,
   `ymax`, `grid`, `legend` (`north east`, …, `none`); per line `x`, `y`,
-  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `sep`,
+  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
+  the x values, to line up series recorded at different times), `sep`,
   `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow
   with); `\plotline<2->` adds a line at a step, with the axes unchanged
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines

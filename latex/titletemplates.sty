@@ -1038,7 +1038,9 @@
 %   west, south east, south west, none).
 % \plotline options: x, y (the column's name, or its number counting from 1;
 %   default 1 and 2), label (legend entry), color (plotcolor1, 2, ... in
-%   turn), style (solid, dashed, dotted), sep (comma, semicolon, tab, space:
+%   turn), style (solid, dashed, dotted), offset (added to the x values:
+%   lines that cover the same span at different times, e.g. offset=-100,
+%   start together), sep (comma, semicolon, tab, space:
 %   instead of guessing from the file name), pdfevery=N (the PDF plots every
 %   N-th point only -- for long series that TeX is slow with or runs out of
 %   memory on; the HTML always has all of them).
@@ -1087,6 +1089,7 @@
     style    .tl_set:N  = \l__tt_plotline_style_tl,
     style    .initial:n = solid,
     sep      .tl_set:N  = \l__tt_plotline_sep_tl,
+    offset   .tl_set:N  = \l__tt_plotline_offset_tl,
     pdfevery .tl_set:N  = \l__tt_plotline_every_tl,
     pdfevery .initial:n = 1,
   }
@@ -1153,7 +1156,21 @@
             \str_if_eq:VnF \l__tt_plotline_sep_tl { space }
               { \tl_put_right:Ne \l__tt_plot_table_tl { col~sep = \l__tt_plotline_sep_tl, } }
           }
-        \__tt_plot_column:nV { x } \l__tt_plotline_x_tl
+        \tl_if_empty:NTF \l__tt_plotline_offset_tl
+          { \__tt_plot_column:nV { x } \l__tt_plotline_x_tl }
+          {                                          % x + offset
+            \regex_match:nVTF { \A \d+ \Z } \l__tt_plotline_x_tl
+              {
+                \tl_put_right:Ne \l__tt_plot_table_tl
+                  { , x~expr = \exp_not:N \thisrowno { \int_eval:n { \l__tt_plotline_x_tl - 1 } }
+                               + ( \l__tt_plotline_offset_tl ) }
+              }
+              {
+                \tl_put_right:Ne \l__tt_plot_table_tl
+                  { , x~expr = \exp_not:N \thisrow { \exp_not:V \l__tt_plotline_x_tl }
+                               + ( \l__tt_plotline_offset_tl ) }
+              }
+          }
         \__tt_plot_column:nV { y } \l__tt_plotline_y_tl
         % a legend entry: with a label, unless legend=none
         \bool_set:Nn \l__tt_plot_key_bool

@@ -69,7 +69,7 @@ class PlotMixin:
     def env_slideplot(self, body):
         """\\begin{slideplot}[width, height, xlabel, ylabel, xmin, xmax, ymin,
         ymax, grid, legend] with \\plotline<spec>[x, y, label, color, style,
-        sep, pdfevery]{file} lines."""
+        offset, sep, pdfevery]{file} lines."""
         opt, j = read_opt(body, 0)
         o = keyvals(opt)
         rest = body[j:]
@@ -156,13 +156,18 @@ class PlotMixin:
         yi = column(str(o.get("y", "2")), header, "y", path)
         if xi is None or yi is None:
             return None
+        offset = o.get("offset", "")
+        offset = number(offset) if isinstance(offset, str) and offset.strip() else 0
+        if offset is None:
+            warn("\\plotline: offset=%s is not a number" % o["offset"])
+            offset = 0
         xs, ys = [], []
         for r in rows:
             x = number(r[xi]) if xi < len(r) else None
             if x is None:
                 continue
             y = number(r[yi]) if yi < len(r) else None
-            xs.append(float("%.7g" % x))
+            xs.append(float("%.7g" % (x + offset)))      # offset: shifted along x
             ys.append(None if y is None else float("%.6g" % y))   # None: a gap
         if not xs:
             warn("\\plotline: no numbers in %s" % path)
@@ -176,4 +181,7 @@ class PlotMixin:
             style = "solid"
         label = o.get("label")
         label = self.inline(label).strip() if isinstance(label, str) else ""
-        return {"x": xs, "y": ys}, label, html.escape(color), style
+        data = {"x": xs, "y": ys}
+        if offset:
+            data["offset"] = offset                 # the readout also gives the file's x
+        return data, label, html.escape(color), style

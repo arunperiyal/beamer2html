@@ -1139,8 +1139,8 @@
 
   // ------------------------------------------------------------ plots
   // \begin{slideplot} -> <div class="plot"> with its data in <script
-  // class="plot-data"> ({series: [{x, y, color, style, spec}], axis: {xmin,
-  // ...}, grid}) and an empty .plot-area, drawn here as SVG: every plot once
+  // class="plot-data"> ({series: [{x, y, color, style, spec, offset}],
+  // axis: {xmin, ...}, grid}) and an empty .plot-area, drawn here as SVG: every plot once
   // at the start (so copies -- slide grid, presenter view, printing -- have
   // it too), again when its size or view changes. On the deck's own plots:
   // the values under the pointer, drag to zoom in (a flat drag zooms the x
@@ -1308,7 +1308,8 @@
       circles += `<circle cx="${G.sx(s.x[k]).toFixed(1)}" cy="${G.sy(s.y[k]).toFixed(1)}" r="5" fill="${s.color}"/>`;
       rows += `<div><span class="plot-swatch" style="--c:${s.color}" data-style="${s.style}"></span>` +
         `${key ? `<span class="plot-name">${key.innerHTML}</span>` : ""}` +
-        `<b>${valueText(s.y[k])}</b></div>`;
+        `<b>${valueText(s.y[k])}</b>` +
+        (s.offset ? `<i class="plot-own">at ${valueText(s.x[k] - s.offset)}</i>` : "") + "</div>";
     });
     if (!rows) { plotLeave(el); return; }
     const cx = G.sx(xv).toFixed(1);

@@ -507,6 +507,7 @@ cite a { color: var(--blue); text-decoration: none; }
 .plot-tip b { margin-left: auto; padding-left: 0.6em; font-weight: normal;
               font-variant-numeric: tabular-nums; }
 .plot-tip-x { color: var(--muted); }
+.plot-own { color: var(--muted); font-size: 0.8em; }      /* x in the file (offset lines) */
 .plot-reset {
   position: absolute; z-index: 3; top: calc(var(--plot-t) + 6px); left: calc(var(--plot-l) + 6px);
   font: 22px/1 sans-serif; padding: 4px 8px; cursor: pointer; color: var(--blue);
