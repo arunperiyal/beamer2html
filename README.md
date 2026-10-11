@@ -27,7 +27,7 @@ python3 path/to/tex2html --watch         # rebuild on every change (like latexmk
 ```
 
 `--watch` (`-w`) keeps running and rebuilds whenever `main.tex`, an `\input`
-file, the `.bib`, an image the slides use, or the tool's own `deck.js` /
+file, the `.bib`, an image or plot data file the slides use, or the tool's own `deck.js` /
 `deck.css` / `titletemplates.sty` changes. An open deck built this way reloads
 itself and stays on the same slide and step. A failed build leaves the last
 good `slides.html` in place. Ctrl+C stops it. For the PDF, run
@@ -151,6 +151,19 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   pauses when you leave the slide. In the PDF it is the poster, or a box with
   the file name, linking to the video — or with `\usepackage{multimedia}` a
   `\movie` that plays in viewers that support it (Okular, …)
+- plots: `\begin{slideplot}[options] \plotline[x=time, y=lift, label=..]{data.csv}
+  … \end{slideplot}` draws lines from data files (CSV or space-separated
+  columns, optional header row; columns by name or by number from 1). In the
+  PDF, pgfplots draws them; in the HTML deck the plot is interactive: the
+  values under the pointer, drag to zoom in (a flat drag zooms the x axis
+  only), double-click or ⟲ to zoom out, click a legend entry to hide / show a
+  line. The data is embedded in `slides.html`, so the deck needs no data files.
+  Options `width`, `height`, `xlabel`, `ylabel`, `xmin`, `xmax`, `ymin`,
+  `ymax`, `grid`, `legend` (`north east`, …, `none`); per line `x`, `y`,
+  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
+  the x values, to line up series recorded at different times), `sep`,
+  `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow
+  with); `\plotline<2->` adds a line at a step, with the axes unchanged
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
   (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,
@@ -186,7 +199,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `cli.py`, `__main__.py` | command line |
 | `document.py` | preamble settings, sections, frames, template slides |
 | `converter.py` | core: inline text and block flow |
-| `commands.py`, `environments.py`, `animation.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, overlay specs, TikZ pictures |
+| `commands.py`, `environments.py`, `animation.py`, `plot.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, plots, overlay specs, TikZ pictures |
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
 | `pack.py` | `--pack`: zip of the deck and the files it uses |

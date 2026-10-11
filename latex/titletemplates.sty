@@ -1023,6 +1023,199 @@
 \cs_generate_variant:Nn \__tt_video:n { V }
 \ExplSyntaxOff
 
+% ---------------------------------------------------------------- Plots
+%   \begin{slideplot}[xlabel={$t$}, ylabel={$y/D$}, height=5cm]
+%     \plotline[x=time, y=aleDisp_y, label={$U_r = 4$}]{data/U4/data_dy.csv}
+%     \plotline<2->[x=time, y=aleDisp_y, label={$U_r = 6$}]{data/U6/data_dy.csv}
+%   \end{slideplot}
+% Lines from data files: columns separated by commas (.csv) or spaces, a
+% header row with the column names (optional), lines starting with # or %
+% skipped. In the PDF, pgfplots draws them; in the HTML deck, the plot is
+% interactive: values under the pointer, drag to zoom in, double-click to
+% zoom out, click a legend entry to hide / show its line.
+% slideplot options: width (\linewidth), height (half the width), xlabel,
+%   ylabel, xmin, xmax, ymin, ymax, grid (true), legend (north east, north
+%   west, south east, south west, none).
+% \plotline options: x, y (the column's name, or its number counting from 1;
+%   default 1 and 2), label (legend entry), color (plotcolor1, 2, ... in
+%   turn), style (solid, dashed, dotted), offset (added to the x values:
+%   lines that cover the same span at different times, e.g. offset=-100,
+%   start together), sep (comma, semicolon, tab, space:
+%   instead of guessing from the file name), pdfevery=N (the PDF plots every
+%   N-th point only -- for long series that TeX is slow with or runs out of
+%   memory on; the HTML always has all of them).
+% \plotline<2->: the line is drawn from step 2 on; the axes stay the same.
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\definecolor{plotcolor1}{RGB}{31,73,125}     % bannerblue
+\definecolor{plotcolor2}{RGB}{213,94,0}      % vermilion
+\definecolor{plotcolor3}{RGB}{0,158,115}     % green
+\definecolor{plotcolor4}{RGB}{204,121,167}   % purple
+\definecolor{plotcolor5}{RGB}{230,159,0}     % orange
+\definecolor{plotcolor6}{RGB}{86,180,233}    % sky blue
+\definecolor{plotcolor7}{RGB}{110,110,110}   % gray
+\ExplSyntaxOn
+\dim_new:N \l__tt_plot_w_dim
+\dim_new:N \l__tt_plot_h_dim
+\int_new:N \g__tt_plot_n_int
+\clist_new:N \l__tt_plot_axis_clist
+\tl_new:N \l__tt_plot_draw_tl
+\tl_new:N \l__tt_plot_table_tl
+\keys_define:nn { tt / plot }
+  {
+    width   .tl_set:N   = \l__tt_plot_width_tl,
+    width   .initial:n  = \linewidth,
+    height  .tl_set:N   = \l__tt_plot_height_tl,
+    xlabel  .tl_set:N   = \l__tt_plot_xlabel_tl,
+    ylabel  .tl_set:N   = \l__tt_plot_ylabel_tl,
+    xmin    .tl_set:N   = \l__tt_plot_xmin_tl,
+    xmax    .tl_set:N   = \l__tt_plot_xmax_tl,
+    ymin    .tl_set:N   = \l__tt_plot_ymin_tl,
+    ymax    .tl_set:N   = \l__tt_plot_ymax_tl,
+    grid    .bool_set:N = \l__tt_plot_grid_bool,
+    grid    .initial:n  = true,
+    grid    .default:n  = true,
+    legend  .tl_set:N   = \l__tt_plot_legend_tl,
+    legend  .initial:n  = { north~east },
+  }
+\keys_define:nn { tt / plotline }
+  {
+    x        .tl_set:N  = \l__tt_plotline_x_tl,
+    x        .initial:n = 1,
+    y        .tl_set:N  = \l__tt_plotline_y_tl,
+    y        .initial:n = 2,
+    label    .tl_set:N  = \l__tt_plotline_label_tl,
+    color    .tl_set:N  = \l__tt_plotline_color_tl,
+    style    .tl_set:N  = \l__tt_plotline_style_tl,
+    style    .initial:n = solid,
+    sep      .tl_set:N  = \l__tt_plotline_sep_tl,
+    offset   .tl_set:N  = \l__tt_plotline_offset_tl,
+    pdfevery .tl_set:N  = \l__tt_plotline_every_tl,
+    pdfevery .initial:n = 1,
+  }
+\NewDocumentEnvironment { slideplot } { O{} +b }
+  {
+    \group_begin:
+    \keys_set:nn { tt / plot } {#1}
+    \int_gzero:N \g__tt_plot_n_int
+    \dim_set:Nn \l__tt_plot_w_dim { \l__tt_plot_width_tl }
+    \tl_if_empty:NTF \l__tt_plot_height_tl
+      { \dim_set:Nn \l__tt_plot_h_dim { 0.5 \l__tt_plot_w_dim } }
+      { \dim_set:Nn \l__tt_plot_h_dim { \l__tt_plot_height_tl } }
+    \clist_set:Ne \l__tt_plot_axis_clist
+      {
+        width = \dim_use:N \l__tt_plot_w_dim,
+        height = \dim_use:N \l__tt_plot_h_dim,
+        enlarge~x~limits = false, enlarge~y~limits = 0.05,
+        scaled~ticks = false,
+        xticklabel~style = { /pgf/number~format/fixed },
+        yticklabel~style = { /pgf/number~format/fixed },
+        tick~label~style = { font = \exp_not:N \footnotesize },
+        label~style = { font = \exp_not:N \small },
+        legend~style = { font = \exp_not:N \footnotesize, cells = { anchor = west } },
+        major~grid~style = { gray!20 },
+        \bool_if:NT \l__tt_plot_grid_bool { grid = major, }
+        \str_if_eq:VnF \l__tt_plot_legend_tl { none }
+          { legend~pos = \tl_use:N \l__tt_plot_legend_tl, }
+        \tl_if_empty:NF \l__tt_plot_xlabel_tl { xlabel = { \exp_not:V \l__tt_plot_xlabel_tl }, }
+        \tl_if_empty:NF \l__tt_plot_ylabel_tl { ylabel = { \exp_not:V \l__tt_plot_ylabel_tl }, }
+        \tl_if_empty:NF \l__tt_plot_xmin_tl { xmin = \l__tt_plot_xmin_tl, }
+        \tl_if_empty:NF \l__tt_plot_xmax_tl { xmax = \l__tt_plot_xmax_tl, }
+        \tl_if_empty:NF \l__tt_plot_ymin_tl { ymin = \l__tt_plot_ymin_tl, }
+        \tl_if_empty:NF \l__tt_plot_ymax_tl { ymax = \l__tt_plot_ymax_tl, }
+      }
+    \par \centering
+    \__tt_plot_axis:Vn \l__tt_plot_axis_clist {#2}
+    \par
+    \group_end:
+  }
+  { }
+\cs_new_protected:Npn \__tt_plot_axis:nn #1#2
+  { \begin{tikzpicture} \begin{axis} [#1] #2 \end{axis} \end{tikzpicture} }
+\cs_generate_variant:Nn \__tt_plot_axis:nn { V }
+\NewDocumentCommand \plotline { d<> O{} m }
+  {
+    \int_gincr:N \g__tt_plot_n_int
+    \file_if_exist:nTF {#3}
+      {
+        \group_begin:
+        \keys_set:nn { tt / plotline } {#2}
+        \tl_if_empty:NT \l__tt_plotline_color_tl
+          {
+            \tl_set:Ne \l__tt_plotline_color_tl
+              { plotcolor \int_eval:n { \int_mod:nn { \g__tt_plot_n_int - 1 } { 7 } + 1 } }
+          }
+        % the table: separator, columns by name or number (pgfplots: from 0)
+        \tl_clear:N \l__tt_plot_table_tl
+        \tl_if_empty:NTF \l__tt_plotline_sep_tl
+          {
+            \regex_match:nnT { (?i) \.csv \Z } {#3}
+              { \tl_put_right:Nn \l__tt_plot_table_tl { col~sep = comma, } }
+          }
+          {
+            \str_if_eq:VnF \l__tt_plotline_sep_tl { space }
+              { \tl_put_right:Ne \l__tt_plot_table_tl { col~sep = \l__tt_plotline_sep_tl, } }
+          }
+        \tl_if_empty:NTF \l__tt_plotline_offset_tl
+          { \__tt_plot_column:nV { x } \l__tt_plotline_x_tl }
+          {                                          % x + offset
+            \regex_match:nVTF { \A \d+ \Z } \l__tt_plotline_x_tl
+              {
+                \tl_put_right:Ne \l__tt_plot_table_tl
+                  { , x~expr = \exp_not:N \thisrowno { \int_eval:n { \l__tt_plotline_x_tl - 1 } }
+                               + ( \l__tt_plotline_offset_tl ) }
+              }
+              {
+                \tl_put_right:Ne \l__tt_plot_table_tl
+                  { , x~expr = \exp_not:N \thisrow { \exp_not:V \l__tt_plotline_x_tl }
+                               + ( \l__tt_plotline_offset_tl ) }
+              }
+          }
+        \__tt_plot_column:nV { y } \l__tt_plotline_y_tl
+        % a legend entry: with a label, unless legend=none
+        \bool_set:Nn \l__tt_plot_key_bool
+          {
+            ! \tl_if_empty_p:N \l__tt_plotline_label_tl
+            && ! \str_if_eq_p:Vn \l__tt_plot_legend_tl { none }
+          }
+        \tl_set:Ne \l__tt_plot_draw_tl
+          {
+            color = \l__tt_plotline_color_tl, line~width = 0.8pt, mark = none,
+            \l__tt_plotline_style_tl,
+            each~nth~point = \l__tt_plotline_every_tl,
+            filter~discard~warning = false, unbounded~coords = jump
+            \bool_if:NF \l__tt_plot_key_bool { , forget~plot }
+          }
+        \IfNoValueTF {#1}
+          { \__tt_plot_line:n {#3} }
+          {                                          % hidden: drawn invisibly, so
+            \alt<#1> { \__tt_plot_line:n {#3} }      % the axes do not change
+              { \__tt_plot_add:nVn { draw = none, forget~plot } \l__tt_plot_table_tl {#3} }
+          }
+        \group_end:
+      }
+      { \msg_warning:nnn { titletemplates } { plot-file } {#3} }
+  }
+\bool_new:N \l__tt_plot_key_bool
+\msg_new:nnn { titletemplates } { plot-file } { \plotline:~data~file~'#1'~not~found. }
+\cs_new_protected:Npn \__tt_plot_column:nn #1#2
+  {
+    \regex_match:nnTF { \A \d+ \Z } {#2}
+      { \tl_put_right:Ne \l__tt_plot_table_tl { , #1~index = \int_eval:n { #2 - 1 } } }
+      { \tl_put_right:Nn \l__tt_plot_table_tl { , #1 = {#2} } }
+  }
+\cs_generate_variant:Nn \__tt_plot_column:nn { nV }
+\cs_new_protected:Npn \__tt_plot_line:n #1
+  {
+    \__tt_plot_add:VVn \l__tt_plot_draw_tl \l__tt_plot_table_tl {#1}
+    \bool_if:NT \l__tt_plot_key_bool
+      { \exp_args:NV \addlegendentry \l__tt_plotline_label_tl }
+  }
+\cs_new_protected:Npn \__tt_plot_add:nnn #1#2#3
+  { \addplot [#1] table [#2] {#3} ; }
+\cs_generate_variant:Nn \__tt_plot_add:nnn { VVn, nVn }
+\ExplSyntaxOff
+
 % ---------------------------------------------------------------- Captions
 %   \begin{figure}                       % (or table) -- centred, does not float
 %     \includegraphics[width=0.8\linewidth]{figures/...}

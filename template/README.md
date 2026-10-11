@@ -17,7 +17,7 @@ latexmk -pdf main.tex  # -> main.pdf
 | `main.tex` | all settings: title-slide fields, title bar / section name / footer switches, margins, caption size, `\showdividers`, bibliography |
 | `sections/01-text.tex` | `itemize`, `enumerate`, `description`, text styles and sizes, math (`align`), `block` |
 | `sections/02-layout.tex` | `columns`, `rows` holding columns (a grid), `\SetTextMargins` between frames |
-| `sections/03-figures.tex` | `figure` + `\caption` + `\label` / `\ref` (PDF and PNG figures), `\FigurePlaceholder` |
+| `sections/03-figures.tex` | `figure` + `\caption` + `\label` / `\ref` (PDF and PNG figures), `\FigurePlaceholder`, `slideplot` (interactive plot from a CSV file) |
 | `sections/04-tables.tex` | `slidetable` in its four styles: `plain`, `lines`, `header`, `striped` |
 | `sections/05-animations.tex` | `animation` with panels in one row and in a grid (`columns=2`), `dt`, `timebar`, `controls=hover`, `subcaptions` |
 | `sections/06-shapes.tex` | `annotate` + `\shape` over a figure (with `grid`, overlays), `\slideshape`, `\slidegrid` |

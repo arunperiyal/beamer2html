@@ -52,6 +52,16 @@ for k, speed in enumerate((1.0, 1.5, 2.0, 3.0), 1):
         fig.savefig(os.path.join(HERE, "anim", "case%d_%d.png" % (k, n)), dpi=100)
         plt.close(fig)
 
+# a time series (CSV): three responses settling to a steady oscillation --
+# plotted by slideplot (one file, a column per case)
+ts = np.round(np.arange(0, 40.0001, 0.02), 2)
+cols = [np.round(amp * (1 - np.exp(-ts / 6)) * np.sin(2 * np.pi * f * ts), 5)
+        for amp, f in ((0.6, 0.20), (0.45, 0.24), (0.15, 0.31))]
+with open(os.path.join(HERE, "sample-response.csv"), "w") as f:
+    f.write("time,case1,case2,case3\n")
+    for row in zip(ts, *cols):
+        f.write(",".join("%g" % v for v in row) + "\n")
+
 # a video (MP4, needs ffmpeg): the field travelling for 4 s -> sample-video.mp4,
 # its first frame -> sample-video.png (the poster)
 import shutil

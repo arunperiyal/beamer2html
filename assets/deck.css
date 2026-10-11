@@ -452,9 +452,68 @@ cite a { color: var(--blue); text-decoration: none; }
     position: relative; display: flex !important;
     width: 1280px; height: 720px; break-after: page;
   }
-  .anim-controls, .hud, .deck-grid { display: none !important; }
+  .anim-controls, .hud, .deck-grid, .plot-tip, .plot-reset { display: none !important; }
   /* steps: deck.js shows each slide at its last step before printing */
 }
+
+/* ------------------------------------------------------------ plots */
+/* \begin{slideplot}: deck.js draws the axes and lines as SVG in .plot-area
+   and sets --plot-l/t/r/b (the space around the axes) on it */
+.plot { margin: 0.3em auto; display: flex; flex-direction: column; }
+.plot-main { display: flex; }
+.plot-ylabel { flex: 0 0 1.5em; position: relative; font-size: 0.9em; }
+.plot-ylabel > span {
+  position: absolute; left: 50%; top: 50%; white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+.plot-area {
+  flex: 1; min-width: 0; position: relative; aspect-ratio: 2 / 1;
+  font-size: 0.8em; line-height: 1.25;              /* tick labels: \footnotesize */
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair;
+}
+.plot-xlabel { text-align: center; font-size: 0.9em; line-height: 1.2; }
+.plot:has(.plot-ylabel) .plot-xlabel { padding-left: 1.5em; }
+.plot-svg { position: absolute; inset: 0; overflow: visible; }
+.plot-svg text { fill: var(--text); font-family: var(--serif); }
+.plot-grid { stroke: rgba(0, 0, 0, 0.1); stroke-width: 1; }
+.plot-tick { stroke: #333; stroke-width: 1; }
+.plot-frame { fill: none; stroke: #333; stroke-width: 1.2; }
+.plot-line { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.plot-cross { stroke: rgba(0, 0, 0, 0.45); stroke-width: 1; stroke-dasharray: 4 3; }
+.plot-zoom { fill: rgba(31, 73, 125, 0.12); stroke: var(--blue); stroke-width: 1; }
+.plot-legend {
+  position: absolute; z-index: 2; display: flex; flex-direction: column;
+  background: rgba(255, 255, 255, 0.9); border: 1px solid #333; padding: 0.15em 0.45em;
+}
+.plot-legend[data-pos="north-east"] { top: calc(var(--plot-t) + 8px); right: calc(var(--plot-r) + 8px); }
+.plot-legend[data-pos="north-west"] { top: calc(var(--plot-t) + 8px); left: calc(var(--plot-l) + 8px); }
+.plot-legend[data-pos="south-east"] { bottom: calc(var(--plot-b) + 8px); right: calc(var(--plot-r) + 8px); }
+.plot-legend[data-pos="south-west"] { bottom: calc(var(--plot-b) + 8px); left: calc(var(--plot-l) + 8px); }
+.plot-key {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0.05em 0;
+  display: flex; align-items: center; gap: 0.45em; cursor: pointer; text-align: left;
+}
+.plot-key.off { opacity: 0.35; }
+.plot-key mjx-container { pointer-events: none; }        /* the click is the key's */
+.plot-swatch { flex: none; width: 1.5em; height: 0; border-top: 2.25px solid var(--c); }
+.plot-swatch[data-style="dashed"] { border-top-style: dashed; }
+.plot-swatch[data-style="dotted"] { border-top-style: dotted; }
+.plot-tip {
+  position: absolute; z-index: 3; pointer-events: none; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.95); border: 1px solid #999; border-radius: 4px;
+  padding: 0.25em 0.55em; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.plot-tip > div { display: flex; align-items: center; gap: 0.45em; }
+.plot-tip b { margin-left: auto; padding-left: 0.6em; font-weight: normal;
+              font-variant-numeric: tabular-nums; }
+.plot-tip-x { color: var(--muted); }
+.plot-own { color: var(--muted); font-size: 0.8em; }      /* x in the file (offset lines) */
+.plot-reset {
+  position: absolute; z-index: 3; top: calc(var(--plot-t) + 6px); left: calc(var(--plot-l) + 6px);
+  font: 22px/1 sans-serif; padding: 4px 8px; cursor: pointer; color: var(--blue);
+  background: rgba(255, 255, 255, 0.9); border: 1px solid #999; border-radius: 4px;
+}
+.plot-tip[hidden], .plot-reset[hidden] { display: none; }
 
 /* ------------------------------------------------------------ shapes */
 /* \begin{annotate} / \shape / \slideshape: deck.js draws an SVG layer over

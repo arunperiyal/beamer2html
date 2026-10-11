@@ -527,6 +527,7 @@
     n = Math.max(0, Math.min(slides.length - 1, n));
     if (n !== idx || !slides[n].classList.contains("active")) {
       slides[idx].classList.remove("active");
+      slides[idx].querySelectorAll(".plot[data-plot]").forEach(plotLeave);
       anims.forEach((a) => { if (slides[idx].contains(a.el)) a.leave(); });
       idx = n;
       slides[idx].classList.add("active");
@@ -559,11 +560,11 @@
   // ------------------------------------------------------------ touch
   // Swipe left (next) / right (previous); a tap on the right two thirds of
   // the screen goes forward, on the left third back. Taps on links, buttons,
-  // the animation controls / time bar and animation images (play / pause)
-  // keep their own meaning. Ignored while two fingers are down or the page is
+  // the animation controls / time bar, animation images (play / pause) and
+  // plots (values, zoom) keep their own meaning. Ignored while two fingers are down or the page is
   // pinch-zoomed in.
   const TOUCH_OWN = "a, button, input, select, textarea, video, " +
-    ".anim-controls, .anim-bar, .anim img";
+    ".anim-controls, .anim-bar, .anim img, .plot-area";
   const zoomed = () => window.visualViewport && visualViewport.scale > 1.01;
   let touch = null, fingers = 0;
   addEventListener("pointerdown", (e) => {
@@ -1136,8 +1137,274 @@
   }
   let videos = [];
 
+  // ------------------------------------------------------------ plots
+  // \begin{slideplot} -> <div class="plot"> with its data in <script
+  // class="plot-data"> ({series: [{x, y, color, style, spec, offset}],
+  // axis: {xmin, ...}, grid}) and an empty .plot-area, drawn here as SVG: every plot once
+  // at the start (so copies -- slide grid, presenter view, printing -- have
+  // it too), again when its size or view changes. On the deck's own plots:
+  // the values under the pointer, drag to zoom in (a flat drag zooms the x
+  // axis only), double-click or the ⟲ button to zoom out, a legend entry
+  // hides / shows its line. A line with a step spec (\plotline<2->) gets
+  // data-spec, so showStep hides it; the axes always include every line.
+  const plotData = [];
+  const PLOT_LW = 0.8 * PX_PER_PT;               // line width = 0.8pt, as in the PDF
+  const DASH = { dashed: "9 6", dotted: "2.5 5" };
+  function niceTicks(lo, hi, n) {
+    const raw = (hi - lo) / Math.max(1, n), p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const st = [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || 10 * p;
+    const out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + st * 1e-9; v += st) out.push(v);
+    return { ticks: out, step: st };
+  }
+  function tickText(v, st) {
+    const d = Math.max(0, -Math.floor(Math.log10(st) + 1e-9) + (st / Math.pow(10,
+      Math.floor(Math.log10(st) + 1e-9)) === 2.5 ? 1 : 0));
+    return (Math.abs(v) < st * 1e-9 ? 0 : v).toFixed(d).replace("-", "−");
+  }
+  const valueText = (v) => (+v.toPrecision(5)).toString().replace("-", "−");
+  function plotRange(P, off, view) {
+    const ax = P.axis;
+    let x0 = ax.xmin, x1 = ax.xmax;
+    if (x0 === undefined || x1 === undefined) {
+      let lo = Infinity, hi = -Infinity;
+      P.series.forEach((s) => s.x.forEach((x) => { lo = Math.min(lo, x); hi = Math.max(hi, x); }));
+      if (x0 === undefined) x0 = lo;
+      if (x1 === undefined) x1 = hi;
+    }
+    if (view) [x0, x1] = view.x;
+    let y0 = view && view.y ? view.y[0] : ax.ymin, y1 = view && view.y ? view.y[1] : ax.ymax;
+    if (y0 === undefined || y1 === undefined) {   // over the lines shown, within x0..x1
+      let lo = Infinity, hi = -Infinity;
+      P.series.forEach((s, i) => {
+        if (off.has(i)) return;
+        s.x.forEach((x, k) => {
+          const y = s.y[k];
+          if (y !== null && x >= x0 && x <= x1) { lo = Math.min(lo, y); hi = Math.max(hi, y); }
+        });
+      });
+      if (lo > hi) { lo = 0; hi = 1; }
+      const pad = (hi - lo || Math.abs(hi) || 1) * 0.05;
+      if (y0 === undefined) y0 = lo - pad;
+      if (y1 === undefined) y1 = hi + pad;
+    }
+    if (x1 <= x0) x1 = x0 + 1;
+    if (y1 <= y0) y1 = y0 + 1;
+    return { x0, x1, y0, y1 };
+  }
+  // the line as a path, at most ~4 points per pixel column (first, min, max,
+  // last of the points falling in it), so long series stay quick
+  function linePath(s, sx, sy, x0, x1) {
+    let d = "", col = null, pts = [], pen = false;
+    const flush = () => {
+      if (!pts.length) return;
+      let lo = pts[0], hi = pts[0];
+      pts.forEach((p) => { if (p[1] < lo[1]) lo = p; if (p[1] > hi[1]) hi = p; });
+      const keep = [pts[0], lo, hi, pts[pts.length - 1]].filter((p, i, a) => a.indexOf(p) === i)
+        .sort((a, b) => a[2] - b[2]);
+      keep.forEach((p) => { d += (pen ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); pen = true; });
+      pts = [];
+    };
+    const n = s.x.length;
+    for (let k = 0; k < n; k++) {
+      const x = s.x[k], y = s.y[k];
+      const near = (x >= x0 && x <= x1) || (k > 0 && s.x[k - 1] >= x0 && s.x[k - 1] <= x1) ||
+        (k < n - 1 && s.x[k + 1] >= x0 && s.x[k + 1] <= x1) ||
+        (k > 0 && k < n - 1 && (s.x[k - 1] - x0) * (s.x[k + 1] - x0) < 0);
+      if (y === null || !near) { flush(); pen = false; col = null; continue; }
+      const px = sx(x), c = Math.round(px);
+      if (c !== col) { flush(); col = c; }
+      pts.push([px, sy(y), k]);
+    }
+    flush();
+    return d;
+  }
+  function drawPlot(el) {
+    const P = plotData[el.dataset.plot], area = el.querySelector(".plot-area");
+    if (!P || !area) return;
+    const W = area.clientWidth, H = area.clientHeight;
+    if (!W || !H) return;
+    const off = el._off || new Set(), r = plotRange(P, off, el._view);
+    const fsz = parseFloat(getComputedStyle(area).fontSize) || 24;
+    const xt = niceTicks(r.x0, r.x1, Math.max(2, Math.round(W / (5.5 * fsz))));
+    const yt = niceTicks(r.y0, r.y1, Math.max(2, Math.round(H / (2.6 * fsz))));
+    const ylabs = yt.ticks.map((v) => tickText(v, yt.step));
+    const xlabs = xt.ticks.map((v) => tickText(v, xt.step));
+    const L = Math.max(...ylabs.map((t) => t.length)) * 0.56 * fsz + 0.6 * fsz;
+    const R = 0.4 * fsz + Math.min(0.3 * fsz * xlabs[xlabs.length - 1].length, 0.15 * W);
+    const T = 0.6 * fsz, B = 1.45 * fsz;
+    const w = Math.max(10, W - L - R), h = Math.max(10, H - T - B);
+    const sx = (x) => ((x - r.x0) / (r.x1 - r.x0)) * w;
+    const sy = (y) => h - ((y - r.y0) / (r.y1 - r.y0)) * h;
+    let g = "";
+    yt.ticks.forEach((v, i) => {
+      const y = sy(v).toFixed(1);
+      if (P.grid) g += `<line class="plot-grid" x1="0" x2="${w}" y1="${y}" y2="${y}"/>`;
+      g += `<line class="plot-tick" x1="0" x2="${0.25 * fsz}" y1="${y}" y2="${y}"/>` +
+           `<text x="${-0.3 * fsz}" y="${y}" dy="0.35em" text-anchor="end">${ylabs[i]}</text>`;
+    });
+    xt.ticks.forEach((v, i) => {
+      const x = sx(v).toFixed(1);
+      if (P.grid) g += `<line class="plot-grid" x1="${x}" x2="${x}" y1="0" y2="${h}"/>`;
+      g += `<line class="plot-tick" x1="${x}" x2="${x}" y1="${h}" y2="${h - 0.25 * fsz}"/>` +
+           `<text x="${x}" y="${h + 1.05 * fsz}" text-anchor="middle">${xlabs[i]}</text>`;
+    });
+    const lines = P.series.map((s, i) => `<path class="plot-line" d="${linePath(s, sx, sy, r.x0, r.x1)}" ` +
+      `stroke="${s.color}" stroke-width="${PLOT_LW.toFixed(2)}"` +
+      (DASH[s.style] ? ` stroke-dasharray="${DASH[s.style]}"` : "") +
+      (s.spec ? ` data-spec="${esc(s.spec)}"` : "") +
+      (off.has(i) ? ' style="display:none"' : "") + "/>").join("");
+    area.querySelectorAll(":scope > svg").forEach((sv) => sv.remove());
+    area.insertAdjacentHTML("afterbegin",
+      `<svg class="plot-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+      `<g transform="translate(${L.toFixed(1)} ${T.toFixed(1)})">${g}` +
+      `<svg class="plot-lines" width="${w}" height="${h}">${lines}` +
+      `<line class="plot-cross" y1="0" y2="${h}" visibility="hidden"/><g class="plot-dots"></g>` +
+      `<rect class="plot-zoom" visibility="hidden"/></svg>` +
+      `<rect class="plot-frame" width="${w}" height="${h}"/></g></svg>`);
+    el._geo = { W, H, L, T, w, h, r, sx, sy };
+    [["l", L], ["t", T], ["r", W - L - w], ["b", H - T - h]].forEach(([k, v]) =>
+      area.style.setProperty("--plot-" + k, v.toFixed(1) + "px"));   // legend, ⟲ inside the axes
+    el.querySelectorAll(".plot-key").forEach((k) => k.classList.toggle("off", off.has(+k.dataset.series)));
+    const reset = area.querySelector(".plot-reset");
+    if (reset) reset.hidden = !el._view;
+    const s = el.closest(".slide");
+    if (s && s === slides[idx]) showStep(s, step);  // the new lines' step visibility
+  }
+  function plotsIn(root) {                        // every plot of a slide copy
+    root.querySelectorAll(".plot").forEach(drawPlot);
+  }
+  function plotPoint(el, e) {                     // pointer -> plot area pixels
+    const area = el.querySelector(".plot-area"), b = area.getBoundingClientRect();
+    const k = b.width / area.clientWidth || 1, G = el._geo;
+    return [(e.clientX - b.left) / k - G.L, (e.clientY - b.top) / k - G.T];
+  }
+  function nearest(xs, x) {                       // index of the point closest in x
+    let best = 0;
+    if (xs.length > 1 && xs[xs.length - 1] >= xs[0]) {   // ascending: binary search
+      let a = 0, b = xs.length - 1;
+      while (b - a > 1) { const m = (a + b) >> 1; if (xs[m] < x) a = m; else b = m; }
+      best = Math.abs(xs[a] - x) <= Math.abs(xs[b] - x) ? a : b;
+    } else xs.forEach((v, k) => { if (Math.abs(v - x) < Math.abs(xs[best] - x)) best = k; });
+    return best;
+  }
+  function plotHover(el, e) {
+    const G = el._geo, P = plotData[el.dataset.plot];
+    if (!G) return;
+    const [px, py] = plotPoint(el, e), area = el.querySelector(".plot-area");
+    const tip = area.querySelector(".plot-tip"), svg = area.querySelector(".plot-lines");
+    const cross = svg.querySelector(".plot-cross"), dots = svg.querySelector(".plot-dots");
+    if (px < 0 || px > G.w || py < 0 || py > G.h) { plotLeave(el); return; }
+    const x = G.r.x0 + (px / G.w) * (G.r.x1 - G.r.x0);
+    const paths = svg.querySelectorAll(".plot-line");
+    let rows = "", circles = "", xv = null;
+    P.series.forEach((s, i) => {
+      const p = paths[i];
+      if (!p || p.style.display === "none" || p.style.visibility === "hidden") return;
+      const k = nearest(s.x, x);
+      if (s.y[k] === null || s.x[k] < G.r.x0 || s.x[k] > G.r.x1) return;
+      if (xv === null || Math.abs(s.x[k] - x) < Math.abs(xv - x)) xv = s.x[k];
+      const key = el.querySelector(`.plot-key[data-series="${i}"] .plot-name`);
+      circles += `<circle cx="${G.sx(s.x[k]).toFixed(1)}" cy="${G.sy(s.y[k]).toFixed(1)}" r="5" fill="${s.color}"/>`;
+      rows += `<div><span class="plot-swatch" style="--c:${s.color}" data-style="${s.style}"></span>` +
+        `${key ? `<span class="plot-name">${key.innerHTML}</span>` : ""}` +
+        `<b>${valueText(s.y[k])}</b>` +
+        (s.offset ? `<i class="plot-own">at ${valueText(s.x[k] - s.offset)}</i>` : "") + "</div>";
+    });
+    if (!rows) { plotLeave(el); return; }
+    const cx = G.sx(xv).toFixed(1);
+    cross.setAttribute("x1", cx);
+    cross.setAttribute("x2", cx);
+    cross.setAttribute("visibility", "visible");
+    dots.innerHTML = circles;
+    const xl = el.querySelector(".plot-xlabel");
+    tip.innerHTML = `<div class="plot-tip-x">${xl ? xl.innerHTML + " = " : ""}${valueText(xv)}</div>` + rows;
+    tip.hidden = false;
+    const left = G.L + G.sx(xv), right = left > G.L + G.w / 2;
+    tip.style.left = right ? "" : left + 14 + "px";
+    tip.style.right = right ? G.W - left + 14 + "px" : "";
+    tip.style.top = G.T + 6 + "px";
+  }
+  function plotLeave(el) {
+    const area = el.querySelector(".plot-area"), svg = area.querySelector(".plot-lines");
+    area.querySelector(".plot-tip").hidden = true;
+    if (!svg) return;
+    svg.querySelector(".plot-cross").setAttribute("visibility", "hidden");
+    svg.querySelector(".plot-dots").innerHTML = "";
+  }
+  function plotSetup(el) {
+    const area = el.querySelector(".plot-area");
+    area.insertAdjacentHTML("beforeend",
+      '<button type="button" class="plot-reset" title="Zoom out (double-click)" hidden>⟲</button>');
+    let drag = null;
+    area.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest(".plot-reset, .plot-key")) return;
+      const [px, py] = plotPoint(el, e);
+      if (px < 0 || px > el._geo.w || py < 0 || py > el._geo.h) return;
+      drag = { px, py, id: e.pointerId };
+      area.setPointerCapture(e.pointerId);
+      plotHover(el, e);
+    });
+    area.addEventListener("pointermove", (e) => {
+      plotHover(el, e);
+      if (!drag || e.pointerId !== drag.id) return;
+      const G = el._geo, [px, py] = plotPoint(el, e);
+      const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
+      const flat = Math.abs(qy - drag.py) < 12;   // flat drag: x only, full height
+      const z = area.querySelector(".plot-zoom");
+      z.setAttribute("x", Math.min(drag.px, qx));
+      z.setAttribute("width", Math.abs(qx - drag.px));
+      z.setAttribute("y", flat ? 0 : Math.min(drag.py, qy));
+      z.setAttribute("height", flat ? G.h : Math.abs(qy - drag.py));
+      z.setAttribute("visibility", Math.abs(qx - drag.px) > 3 ? "visible" : "hidden");
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const G = el._geo, d = drag, [px, py] = plotPoint(el, e);
+      drag = null;
+      area.querySelector(".plot-zoom").setAttribute("visibility", "hidden");
+      if (e.type !== "pointerup") return;
+      const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
+      if (Math.abs(qx - d.px) < 8) return;           // a click / tap: just the values
+      const xv = (p) => G.r.x0 + (p / G.w) * (G.r.x1 - G.r.x0);
+      const yv = (p) => G.r.y1 - (p / G.h) * (G.r.y1 - G.r.y0);
+      el._view = { x: [xv(Math.min(d.px, qx)), xv(Math.max(d.px, qx))],
+                   y: Math.abs(qy - d.py) < 12 ? null : [yv(Math.max(d.py, qy)), yv(Math.min(d.py, qy))] };
+      drawPlot(el);
+      if (e.pointerType === "mouse") plotHover(el, e);
+    };
+    area.addEventListener("pointerup", end);
+    area.addEventListener("pointercancel", end);
+    area.addEventListener("pointerleave", (e) => { if (!drag && e.pointerType === "mouse") plotLeave(el); });
+    const zoomOut = () => { el._view = null; plotLeave(el); drawPlot(el); };
+    area.addEventListener("dblclick", zoomOut);
+    area.querySelector(".plot-reset").addEventListener("click", zoomOut);
+    el.querySelectorAll(".plot-key").forEach((k) => k.addEventListener("click", () => {
+      const off = el._off || (el._off = new Set()), i = +k.dataset.series;
+      off.has(i) ? off.delete(i) : off.add(i);
+      plotLeave(el);
+      drawPlot(el);
+    }));
+    new ResizeObserver(() => {                    // shown, or the layout changed
+      const G = el._geo;
+      if (area.clientWidth && (!G || G.W !== area.clientWidth || G.H !== area.clientHeight)) drawPlot(el);
+    }).observe(area);
+  }
+
   // ================================================================ start
   anims = Array.from(deck.querySelectorAll(".anim")).map((el) => new Anim(el));
+  deck.querySelectorAll(".plot").forEach((el, i) => {
+    try {
+      plotData[i] = JSON.parse(el.querySelector("script.plot-data").textContent);
+    } catch (e) { console.warn("deck.js: plot data not readable", e); return; }
+    el.dataset.plot = i;
+    plotSetup(el);
+    const s = el.closest(".slide");               // drawn now, also on hidden slides
+    const hidden = s && !s.classList.contains("active");
+    if (hidden) s.style.display = "flex";
+    drawPlot(el);
+    if (hidden) s.style.display = "";
+  });
   videos = Array.from(deck.querySelectorAll("video.video"));
   videos.forEach((v) => {
     const start = +(v.dataset.start || 0), end = +(v.dataset.end || Infinity);

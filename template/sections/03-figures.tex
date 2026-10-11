@@ -28,3 +28,19 @@
     \caption{A placeholder keeps the layout while the figure is being made.}
   \end{figure}
 \end{frame}
+
+% slideplot: lines from data files (columns by name or number). In the PDF,
+% pgfplots draws them; in the HTML deck the plot is interactive: values under
+% the pointer, drag to zoom in, double-click to zoom out, click a legend entry
+% to hide / show its line. \plotline<2->: a line from step 2 on.
+% Options: width, height, xlabel, ylabel, xmin, xmax, ymin, ymax, grid,
+% legend; per line x, y, label, color, style, offset (shifts the line along
+% x), sep, pdfevery.
+\begin{frame}{Plots from data}{interactive in the HTML deck}
+  \begin{slideplot}[width=0.9\linewidth, height=5cm, xlabel={Time $t$ (s)},
+                    ylabel={Response $y$}]
+    \plotline[x=time, y=case1, label={Case 1}]{figures/sample-response.csv}
+    \plotline[x=time, y=case2, label={Case 2}]{figures/sample-response.csv}
+    \plotline<2->[x=time, y=case3, label={Case 3}, style=dashed]{figures/sample-response.csv}
+  \end{slideplot}
+\end{frame}

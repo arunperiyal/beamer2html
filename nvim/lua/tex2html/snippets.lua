@@ -112,6 +112,11 @@ local snippets = {
 	\caption{<>}\label{fig:<>}
 \end{figure}]], { i(1, "0.8\\linewidth"), i(2, "poster.png"), i(3, "video.mp4"), i(4, "Caption."), i(0, "name") }),
 
+  snip("plot", "slideplot: lines from a data file, interactive in the HTML deck", [[
+\begin{slideplot}[xlabel={<>}, ylabel={<>}, height=<>]
+	\plotline[x=<>, y=<>, label={<>}]{<>}
+\end{slideplot}]], { i(1, "$t$"), i(2, "$y$"), i(3, "5cm"), i(4, "time"), i(5, "y"), i(6, "Case 1"), i(0, "data/file.csv") }),
+
   snip("annot", "annotate: shapes over a figure (grid shows the 0..1 coordinates)", [[
 \begin{figure}
 	\begin{annotate}[grid]
