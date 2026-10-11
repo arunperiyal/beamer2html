@@ -76,8 +76,8 @@ def length_setting(name, s, i, state):
 def convert(tex_path, root):
     """Convert `tex_path` (relative to `root`). Returns (config, slides,
     sources): the DECK_CONFIG dict, a list of <section> strings, and the full
-    paths of the .tex and .bib files read. Also writes html/references.js
-    for every \\addbibresource."""
+    paths of the .tex, .bib and plot data files read. Also writes
+    html/references.js for every \\addbibresource."""
     sources = set()
     src = read_tex(tex_path, root, sources)
     pre, _, body = src.partition("\\begin{document}")
@@ -94,6 +94,7 @@ def convert(tex_path, root):
     bibs = re.findall(r"\\addbibresource\{([^}]*)\}", pre)
     bib_to_js(bibs, root)
     sources.update(os.path.join(root, b if b.endswith(".bib") else b + ".bib") for b in bibs)
+    sources.update(cv.data_files)                  # \plotline data: rebuild on change
     return config, slides, sources
 
 

@@ -1,9 +1,9 @@
 """Converter: turns LaTeX text into HTML.
 
 The work is split across mixins -- commands.py (\\commands),
-environments.py (\\begin{...}), animation.py (animateinline) and
-overlays.py (<overlay specs>, \\only, \\uncover, ...) -- and this
-module holds the core: the character-level inline pass and the block-level
+environments.py (\\begin{...}), animation.py (animateinline), plot.py
+(slideplot) and overlays.py (<overlay specs>, \\only, \\uncover, ...) -- and
+this module holds the core: the character-level inline pass and the block-level
 flow pass that resolves paragraphs, \\hfill rows and \\centering.
 """
 import html
@@ -14,11 +14,13 @@ from .commands import CommandsMixin
 from .environments import EnvironmentsMixin
 from .overlays import OverlayMixin
 from .parsing import read_group
+from .plot import PlotMixin
 from .tikz import TikzMixin
 from .vocabulary import CENTER, HFILL, PARA
 
 
-class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin, TikzMixin):
+class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, PlotMixin, OverlayMixin,
+                TikzMixin):
     def __init__(self, root):
         self.root = root          # project folder; image paths are relative to it
         self.macros = {}          # \def\name{value}
@@ -26,6 +28,7 @@ class Converter(CommandsMixin, EnvironmentsMixin, AnimationMixin, OverlayMixin, 
         self.floats = []          # open figure/table environments
         self.labels = {}          # \label key -> number (\ref is resolved at the end)
         self.tikz_used = set()    # cache keys of the TikZ pictures (tikz.py)
+        self.data_files = set()   # \plotline data files read (plot.py)
 
     # ---------------------------------------------------------- flows
     def flow(self, s):

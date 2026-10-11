@@ -75,6 +75,8 @@ class EnvironmentsMixin:
                 self.blocks(self.inline(body))) + PARA
         if env == "animation":
             return self.env_animation(body)
+        if env == "slideplot":                     # plot.py
+            return self.env_slideplot(body)
         if env == "annotate":                      # \shape: commands.py
             opt, j = read_opt(body, 0)
             grid = ' data-grid' if "grid" in keyvals(opt) else ""
