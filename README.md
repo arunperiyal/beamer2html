@@ -164,7 +164,18 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
   the x values, to line up series recorded at different times), `sep`,
   `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow
-  with); `\plotline<2->` adds a line at a step, with the axes unchanged
+  with); `\plotline<2->` adds a line at a step, with the axes unchanged.
+  Lines with the same `label` share one colour and one legend entry
+- plot panels: `\plotpanel[title=.., xlabel=.., ylabel=..]` inside a
+  `slideplot` starts a panel; the `\plotline` lines after it are drawn in it.
+  `rows` / `columns` lay the panels out (row by row; give one and the other
+  follows from the number of panels; neither: one column). `share=x`, `y`,
+  `both` or `none` (default: one column → `x`, one row → `y`, a grid →
+  `both`): a shared axis has one range, tick labels on the outer panels only,
+  and in the HTML deck linked zoom; with x shared the pointer marks the same
+  x in every panel. The `slideplot`'s `xlabel` / `ylabel` are written once,
+  centred; one legend for all panels. `\plotpanel<2->` shows a panel from a
+  step on
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
   (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,

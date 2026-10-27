@@ -1039,16 +1039,34 @@
 %   of them, outer north: in rows above them -- the plot stays within width;
 %   none).
 % \plotline options: x, y (the column's name, or its number counting from 1;
-%   default 1 and 2), label (legend entry), color (plotcolor1, 2, ... in
-%   turn), style (solid, dashed, dotted), offset (added to the x values:
-%   lines that cover the same span at different times, e.g. offset=-100,
-%   start together), sep (comma, semicolon, tab, space:
-%   instead of guessing from the file name), pdfevery=N (the PDF plots every
-%   N-th point only -- for long series that TeX is slow with or runs out of
-%   memory on; the HTML always has all of them).
+%   default 1 and 2), label (legend entry; lines with the same label share
+%   one colour and one entry), color (plotcolor1, 2, ... in turn), style
+%   (solid, dashed, dotted), offset (added to the x values: lines that cover
+%   the same span at different times, e.g. offset=-100, start together), sep
+%   (comma, semicolon, tab, space: instead of guessing from the file name),
+%   pdfevery=N (the PDF plots every N-th point only -- for long series that
+%   TeX is slow with or runs out of memory on; the HTML always has all of
+%   them).
 % \plotline<2->: the line is drawn from step 2 on; the axes stay the same.
+%
+% Panels: \plotpanel[title, xlabel, ylabel] starts a panel; the \plotline
+% lines after it are drawn in it.
+%   \begin{slideplot}[columns=3, xlabel={$t$}, ylabel={$y/D$}, legend=outer north]
+%     \plotpanel[title={$U_r = 4.0$}]
+%       \plotline[x=time, y=disp, label=Helical]{data/U4.csv}
+%     \plotpanel[title={$U_r = 5.4$}]
+%       ...
+%   \end{slideplot}
+% rows=R and / or columns=C lay them out, row by row (only one given: the
+% other from the number of panels; neither: one column). share=x, y, both,
+% none: a shared axis has one range (from all panels, unless given), tick
+% labels on the outer panels only and, in the HTML deck, linked zoom. By
+% default: one column -> x, one row -> y, a grid -> both. xlabel / ylabel of
+% the slideplot are written once, centred; those of a panel on that panel.
+% One legend for all panels. \plotpanel<2->: the panel from step 2 on.
 \RequirePackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
 \definecolor{plotcolor1}{RGB}{31,73,125}     % bannerblue
 \definecolor{plotcolor2}{RGB}{213,94,0}      % vermilion
 \definecolor{plotcolor3}{RGB}{0,158,115}     % green
@@ -1059,10 +1077,76 @@
 \ExplSyntaxOn
 \dim_new:N \l__tt_plot_w_dim
 \dim_new:N \l__tt_plot_h_dim
-\int_new:N \g__tt_plot_n_int
+\dim_new:N \l__tt_plot_aw_dim                    % one panel's axes
+\dim_new:N \l__tt_plot_ah_dim
+\dim_new:N \l__tt_plot_hsep_dim
+\dim_new:N \l__tt_plot_vsep_dim
+\dim_new:N \g__tt_plot_key_dim                   % widest legend label
 \clist_new:N \l__tt_plot_axis_clist
 \tl_new:N \l__tt_plot_draw_tl
 \tl_new:N \l__tt_plot_table_tl
+\tl_new:N \l__tt_plot_color_tl
+\tl_new:N \l__tt_plot_mode_tl                    % what \plotline / \plotpanel do:
+                                                 % survey, draw (one axis), grid
+\tl_new:N \g__tt_plot_opts_tl
+\tl_new:N \l__tt_plot_keytab_tl
+\tl_new:N \l__tt_plot_cval_tl
+\tl_new:N \l__tt_plot_row_tl
+\tl_new:N \l__tt_plot_xv_tl
+\tl_new:N \l__tt_plot_yv_tl
+\str_new:N \l__tt_plot_ckey_str
+\str_new:N \l__tt_plot_sep_str
+\bool_new:N \l__tt_plot_key_bool
+\bool_new:N \l__tt_plot_multi_bool               % with \plotpanel
+\bool_new:N \l__tt_plot_scan_bool                % read the data for shared ranges
+\bool_new:N \l__tt_plot_sharex_bool
+\bool_new:N \l__tt_plot_sharey_bool
+\bool_new:N \l__tt_plot_first_bool
+\bool_new:N \l__tt_plot_spaces_bool
+\bool_new:N \g__tt_plot_hidden_bool              % this panel: not shown at this step
+\bool_new:N \g__tt_plot_drop_bool                % no panel to draw into
+\bool_new:N \g__tt_plot_titles_bool
+\bool_new:N \g__tt_plot_pxlabel_bool
+\bool_new:N \g__tt_plot_pylabel_bool
+\int_new:N \g__tt_plot_line_int
+\int_new:N \g__tt_plot_colors_int
+\int_new:N \g__tt_plot_keys_int
+\int_new:N \g__tt_plot_panels_int
+\int_new:N \g__tt_plot_panel_int
+\int_new:N \l__tt_plot_rows_int
+\int_new:N \l__tt_plot_cols_int
+\int_new:N \l__tt_plot_n_int                     % panels drawn
+\int_new:N \l__tt_plot_keycols_int
+\int_new:N \l__tt_plot_k_int
+\int_new:N \l__tt_plot_xi_int
+\int_new:N \l__tt_plot_yi_int
+\prop_new:N \g__tt_plot_labels_prop              % label -> colour
+\prop_new:N \g__tt_plot_cache_prop               % file and columns -> data ranges
+\seq_new:N \g__tt_plot_linecolor_seq             % each line's colour
+\seq_new:N \g__tt_plot_linekey_seq               % 1: the line has its label's entry
+\seq_new:N \g__tt_plot_keys_seq                  % {label}{colour}{style}{spec}
+\seq_new:N \l__tt_plot_row_seq
+\fp_new:N \g__tt_plot_xlo_fp
+\fp_new:N \g__tt_plot_xhi_fp
+\fp_new:N \g__tt_plot_ylo_fp
+\fp_new:N \g__tt_plot_yhi_fp
+\fp_new:N \l__tt_plot_sxlo_fp
+\fp_new:N \l__tt_plot_sxhi_fp
+\fp_new:N \l__tt_plot_sylo_fp
+\fp_new:N \l__tt_plot_syhi_fp
+\fp_new:N \l__tt_plot_off_fp
+\fp_new:N \l__tt_plot_lo_fp
+\fp_new:N \l__tt_plot_hi_fp
+\fp_new:N \l__tt_plot_x_fp
+\fp_new:N \l__tt_plot_y_fp
+\prop_new:N \g__tt_plot_written_prop             % ranges written to the .aux
+\ior_new:N \g__tt_plot_ior
+\box_new:N \l__tt_plot_measure_box
+\cs_generate_variant:Nn \str_case:nnF { V }
+\cs_generate_variant:Nn \str_case:nn { V }
+\cs_generate_variant:Nn \prop_gput:Nnn { NVV , NVn }
+\prg_generate_conditional_variant:Nnn \prop_if_in:Nn { NV } { T , F , TF }
+\prg_generate_conditional_variant:Nnn \prop_get:NnN { NV } { T , F , TF }
 \keys_define:nn { tt / plot }
   {
     width   .tl_set:N   = \l__tt_plot_width_tl,
@@ -1079,6 +1163,15 @@
     grid    .default:n  = true,
     legend  .tl_set:N   = \l__tt_plot_legend_tl,
     legend  .initial:n  = { north~east },
+    rows    .tl_set:N   = \l__tt_plot_rows_tl,
+    columns .tl_set:N   = \l__tt_plot_columns_tl,
+    share   .tl_set:N   = \l__tt_plot_share_tl,
+  }
+\keys_define:nn { tt / plotpanel }
+  {
+    title   .tl_set:N   = \l__tt_plotpanel_title_tl,
+    xlabel  .tl_set:N   = \l__tt_plotpanel_xlabel_tl,
+    ylabel  .tl_set:N   = \l__tt_plotpanel_ylabel_tl,
   }
 \keys_define:nn { tt / plotline }
   {
@@ -1095,53 +1188,331 @@
     pdfevery .tl_set:N  = \l__tt_plotline_every_tl,
     pdfevery .initial:n = 1,
   }
+% axis style shared by single plots and panels
+\tl_const:Nn \c__tt_plot_style_tl
+  {
+    enlarge~x~limits = false, scaled~ticks = false,
+    xticklabel~style = { /pgf/number~format/fixed },
+    yticklabel~style = { /pgf/number~format/fixed },
+    tick~label~style = { font = \footnotesize },
+    label~style = { font = \small }, title~style = { font = \small },
+    legend~style = { font = \footnotesize, cells = { anchor = west } },
+    major~grid~style = { gray!20 },
+  }
 \NewDocumentEnvironment { slideplot } { O{} +b }
   {
     \group_begin:
     \keys_set:nn { tt / plot } {#1}
-    \int_gzero:N \g__tt_plot_n_int
     \dim_set:Nn \l__tt_plot_w_dim { \l__tt_plot_width_tl }
     \tl_if_empty:NTF \l__tt_plot_height_tl
       { \dim_set:Nn \l__tt_plot_h_dim { 0.5 \l__tt_plot_w_dim } }
       { \dim_set:Nn \l__tt_plot_h_dim { \l__tt_plot_height_tl } }
-    % a legend outside the axes takes its room from the width / height
-    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~east }
+    \seq_set_split:Nnn \l__tt_plot_row_seq { \plotpanel } {#2}
+    \int_gset:Nn \g__tt_plot_panels_int { \seq_count:N \l__tt_plot_row_seq - 1 }
+    \bool_set:Nn \l__tt_plot_multi_bool { \int_compare_p:nNn \g__tt_plot_panels_int > 0 }
+    \bool_if:NT \l__tt_plot_multi_bool { \__tt_plot_layout: }
+    \bool_set:Nn \l__tt_plot_scan_bool               % a shared range not given
       {
-        \__tt_plot_measure_keys:n {#2}
-        \dim_sub:Nn \l__tt_plot_w_dim { \g__tt_plot_key_dim + 1.4cm }
+        \l__tt_plot_multi_bool &&
+        (
+          ( \l__tt_plot_sharex_bool &&
+            ( \tl_if_empty_p:N \l__tt_plot_xmin_tl || \tl_if_empty_p:N \l__tt_plot_xmax_tl ) )
+          || ( \l__tt_plot_sharey_bool &&
+            ( \tl_if_empty_p:N \l__tt_plot_ymin_tl || \tl_if_empty_p:N \l__tt_plot_ymax_tl ) )
+        )
       }
-    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~north }
-      {                                              % as many per row as fit
-        \__tt_plot_measure_keys:n {#2}
-        \int_set:Nn \l__tt_plot_cols_int
+    \__tt_plot_survey:n {#2}
+    \par \centering
+    \bool_if:NTF \l__tt_plot_multi_bool
+      { \__tt_plot_grid:n {#2} }
+      { \__tt_plot_single:n {#2} }
+    \par
+    \group_end:
+  }
+  { }
+\NewDocumentCommand \plotpanel { d<> O{} }
+  {
+    \str_case:Vn \l__tt_plot_mode_tl
+      {
+        { survey } { \__tt_plot_survey_panel:n {#2} }
+        { grid }   { \__tt_plot_draw_panel:nn {#1} {#2} }
+      }
+  }
+\NewDocumentCommand \plotline { d<> O{} m }
+  {
+    \str_case:Vn \l__tt_plot_mode_tl
+      {
+        { survey } { \__tt_plot_survey_line:nnn {#1} {#2} {#3} }
+        { draw }   { \__tt_plot_draw_line:nnn {#1} {#2} {#3} }
+        { grid }   { \__tt_plot_draw_line:nnn {#1} {#2} {#3} }
+      }
+  }
+% ---- first pass: the body run in a box. Counts the panels, gives each line
+% its colour (one per label), collects the legend entries and, for shared
+% axes, the data ranges.
+\cs_new_protected:Npn \__tt_plot_survey:n #1
+  {
+    \int_gzero:N \g__tt_plot_line_int
+    \int_gzero:N \g__tt_plot_colors_int
+    \int_gzero:N \g__tt_plot_keys_int
+    \prop_gclear:N \g__tt_plot_labels_prop
+    \seq_gclear:N \g__tt_plot_linecolor_seq
+    \seq_gclear:N \g__tt_plot_linekey_seq
+    \seq_gclear:N \g__tt_plot_keys_seq
+    \dim_gzero:N \g__tt_plot_key_dim
+    \bool_gset_false:N \g__tt_plot_titles_bool
+    \bool_gset_false:N \g__tt_plot_pxlabel_bool
+    \bool_gset_false:N \g__tt_plot_pylabel_bool
+    \fp_gset:Nn \g__tt_plot_xlo_fp { inf }
+    \fp_gset:Nn \g__tt_plot_xhi_fp { -inf }
+    \fp_gset:Nn \g__tt_plot_ylo_fp { inf }
+    \fp_gset:Nn \g__tt_plot_yhi_fp { -inf }
+    \tl_set:Nn \l__tt_plot_mode_tl { survey }
+    \hbox_set:Nn \l__tt_plot_measure_box {#1}
+  }
+\cs_new_protected:Npn \__tt_plot_survey_panel:n #1
+  {
+    \group_begin:
+    \keys_set:nn { tt / plotpanel } {#1}
+    \tl_if_empty:NF \l__tt_plotpanel_title_tl { \bool_gset_true:N \g__tt_plot_titles_bool }
+    \tl_if_empty:NF \l__tt_plotpanel_xlabel_tl { \bool_gset_true:N \g__tt_plot_pxlabel_bool }
+    \tl_if_empty:NF \l__tt_plotpanel_ylabel_tl { \bool_gset_true:N \g__tt_plot_pylabel_bool }
+    \group_end:
+  }
+\cs_new_protected:Npn \__tt_plot_survey_line:nnn #1#2#3
+  {
+    \int_gincr:N \g__tt_plot_line_int
+    \group_begin:
+    \keys_set:nn { tt / plotline } {#2}
+    \tl_if_empty:NTF \l__tt_plotline_label_tl
+      {
+        \__tt_plot_new_color:
+        \seq_gput_right:NV \g__tt_plot_linecolor_seq \l__tt_plot_color_tl
+        \seq_gput_right:Nn \g__tt_plot_linekey_seq { 0 }
+      }
+      {
+        \prop_get:NVNTF \g__tt_plot_labels_prop \l__tt_plotline_label_tl \l__tt_plot_color_tl
+          {                                          % a label seen before: its colour
+            \seq_gput_right:NV \g__tt_plot_linecolor_seq \l__tt_plot_color_tl
+            \seq_gput_right:Nn \g__tt_plot_linekey_seq { 0 }
+          }
           {
-            \int_max:nn { 1 }
+            \__tt_plot_new_color:
+            \prop_gput:NVV \g__tt_plot_labels_prop \l__tt_plotline_label_tl \l__tt_plot_color_tl
+            \seq_gput_right:NV \g__tt_plot_linecolor_seq \l__tt_plot_color_tl
+            \seq_gput_right:Nn \g__tt_plot_linekey_seq { 1 }
+            \int_gincr:N \g__tt_plot_keys_int
+            \seq_gput_right:Ne \g__tt_plot_keys_seq
               {
-                \int_min:nn { \g__tt_plot_keys_int }
-                  {
-                    \int_div_truncate:nn { \dim_to_decimal_in_sp:n { \l__tt_plot_w_dim } }
-                      { \dim_to_decimal_in_sp:n { \g__tt_plot_key_dim + 1.6cm } }
-                  }
+                { \exp_not:V \l__tt_plotline_label_tl } { \l__tt_plot_color_tl }
+                { \l__tt_plotline_style_tl } { \IfNoValueF {#1} { \exp_not:n {#1} } }
+              }
+            \hbox_set:Nn \l_tmpa_box { \footnotesize \l__tt_plotline_label_tl }
+            \dim_gset:Nn \g__tt_plot_key_dim
+              { \dim_max:nn { \g__tt_plot_key_dim } { \box_wd:N \l_tmpa_box } }
+          }
+      }
+    \bool_if:NT \l__tt_plot_scan_bool
+      { \file_if_exist:nT {#3} { \__tt_plot_scan:n {#3} } }
+    \group_end:
+  }
+\cs_new_protected:Npn \__tt_plot_new_color:
+  {
+    \tl_if_empty:NTF \l__tt_plotline_color_tl
+      {
+        \int_gincr:N \g__tt_plot_colors_int
+        \tl_set:Ne \l__tt_plot_color_tl
+          { plotcolor \int_eval:n { \int_mod:nn { \g__tt_plot_colors_int - 1 } { 7 } + 1 } }
+      }
+      { \tl_set_eq:NN \l__tt_plot_color_tl \l__tt_plotline_color_tl }
+  }
+% ---- data ranges of a line (x with offset; y within xmin..xmax), read from
+% its file once, then kept in the .aux (with the file's date: a changed file
+% is read again)
+\cs_new_protected:cpn { tt@plotrange } #1#2
+  { \prop_gput:Nnn \g__tt_plot_cache_prop {#1} {#2} }
+\cs_new_protected:Npn \__tt_plot_scan:n #1
+  {
+    \str_set:Ne \l__tt_plot_ckey_str
+      {
+        \file_timestamp:n {#1} | #1 | \l__tt_plotline_x_tl | \l__tt_plotline_y_tl | \l__tt_plotline_sep_tl |
+        \l__tt_plotline_offset_tl | \l__tt_plot_xmin_tl | \l__tt_plot_xmax_tl
+      }
+    \prop_get:NVNF \g__tt_plot_cache_prop \l__tt_plot_ckey_str \l__tt_plot_cval_tl
+      {
+        \__tt_plot_scan_file:n {#1}
+        \tl_set:Ne \l__tt_plot_cval_tl
+          {
+            { \fp_use:N \l__tt_plot_sxlo_fp } { \fp_use:N \l__tt_plot_sxhi_fp }
+            { \fp_use:N \l__tt_plot_sylo_fp } { \fp_use:N \l__tt_plot_syhi_fp }
+          }
+        \prop_gput:NVV \g__tt_plot_cache_prop \l__tt_plot_ckey_str \l__tt_plot_cval_tl
+      }
+    \prop_if_in:NVF \g__tt_plot_written_prop \l__tt_plot_ckey_str
+      {
+        \prop_gput:NVn \g__tt_plot_written_prop \l__tt_plot_ckey_str { }
+        \iow_now:Ne \@auxout
+          {
+            \token_to_str:N \tt@plotrange
+              { \l__tt_plot_ckey_str } { \exp_not:V \l__tt_plot_cval_tl }
+          }
+      }
+    \exp_after:wN \__tt_plot_merge:nnnn \l__tt_plot_cval_tl
+  }
+\cs_new_protected:Npn \__tt_plot_merge:nnnn #1#2#3#4
+  {
+    \fp_gset:Nn \g__tt_plot_xlo_fp { min ( \g__tt_plot_xlo_fp , #1 ) }
+    \fp_gset:Nn \g__tt_plot_xhi_fp { max ( \g__tt_plot_xhi_fp , #2 ) }
+    \fp_gset:Nn \g__tt_plot_ylo_fp { min ( \g__tt_plot_ylo_fp , #3 ) }
+    \fp_gset:Nn \g__tt_plot_yhi_fp { max ( \g__tt_plot_yhi_fp , #4 ) }
+  }
+\cs_new_protected:Npn \__tt_plot_scan_file:n #1
+  {
+    \fp_set:Nn \l__tt_plot_sxlo_fp { inf }
+    \fp_set:Nn \l__tt_plot_sxhi_fp { -inf }
+    \fp_set:Nn \l__tt_plot_sylo_fp { inf }
+    \fp_set:Nn \l__tt_plot_syhi_fp { -inf }
+    \fp_set:Nn \l__tt_plot_off_fp
+      { \tl_if_empty:NTF \l__tt_plotline_offset_tl { 0 } { \l__tt_plotline_offset_tl } }
+    \fp_set:Nn \l__tt_plot_lo_fp
+      { \tl_if_empty:NTF \l__tt_plot_xmin_tl { -inf } { \l__tt_plot_xmin_tl } }
+    \fp_set:Nn \l__tt_plot_hi_fp
+      { \tl_if_empty:NTF \l__tt_plot_xmax_tl { inf } { \l__tt_plot_xmax_tl } }
+    \str_set:Nn \l__tt_plot_sep_str { , }
+    \bool_set_false:N \l__tt_plot_spaces_bool
+    \str_case:VnF \l__tt_plotline_sep_tl
+      {
+        { comma }     { }
+        { semicolon } { \str_set:Nn \l__tt_plot_sep_str { ; } }
+        { tab }       { \bool_set_true:N \l__tt_plot_spaces_bool }  % tabs are read as spaces
+        { space }     { \bool_set_true:N \l__tt_plot_spaces_bool }
+      }
+      { \regex_match:nnF { (?i) \.csv \Z } {#1} { \bool_set_true:N \l__tt_plot_spaces_bool } }
+    \__tt_plot_scan_column:NV \l__tt_plot_xi_int \l__tt_plotline_x_tl
+    \__tt_plot_scan_column:NV \l__tt_plot_yi_int \l__tt_plotline_y_tl
+    \bool_set_true:N \l__tt_plot_first_bool
+    \ior_open:Nn \g__tt_plot_ior {#1}
+    \ior_str_map_inline:Nn \g__tt_plot_ior { \__tt_plot_scan_row:n {##1} }
+    \ior_close:N \g__tt_plot_ior
+  }
+\cs_new_protected:Npn \__tt_plot_scan_column:Nn #1#2      % a number: that column
+  {                                                      % (else 0: from the header)
+    \regex_match:nnTF { \A \d+ \Z } {#2}
+      { \int_set:Nn #1 {#2} }
+      { \int_zero:N #1 }
+  }
+\cs_generate_variant:Nn \__tt_plot_scan_column:Nn { NV }
+\cs_new_protected:Npn \__tt_plot_scan_row:n #1
+  {
+    \tl_set:Ne \l__tt_plot_row_tl { \tl_trim_spaces:n {#1} }
+    \tl_if_empty:NF \l__tt_plot_row_tl
+      {
+        \bool_lazy_or:nnF
+          { \str_if_eq_p:ee { \str_head:N \l__tt_plot_row_tl } { \c_hash_str } }
+          { \str_if_eq_p:ee { \str_head:N \l__tt_plot_row_tl } { \c_percent_str } }
+          { \__tt_plot_scan_fields: }
+      }
+  }
+\cs_new_protected:Npn \__tt_plot_scan_fields:
+  {
+    \bool_if:NT \l__tt_plot_spaces_bool
+      { \tl_replace_all:Nnn \l__tt_plot_row_tl { ~ } { , } }
+    \exp_args:NNVV \seq_set_split:Nnn \l__tt_plot_row_seq \l__tt_plot_sep_str \l__tt_plot_row_tl
+    \bool_if:NT \l__tt_plot_spaces_bool { \seq_remove_all:Nn \l__tt_plot_row_seq { } }
+    \bool_if:NTF \l__tt_plot_first_bool
+      {
+        \bool_set_false:N \l__tt_plot_first_bool
+        \tl_set:Ne \l__tt_plot_xv_tl { \seq_item:Nn \l__tt_plot_row_seq { 1 } }
+        \regex_match:nVTF { \A [\+\-]? (\d+\.?\d*|\.\d+) ([eE][\+\-]?\d+)? \Z } \l__tt_plot_xv_tl
+          { \__tt_plot_scan_point: }              % no header row
+          {
+            \seq_map_indexed_inline:Nn \l__tt_plot_row_seq
+              {
+                \int_compare:nNnT \l__tt_plot_xi_int = 0
+                  { \str_if_eq:nVT {##2} \l__tt_plotline_x_tl { \int_set:Nn \l__tt_plot_xi_int {##1} } }
+                \int_compare:nNnT \l__tt_plot_yi_int = 0
+                  { \str_if_eq:nVT {##2} \l__tt_plotline_y_tl { \int_set:Nn \l__tt_plot_yi_int {##1} } }
               }
           }
-        \dim_sub:Nn \l__tt_plot_h_dim
+      }
+      { \__tt_plot_scan_point: }
+  }
+\cs_new_protected:Npn \__tt_plot_scan_point:
+  {
+    \bool_lazy_and:nnT
+      { \int_compare_p:nNn { \int_min:nn \l__tt_plot_xi_int \l__tt_plot_yi_int } > 0 }
+      {
+        \int_compare_p:nNn { \seq_count:N \l__tt_plot_row_seq }
+          > { \int_max:nn \l__tt_plot_xi_int \l__tt_plot_yi_int - 1 }
+      }
+      {
+        \tl_set:Ne \l__tt_plot_xv_tl { \seq_item:Nn \l__tt_plot_row_seq { \l__tt_plot_xi_int } }
+        \tl_set:Ne \l__tt_plot_yv_tl { \seq_item:Nn \l__tt_plot_row_seq { \l__tt_plot_yi_int } }
+        \bool_lazy_or:nnF { \tl_if_empty_p:N \l__tt_plot_xv_tl } { \tl_if_empty_p:N \l__tt_plot_yv_tl }
           {
-            1.6em * \int_div_truncate:nn { \g__tt_plot_keys_int + \l__tt_plot_cols_int - 1 }
-                                          { \l__tt_plot_cols_int } + 0.6em
+            \fp_set:Nn \l__tt_plot_x_fp { \l__tt_plot_xv_tl + \l__tt_plot_off_fp }
+            \fp_compare:nNnTF \l__tt_plot_x_fp < \l__tt_plot_sxlo_fp
+              { \fp_set_eq:NN \l__tt_plot_sxlo_fp \l__tt_plot_x_fp }
+              {
+                \fp_compare:nNnT \l__tt_plot_x_fp > \l__tt_plot_sxhi_fp
+                  { \fp_set_eq:NN \l__tt_plot_sxhi_fp \l__tt_plot_x_fp }
+              }
+            \fp_compare:nNnT \l__tt_plot_x_fp > \l__tt_plot_sxhi_fp   % the first point
+              { \fp_set_eq:NN \l__tt_plot_sxhi_fp \l__tt_plot_x_fp }
+            \bool_lazy_and:nnT
+              { ! \fp_compare_p:nNn \l__tt_plot_x_fp < \l__tt_plot_lo_fp }
+              { ! \fp_compare_p:nNn \l__tt_plot_x_fp > \l__tt_plot_hi_fp }
+              {
+                \fp_set:Nn \l__tt_plot_y_fp { \l__tt_plot_yv_tl }
+                \fp_compare:nNnTF \l__tt_plot_y_fp < \l__tt_plot_sylo_fp
+                  { \fp_set_eq:NN \l__tt_plot_sylo_fp \l__tt_plot_y_fp }
+                  {
+                    \fp_compare:nNnT \l__tt_plot_y_fp > \l__tt_plot_syhi_fp
+                      { \fp_set_eq:NN \l__tt_plot_syhi_fp \l__tt_plot_y_fp }
+                  }
+                \fp_compare:nNnT \l__tt_plot_y_fp > \l__tt_plot_syhi_fp
+                  { \fp_set_eq:NN \l__tt_plot_syhi_fp \l__tt_plot_y_fp }
+              }
           }
+      }
+  }
+% ---- legend entries per row that fit in a width
+\cs_new_protected:Npn \__tt_plot_keycols:n #1
+  {
+    \int_set:Nn \l__tt_plot_keycols_int
+      {
+        \int_max:nn { 1 }
+          {
+            \int_min:nn { \g__tt_plot_keys_int }
+              {
+                \int_div_truncate:nn { \dim_to_decimal_in_sp:n {#1} }
+                  { \dim_to_decimal_in_sp:n { \g__tt_plot_key_dim + 1.6cm } }
+              }
+          }
+      }
+  }
+\cs_new:Npn \__tt_plot_keyrows:
+  {
+    \int_div_truncate:nn { \g__tt_plot_keys_int + \l__tt_plot_keycols_int - 1 }
+      { \l__tt_plot_keycols_int }
+  }
+% ---- one axis
+\cs_new_protected:Npn \__tt_plot_single:n #1
+  {
+    % a legend outside the axes takes its room from the width / height
+    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~east }
+      { \dim_sub:Nn \l__tt_plot_w_dim { \g__tt_plot_key_dim + 1.4cm } }
+    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~north }
+      {                                              % as many per row as fit
+        \__tt_plot_keycols:n { \l__tt_plot_w_dim }
+        \dim_sub:Nn \l__tt_plot_h_dim { 1.6em * \__tt_plot_keyrows: + 0.6em }
       }
     \clist_set:Ne \l__tt_plot_axis_clist
       {
         width = \dim_use:N \l__tt_plot_w_dim,
         height = \dim_use:N \l__tt_plot_h_dim,
-        enlarge~x~limits = false, enlarge~y~limits = 0.05,
-        scaled~ticks = false,
-        xticklabel~style = { /pgf/number~format/fixed },
-        yticklabel~style = { /pgf/number~format/fixed },
-        tick~label~style = { font = \exp_not:N \footnotesize },
-        label~style = { font = \exp_not:N \small },
-        legend~style = { font = \exp_not:N \footnotesize, cells = { anchor = west } },
-        major~grid~style = { gray!20 },
+        enlarge~y~limits = 0.05,
+        \exp_not:V \c__tt_plot_style_tl
         \bool_if:NT \l__tt_plot_grid_bool { grid = major, }
         \str_case:VnF \l__tt_plot_legend_tl
           {
@@ -1149,7 +1520,7 @@
             { outer~east } { legend~style = { at = { (1.03, 1) }, anchor = north~west }, }
             { outer~north }
               {
-                legend~columns = \int_use:N \l__tt_plot_cols_int,
+                legend~columns = \int_use:N \l__tt_plot_keycols_int,
                 legend~style = { at = { (0.5, 1.03) }, anchor = south,
                                  /tikz/every~even~column/.append~style = { column~sep = 0.8em } },
               }
@@ -1162,106 +1533,401 @@
         \tl_if_empty:NF \l__tt_plot_ymin_tl { ymin = \l__tt_plot_ymin_tl, }
         \tl_if_empty:NF \l__tt_plot_ymax_tl { ymax = \l__tt_plot_ymax_tl, }
       }
-    \par \centering
-    \__tt_plot_axis:Vn \l__tt_plot_axis_clist {#2}
-    \par
-    \group_end:
-  }
-  { }
-\cs_generate_variant:Nn \str_case:nnF { V }
-\dim_new:N \g__tt_plot_key_dim
-\int_new:N \g__tt_plot_keys_int
-\int_new:N \l__tt_plot_cols_int
-\box_new:N \l__tt_plot_measure_box
-% the widest legend entry and the number of entries: the body run in a box
-% with a \plotline that only measures its label
-\cs_new_protected:Npn \__tt_plot_measure_keys:n #1
-  {
-    \dim_gzero:N \g__tt_plot_key_dim
-    \int_gzero:N \g__tt_plot_keys_int
-    \hbox_set:Nn \l__tt_plot_measure_box
-      {
-        \RenewDocumentCommand \plotline { d<> O{} m }
-          {
-            \group_begin:
-            \keys_set:nn { tt / plotline } {##2}
-            \tl_if_empty:NF \l__tt_plotline_label_tl { \int_gincr:N \g__tt_plot_keys_int }
-            \hbox_set:Nn \l__tt_plot_measure_box { \footnotesize \l__tt_plotline_label_tl }
-            \dim_gset:Nn \g__tt_plot_key_dim
-              { \dim_max:nn { \g__tt_plot_key_dim } { \box_wd:N \l__tt_plot_measure_box } }
-            \group_end:
-          }
-        #1
-      }
+    \tl_set:Nn \l__tt_plot_mode_tl { draw }
+    \int_gzero:N \g__tt_plot_line_int
+    \bool_gset_false:N \g__tt_plot_hidden_bool
+    \bool_gset_false:N \g__tt_plot_drop_bool
+    \__tt_plot_axis:Vn \l__tt_plot_axis_clist {#1}
   }
 \cs_new_protected:Npn \__tt_plot_axis:nn #1#2
   { \begin{tikzpicture} \begin{axis} [#1] #2 \end{axis} \end{tikzpicture} }
 \cs_generate_variant:Nn \__tt_plot_axis:nn { V }
-\NewDocumentCommand \plotline { d<> O{} m }
+% ---- panels: a groupplot
+% rows x columns (one given: the other from the number of panels; neither:
+% one column) and the shared axes
+\cs_new_protected:Npn \__tt_plot_layout:
   {
-    \int_gincr:N \g__tt_plot_n_int
-    \file_if_exist:nTF {#3}
+    \int_set:Nn \l__tt_plot_cols_int
       {
-        \group_begin:
-        \keys_set:nn { tt / plotline } {#2}
-        \tl_if_empty:NT \l__tt_plotline_color_tl
+        \tl_if_blank:VTF \l__tt_plot_columns_tl
           {
-            \tl_set:Ne \l__tt_plotline_color_tl
-              { plotcolor \int_eval:n { \int_mod:nn { \g__tt_plot_n_int - 1 } { 7 } + 1 } }
-          }
-        % the table: separator, columns by name or number (pgfplots: from 0)
-        \tl_clear:N \l__tt_plot_table_tl
-        \tl_if_empty:NTF \l__tt_plotline_sep_tl
-          {
-            \regex_match:nnT { (?i) \.csv \Z } {#3}
-              { \tl_put_right:Nn \l__tt_plot_table_tl { col~sep = comma, } }
-          }
-          {
-            \str_if_eq:VnF \l__tt_plotline_sep_tl { space }
-              { \tl_put_right:Ne \l__tt_plot_table_tl { col~sep = \l__tt_plotline_sep_tl, } }
-          }
-        \tl_if_empty:NTF \l__tt_plotline_offset_tl
-          { \__tt_plot_column:nV { x } \l__tt_plotline_x_tl }
-          {                                          % x + offset
-            \regex_match:nVTF { \A \d+ \Z } \l__tt_plotline_x_tl
+            \tl_if_blank:VTF \l__tt_plot_rows_tl { 1 }
               {
-                \tl_put_right:Ne \l__tt_plot_table_tl
-                  { , x~expr = \exp_not:N \thisrowno { \int_eval:n { \l__tt_plotline_x_tl - 1 } }
-                               + ( \l__tt_plotline_offset_tl ) }
-              }
-              {
-                \tl_put_right:Ne \l__tt_plot_table_tl
-                  { , x~expr = \exp_not:N \thisrow { \exp_not:V \l__tt_plotline_x_tl }
-                               + ( \l__tt_plotline_offset_tl ) }
+                \int_div_truncate:nn { \g__tt_plot_panels_int + \l__tt_plot_rows_tl - 1 }
+                  { \l__tt_plot_rows_tl }
               }
           }
-        \__tt_plot_column:nV { y } \l__tt_plotline_y_tl
-        % a legend entry: with a label, unless legend=none
-        \bool_set:Nn \l__tt_plot_key_bool
+          { \l__tt_plot_columns_tl }
+      }
+    \int_set:Nn \l__tt_plot_rows_int
+      {
+        \tl_if_blank:VTF \l__tt_plot_rows_tl
           {
-            ! \tl_if_empty_p:N \l__tt_plotline_label_tl
-            && ! \str_if_eq_p:Vn \l__tt_plot_legend_tl { none }
+            \int_div_truncate:nn { \g__tt_plot_panels_int + \l__tt_plot_cols_int - 1 }
+              { \l__tt_plot_cols_int }
           }
-        \tl_set:Ne \l__tt_plot_draw_tl
+          { \l__tt_plot_rows_tl }
+      }
+    \int_set:Nn \l__tt_plot_n_int
+      { \int_min:nn { \g__tt_plot_panels_int } { \l__tt_plot_rows_int * \l__tt_plot_cols_int } }
+    \int_compare:nNnT { \g__tt_plot_panels_int } > { \l__tt_plot_n_int }
+      {
+        \msg_warning:nneee { titletemplates } { plot-panels }
+          { \int_use:N \g__tt_plot_panels_int } { \int_use:N \l__tt_plot_rows_int }
+          { \int_use:N \l__tt_plot_cols_int }
+      }
+    % shared axes: one column -> x, one row -> y, a grid -> both
+    \tl_if_blank:VT \l__tt_plot_share_tl
+      {
+        \tl_set:Ne \l__tt_plot_share_tl
           {
-            color = \l__tt_plotline_color_tl, line~width = 0.8pt, mark = none,
-            \l__tt_plotline_style_tl,
-            each~nth~point = \l__tt_plotline_every_tl,
-            filter~discard~warning = false, unbounded~coords = jump
-            \bool_if:NF \l__tt_plot_key_bool { , forget~plot }
+            \int_compare:nNnTF \l__tt_plot_cols_int = 1
+              { \int_compare:nNnTF \l__tt_plot_rows_int > 1 { x } { both } }
+              { \int_compare:nNnTF \l__tt_plot_rows_int = 1 { y } { both } }
           }
+      }
+    \bool_set:Nn \l__tt_plot_sharex_bool
+      { \str_if_eq_p:Vn \l__tt_plot_share_tl { x } || \str_if_eq_p:Vn \l__tt_plot_share_tl { both } }
+    \bool_set:Nn \l__tt_plot_sharey_bool
+      { \str_if_eq_p:Vn \l__tt_plot_share_tl { y } || \str_if_eq_p:Vn \l__tt_plot_share_tl { both } }
+  }
+\cs_new_protected:Npn \__tt_plot_grid:n #1
+  {
+    % sizes: the axes of all panels alike; tick labels, labels, titles and
+    % the legend fitted in around them
+    \dim_set:Nn \l__tt_plot_hsep_dim
+      {
+        \bool_if:NTF \l__tt_plot_sharey_bool { 0.45cm }        % room for x tick labels
+          { 2.6em + \bool_if:NTF \g__tt_plot_pylabel_bool { 1.6em } { 0pt } }
+      }
+    \dim_set:Nn \l__tt_plot_vsep_dim
+      {
+        \bool_if:NTF \l__tt_plot_sharex_bool { 0.25cm }
+          { 1.6em + \bool_if:NTF \g__tt_plot_pxlabel_bool { 1.6em } { 0pt } }
+        + \bool_if:NTF \g__tt_plot_titles_bool { 1.6em } { 0pt }
+      }
+    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~north }
+      { \__tt_plot_keycols:n { \l__tt_plot_w_dim } }
+    \dim_set:Nn \l__tt_plot_aw_dim
+      {
+        (
+          \l__tt_plot_w_dim - 2.6em
+          - \bool_lazy_or:nnTF { ! \tl_if_empty_p:N \l__tt_plot_ylabel_tl }
+              { \g__tt_plot_pylabel_bool } { 1.6em } { 0pt }
+          - \l__tt_plot_hsep_dim * \int_eval:n { \l__tt_plot_cols_int - 1 }
+          - \str_if_eq:VnTF \l__tt_plot_legend_tl { outer~east }
+              { ( \g__tt_plot_key_dim + 1.4cm ) } { 0pt }
+        ) / \l__tt_plot_cols_int
+      }
+    \dim_set:Nn \l__tt_plot_ah_dim
+      {
+        (
+          \l__tt_plot_h_dim - 1.6em
+          - \bool_lazy_or:nnTF { ! \tl_if_empty_p:N \l__tt_plot_xlabel_tl }
+              { \g__tt_plot_pxlabel_bool } { 1.6em } { 0pt }
+          - \bool_if:NTF \g__tt_plot_titles_bool { 1.6em } { 0.3em }
+          - \l__tt_plot_vsep_dim * \int_eval:n { \l__tt_plot_rows_int - 1 }
+          - \str_if_eq:VnTF \l__tt_plot_legend_tl { outer~north }
+              { ( 1.6em * \__tt_plot_keyrows: + 0.8em ) } { 0pt }
+        ) / \l__tt_plot_rows_int
+      }
+    \dim_set:Nn \l__tt_plot_aw_dim { \dim_max:nn { \l__tt_plot_aw_dim } { 1cm } }
+    \dim_set:Nn \l__tt_plot_ah_dim { \dim_max:nn { \l__tt_plot_ah_dim } { 0.8cm } }
+    \clist_set:Ne \l__tt_plot_axis_clist
+      {
+        group~style =
+          {
+            group~size = { \int_use:N \l__tt_plot_cols_int \c_space_tl by \c_space_tl \int_use:N \l__tt_plot_rows_int },
+            horizontal~sep = \dim_use:N \l__tt_plot_hsep_dim,
+            vertical~sep = \dim_use:N \l__tt_plot_vsep_dim,
+          },
+        scale~only~axis, width = \dim_use:N \l__tt_plot_aw_dim,
+        height = \dim_use:N \l__tt_plot_ah_dim,
+        \exp_not:V \c__tt_plot_style_tl
+        \bool_if:NT \l__tt_plot_grid_bool { grid = major, }
+        \bool_if:NTF \l__tt_plot_sharex_bool
+          {
+            \__tt_plot_limit:nNn { xmin } \l__tt_plot_xmin_tl { \g__tt_plot_xlo_fp }
+            \__tt_plot_limit:nNn { xmax } \l__tt_plot_xmax_tl { \g__tt_plot_xhi_fp }
+          }
+          {
+            \tl_if_empty:NF \l__tt_plot_xmin_tl { xmin = \l__tt_plot_xmin_tl, }
+            \tl_if_empty:NF \l__tt_plot_xmax_tl { xmax = \l__tt_plot_xmax_tl, }
+          }
+        \bool_if:NTF \l__tt_plot_sharey_bool
+          {
+            enlarge~y~limits = false,                % 5% added here
+            \__tt_plot_limit:nNn { ymin } \l__tt_plot_ymin_tl
+              { \g__tt_plot_ylo_fp - 0.05 * ( \g__tt_plot_yhi_fp - \g__tt_plot_ylo_fp ) }
+            \__tt_plot_limit:nNn { ymax } \l__tt_plot_ymax_tl
+              { \g__tt_plot_yhi_fp + 0.05 * ( \g__tt_plot_yhi_fp - \g__tt_plot_ylo_fp ) }
+          }
+          {
+            enlarge~y~limits = 0.05,
+            \tl_if_empty:NF \l__tt_plot_ymin_tl { ymin = \l__tt_plot_ymin_tl, }
+            \tl_if_empty:NF \l__tt_plot_ymax_tl { ymax = \l__tt_plot_ymax_tl, }
+          }
+      }
+    \tl_set:Nn \l__tt_plot_mode_tl { grid }
+    \int_gzero:N \g__tt_plot_line_int
+    \int_gzero:N \g__tt_plot_panel_int
+    \bool_gset_true:N \g__tt_plot_drop_bool          % lines before the first panel
+    \bool_gset_false:N \g__tt_plot_hidden_bool
+    \__tt_plot_group:Vn \l__tt_plot_axis_clist {#1}
+  }
+% key = given value, or the one from the data (if there was data)
+\cs_new:Npn \__tt_plot_limit:nNn #1#2#3
+  {
+    \tl_if_empty:NTF #2
+      {
+        \fp_compare:nT { abs ( \g__tt_plot_xlo_fp ) < inf && abs ( \g__tt_plot_ylo_fp ) < inf }
+          { #1 = \fp_eval:n {#3}, }
+      }
+      { #1 = \exp_not:V #2, }
+  }
+\cs_new_protected:Npn \__tt_plot_group:nn #1#2
+  {
+    \begin{tikzpicture}
+      \begin{groupplot} [#1]
+        #2
+        \prg_replicate:nn { \l__tt_plot_rows_int * \l__tt_plot_cols_int - \l__tt_plot_n_int }
+          { \nextgroupplot [ group/empty~plot ] }
+      \end{groupplot}
+      \__tt_plot_labels:
+      \__tt_plot_legend:
+    \end{tikzpicture}
+  }
+\cs_generate_variant:Nn \__tt_plot_group:nn { V }
+\cs_new_protected:Npn \__tt_plot_draw_panel:nn #1#2
+  {
+    \int_gincr:N \g__tt_plot_panel_int
+    \int_compare:nNnTF \g__tt_plot_panel_int > \l__tt_plot_n_int
+      { \bool_gset_true:N \g__tt_plot_drop_bool }
+      {
+        \bool_gset_false:N \g__tt_plot_drop_bool
         \IfNoValueTF {#1}
-          { \__tt_plot_line:n {#3} }
-          {                                          % hidden: drawn invisibly, so
-            \alt<#1> { \__tt_plot_line:n {#3} }      % the axes do not change
-              { \__tt_plot_add:nVn { draw = none, forget~plot } \l__tt_plot_table_tl {#3} }
+          { \bool_gset_false:N \g__tt_plot_hidden_bool }
+          { \alt<#1> { \bool_gset_false:N \g__tt_plot_hidden_bool } { \bool_gset_true:N \g__tt_plot_hidden_bool } }
+        \group_begin:
+        \keys_set:nn { tt / plotpanel } {#2}
+        \tl_gset:Ne \g__tt_plot_opts_tl
+          {
+            \bool_if:NTF \g__tt_plot_hidden_bool { hide~axis, }
+              {
+                \tl_if_empty:NF \l__tt_plotpanel_title_tl
+                  { title = { \exp_not:V \l__tt_plotpanel_title_tl }, }
+              }
+            \tl_if_empty:NF \l__tt_plotpanel_xlabel_tl
+              { xlabel = { \exp_not:V \l__tt_plotpanel_xlabel_tl }, }
+            \tl_if_empty:NF \l__tt_plotpanel_ylabel_tl
+              { ylabel = { \exp_not:V \l__tt_plotpanel_ylabel_tl }, }
+            \bool_if:NT \l__tt_plot_sharex_bool       % tick labels on the outer panels
+              {
+                \int_compare:nNnF { \g__tt_plot_panel_int + \l__tt_plot_cols_int } > \l__tt_plot_n_int
+                  { xticklabels = { }, }
+              }
+            \bool_if:NT \l__tt_plot_sharey_bool
+              {
+                \int_compare:nNnF { \int_mod:nn { \g__tt_plot_panel_int - 1 } { \l__tt_plot_cols_int } } = 0
+                  { yticklabels = { }, }
+              }
           }
         \group_end:
+        \exp_args:NV \__tt_plot_next:n \g__tt_plot_opts_tl
       }
-      { \msg_warning:nnn { titletemplates } { plot-file } {#3} }
   }
-\bool_new:N \l__tt_plot_key_bool
+\cs_new_protected:Npn \__tt_plot_next:n #1 { \nextgroupplot [#1] }
+% the slideplot's xlabel / ylabel, centred on all panels
+\cs_new_protected:Npn \__tt_plot_labels:
+  {
+    \use:e
+      {
+        \exp_not:N \path (group~c1r1.north~west) --
+          (group~c \int_min:nn { \l__tt_plot_cols_int } { \l__tt_plot_n_int } r1.north~east)
+          coordinate [ midway ] (tt-plot-top) ;
+        \exp_not:N \path (group~c1r1.north~west) --
+          (group~c1r \int_div_truncate:nn { \l__tt_plot_n_int + \l__tt_plot_cols_int - 1 }
+                                          { \l__tt_plot_cols_int } .south~west)
+          coordinate [ midway ] (tt-plot-left) ;
+      }
+    \tl_if_empty:NF \l__tt_plot_xlabel_tl
+      {
+        \node [ anchor = north, font = \small, inner~sep = 2pt ]
+          at (tt-plot-top |- current~bounding~box.south) { \l__tt_plot_xlabel_tl } ;
+      }
+    \tl_if_empty:NF \l__tt_plot_ylabel_tl
+      {
+        \node [ anchor = south, rotate = 90, font = \small, inner~sep = 2pt ]
+          at (current~bounding~box.west |- tt-plot-left) { \l__tt_plot_ylabel_tl } ;
+      }
+  }
+% one legend for all panels: a box with a line sample and label per entry
+\cs_new_protected:Npn \__tt_plot_legend:
+  {
+    \bool_lazy_or:nnF
+      { \int_compare_p:nNn \g__tt_plot_keys_int = 0 }
+      { \str_if_eq_p:Vn \l__tt_plot_legend_tl { none } }
+      {
+        \str_if_eq:VnF \l__tt_plot_legend_tl { outer~north }
+          { \int_set:Nn \l__tt_plot_keycols_int { 1 } }
+        \tl_clear:N \l__tt_plot_keytab_tl
+        \int_zero:N \l__tt_plot_k_int
+        \seq_map_inline:Nn \g__tt_plot_keys_seq { \__tt_plot_key_cell:nnnn ##1 }
+        \int_set:Nn \l_tmpa_int { \int_min:nn { \l__tt_plot_cols_int } { \l__tt_plot_n_int } }
+        \int_set:Nn \l_tmpb_int
+          { \int_div_truncate:nn { \l__tt_plot_n_int + \l__tt_plot_cols_int - 1 } { \l__tt_plot_cols_int } }
+        \str_case:Vn \l__tt_plot_legend_tl
+          {
+            { outer~east }
+              {
+                \__tt_plot_key_node:nn { anchor = north~west, xshift = 0.25cm }
+                  { current~bounding~box.east |- group~c \int_use:N \l_tmpa_int r1.north~east }
+              }
+            { outer~north }
+              {
+                \__tt_plot_key_node:nn { anchor = south, yshift = 0.1cm }
+                  { tt-plot-top |- current~bounding~box.north }
+              }
+            { north~east }
+              {
+                \__tt_plot_key_node:nn { anchor = north~east, xshift = -4pt, yshift = -4pt }
+                  { group~c \int_use:N \l_tmpa_int r1.north~east }
+              }
+            { north~west }
+              {
+                \__tt_plot_key_node:nn { anchor = north~west, xshift = 4pt, yshift = -4pt }
+                  { group~c1r1.north~west }
+              }
+            { south~east }
+              {
+                \__tt_plot_key_node:nn { anchor = south~east, xshift = -4pt, yshift = 4pt }
+                  {
+                    group~c \int_eval:n { \int_mod:nn { \l__tt_plot_n_int - 1 } { \l__tt_plot_cols_int } + 1 }
+                    r \int_use:N \l_tmpb_int .south~east
+                  }
+              }
+            { south~west }
+              {
+                \__tt_plot_key_node:nn { anchor = south~west, xshift = 4pt, yshift = 4pt }
+                  { group~c1r \int_use:N \l_tmpb_int .south~west }
+              }
+          }
+      }
+  }
+\cs_new_protected:Npn \__tt_plot_key_cell:nnnn #1#2#3#4
+  {
+    \int_incr:N \l__tt_plot_k_int
+    \int_compare:nNnT \l__tt_plot_k_int > 1
+      {
+        \int_compare:nNnTF { \int_mod:nn { \l__tt_plot_k_int - 1 } { \l__tt_plot_keycols_int } } = 0
+          { \tl_put_right:Nn \l__tt_plot_keytab_tl { \\ } }
+          { \tl_put_right:Nn \l__tt_plot_keytab_tl { & } }
+      }
+    \tl_if_blank:nTF {#4}
+      { \tl_put_right:Nn \l__tt_plot_keytab_tl { \__tt_plot_key:nnn {#1} {#2} {#3} } }
+      {                                              % its line comes at a step
+        \tl_put_right:Nn \l__tt_plot_keytab_tl
+          { \alt<#4> { \__tt_plot_key:nnn {#1} {#2} {#3} } { \phantom { \__tt_plot_key:nnn {#1} {#2} {#3} } } }
+      }
+  }
+\cs_new_protected:Npn \__tt_plot_key:nnn #1#2#3
+  {
+    \tikz [ baseline = -0.55ex ] \draw [ #2, line~width = 0.8pt, #3 ] (0,0) -- (0.5cm,0) ;
+    \hspace { 0.35em } #1
+  }
+\cs_new_protected:Npn \__tt_plot_key_node:nn #1#2
+  {
+    \use:e
+      {
+        \exp_not:N \node
+          [ draw, fill = white, inner~sep = 2.5pt, font = \exp_not:N \footnotesize, #1 ]
+          at (#2)
+          {
+            \exp_not:N \begin{tabular}
+              {
+                @{} l
+                \int_compare:nNnT \l__tt_plot_keycols_int > 1
+                  { * { \int_eval:n { \l__tt_plot_keycols_int - 1 } } { @{ \exp_not:N \hspace { 0.9em } } l } }
+                @{}
+              }
+              \exp_not:V \l__tt_plot_keytab_tl
+            \exp_not:N \end{tabular}
+          } ;
+      }
+  }
+% ---- drawing a line (one axis, or the current panel)
+\cs_new_protected:Npn \__tt_plot_draw_line:nnn #1#2#3
+  {
+    \int_gincr:N \g__tt_plot_line_int
+    \bool_if:NF \g__tt_plot_drop_bool
+      {
+        \file_if_exist:nTF {#3}
+          {
+            \group_begin:
+            \keys_set:nn { tt / plotline } {#2}
+            \tl_set:Ne \l__tt_plot_color_tl
+              { \seq_item:Nn \g__tt_plot_linecolor_seq { \g__tt_plot_line_int } }
+            % the table: separator, columns by name or number (pgfplots: from 0)
+            \tl_clear:N \l__tt_plot_table_tl
+            \tl_if_empty:NTF \l__tt_plotline_sep_tl
+              {
+                \regex_match:nnT { (?i) \.csv \Z } {#3}
+                  { \tl_put_right:Nn \l__tt_plot_table_tl { col~sep = comma, } }
+              }
+              {
+                \str_if_eq:VnF \l__tt_plotline_sep_tl { space }
+                  { \tl_put_right:Ne \l__tt_plot_table_tl { col~sep = \l__tt_plotline_sep_tl, } }
+              }
+            \tl_if_empty:NTF \l__tt_plotline_offset_tl
+              { \__tt_plot_column:nV { x } \l__tt_plotline_x_tl }
+              {                                      % x + offset
+                \regex_match:nVTF { \A \d+ \Z } \l__tt_plotline_x_tl
+                  {
+                    \tl_put_right:Ne \l__tt_plot_table_tl
+                      { , x~expr = \exp_not:N \thisrowno { \int_eval:n { \l__tt_plotline_x_tl - 1 } }
+                                   + ( \l__tt_plotline_offset_tl ) }
+                  }
+                  {
+                    \tl_put_right:Ne \l__tt_plot_table_tl
+                      { , x~expr = \exp_not:N \thisrow { \exp_not:V \l__tt_plotline_x_tl }
+                                   + ( \l__tt_plotline_offset_tl ) }
+                  }
+              }
+            \__tt_plot_column:nV { y } \l__tt_plotline_y_tl
+            % a legend entry (one axis): the first line of a label, unless legend=none
+            \bool_set:Nn \l__tt_plot_key_bool
+              {
+                ! \l__tt_plot_multi_bool
+                && \int_compare_p:nNn
+                     { \seq_item:Nn \g__tt_plot_linekey_seq { \g__tt_plot_line_int } } = 1
+                && ! \str_if_eq_p:Vn \l__tt_plot_legend_tl { none }
+              }
+            \tl_set:Ne \l__tt_plot_draw_tl
+              {
+                color = \l__tt_plot_color_tl, line~width = 0.8pt, mark = none,
+                \l__tt_plotline_style_tl,
+                each~nth~point = \l__tt_plotline_every_tl,
+                filter~discard~warning = false, unbounded~coords = jump
+                \bool_if:NF \l__tt_plot_key_bool { , forget~plot }
+              }
+            \bool_if:NTF \g__tt_plot_hidden_bool
+              { \__tt_plot_add:nVn { draw = none, forget~plot } \l__tt_plot_table_tl {#3} }
+              {
+                \IfNoValueTF {#1}
+                  { \__tt_plot_line:n {#3} }
+                  {                                  % hidden: drawn invisibly, so
+                    \alt<#1> { \__tt_plot_line:n {#3} }  % the axes do not change
+                      { \__tt_plot_add:nVn { draw = none, forget~plot } \l__tt_plot_table_tl {#3} }
+                  }
+              }
+            \group_end:
+          }
+          { \msg_warning:nnn { titletemplates } { plot-file } {#3} }
+      }
+  }
 \msg_new:nnn { titletemplates } { plot-file } { \plotline:~data~file~'#1'~not~found. }
+\msg_new:nnn { titletemplates } { plot-panels }
+  { slideplot:~#1~panels~do~not~fit~in~#2~x~#3~(the~last~ones~left~out). }
 \cs_new_protected:Npn \__tt_plot_column:nn #1#2
   {
     \regex_match:nnTF { \A \d+ \Z } {#2}
