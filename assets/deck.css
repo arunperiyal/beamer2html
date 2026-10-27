@@ -458,7 +458,7 @@ cite a { color: var(--blue); text-decoration: none; }
 
 /* ------------------------------------------------------------ plots */
 /* \begin{slideplot}: deck.js draws the axes and lines as SVG in .plot-area
-   and sets --plot-l/t/r/b (the space around the axes) on it */
+   and sets --plot-l/t/r/b (the space around the axes) on the .plot */
 .plot { margin: 0.3em auto; display: flex; flex-direction: column; }
 .plot-main { display: flex; }
 .plot-ylabel { flex: 0 0 1.5em; position: relative; font-size: 0.9em; }
@@ -489,6 +489,14 @@ cite a { color: var(--blue); text-decoration: none; }
 .plot-legend[data-pos="north-west"] { top: calc(var(--plot-t) + 8px); left: calc(var(--plot-l) + 8px); }
 .plot-legend[data-pos="south-east"] { bottom: calc(var(--plot-b) + 8px); right: calc(var(--plot-r) + 8px); }
 .plot-legend[data-pos="south-west"] { bottom: calc(var(--plot-b) + 8px); left: calc(var(--plot-l) + 8px); }
+.plot-legend[data-pos^="outer"] { position: static; font-size: 0.8em; line-height: 1.25; }
+.plot-legend[data-pos="outer-east"] {                 /* right of the axes, top aligned */
+  flex: none; align-self: flex-start; margin: var(--plot-t, 0px) 0 0 0.4em;
+}
+.plot-legend[data-pos="outer-north"] {                /* one row above the axes */
+  flex-direction: row; flex-wrap: wrap; justify-content: center; column-gap: 1.1em;
+  align-self: center; margin-bottom: 0.25em;
+}
 .plot-key {
   font: inherit; color: inherit; background: none; border: 0; padding: 0.05em 0;
   display: flex; align-items: center; gap: 0.45em; cursor: pointer; text-align: left;

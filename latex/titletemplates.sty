@@ -1035,7 +1035,9 @@
 % zoom out, click a legend entry to hide / show its line.
 % slideplot options: width (\linewidth), height (half the width), xlabel,
 %   ylabel, xmin, xmax, ymin, ymax, grid (true), legend (north east, north
-%   west, south east, south west, none).
+%   west, south east, south west: inside the axes; outer east: to the right
+%   of them, outer north: in rows above them -- the plot stays within width;
+%   none).
 % \plotline options: x, y (the column's name, or its number counting from 1;
 %   default 1 and 2), label (legend entry), color (plotcolor1, 2, ... in
 %   turn), style (solid, dashed, dotted), offset (added to the x values:
@@ -1102,6 +1104,32 @@
     \tl_if_empty:NTF \l__tt_plot_height_tl
       { \dim_set:Nn \l__tt_plot_h_dim { 0.5 \l__tt_plot_w_dim } }
       { \dim_set:Nn \l__tt_plot_h_dim { \l__tt_plot_height_tl } }
+    % a legend outside the axes takes its room from the width / height
+    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~east }
+      {
+        \__tt_plot_measure_keys:n {#2}
+        \dim_sub:Nn \l__tt_plot_w_dim { \g__tt_plot_key_dim + 1.4cm }
+      }
+    \str_if_eq:VnT \l__tt_plot_legend_tl { outer~north }
+      {                                              % as many per row as fit
+        \__tt_plot_measure_keys:n {#2}
+        \int_set:Nn \l__tt_plot_cols_int
+          {
+            \int_max:nn { 1 }
+              {
+                \int_min:nn { \g__tt_plot_keys_int }
+                  {
+                    \int_div_truncate:nn { \dim_to_decimal_in_sp:n { \l__tt_plot_w_dim } }
+                      { \dim_to_decimal_in_sp:n { \g__tt_plot_key_dim + 1.6cm } }
+                  }
+              }
+          }
+        \dim_sub:Nn \l__tt_plot_h_dim
+          {
+            1.6em * \int_div_truncate:nn { \g__tt_plot_keys_int + \l__tt_plot_cols_int - 1 }
+                                          { \l__tt_plot_cols_int } + 0.6em
+          }
+      }
     \clist_set:Ne \l__tt_plot_axis_clist
       {
         width = \dim_use:N \l__tt_plot_w_dim,
@@ -1115,7 +1143,17 @@
         legend~style = { font = \exp_not:N \footnotesize, cells = { anchor = west } },
         major~grid~style = { gray!20 },
         \bool_if:NT \l__tt_plot_grid_bool { grid = major, }
-        \str_if_eq:VnF \l__tt_plot_legend_tl { none }
+        \str_case:VnF \l__tt_plot_legend_tl
+          {
+            { none } { }
+            { outer~east } { legend~style = { at = { (1.03, 1) }, anchor = north~west }, }
+            { outer~north }
+              {
+                legend~columns = \int_use:N \l__tt_plot_cols_int,
+                legend~style = { at = { (0.5, 1.03) }, anchor = south,
+                                 /tikz/every~even~column/.append~style = { column~sep = 0.8em } },
+              }
+          }
           { legend~pos = \tl_use:N \l__tt_plot_legend_tl, }
         \tl_if_empty:NF \l__tt_plot_xlabel_tl { xlabel = { \exp_not:V \l__tt_plot_xlabel_tl }, }
         \tl_if_empty:NF \l__tt_plot_ylabel_tl { ylabel = { \exp_not:V \l__tt_plot_ylabel_tl }, }
@@ -1130,6 +1168,32 @@
     \group_end:
   }
   { }
+\cs_generate_variant:Nn \str_case:nnF { V }
+\dim_new:N \g__tt_plot_key_dim
+\int_new:N \g__tt_plot_keys_int
+\int_new:N \l__tt_plot_cols_int
+\box_new:N \l__tt_plot_measure_box
+% the widest legend entry and the number of entries: the body run in a box
+% with a \plotline that only measures its label
+\cs_new_protected:Npn \__tt_plot_measure_keys:n #1
+  {
+    \dim_gzero:N \g__tt_plot_key_dim
+    \int_gzero:N \g__tt_plot_keys_int
+    \hbox_set:Nn \l__tt_plot_measure_box
+      {
+        \RenewDocumentCommand \plotline { d<> O{} m }
+          {
+            \group_begin:
+            \keys_set:nn { tt / plotline } {##2}
+            \tl_if_empty:NF \l__tt_plotline_label_tl { \int_gincr:N \g__tt_plot_keys_int }
+            \hbox_set:Nn \l__tt_plot_measure_box { \footnotesize \l__tt_plotline_label_tl }
+            \dim_gset:Nn \g__tt_plot_key_dim
+              { \dim_max:nn { \g__tt_plot_key_dim } { \box_wd:N \l__tt_plot_measure_box } }
+            \group_end:
+          }
+        #1
+      }
+  }
 \cs_new_protected:Npn \__tt_plot_axis:nn #1#2
   { \begin{tikzpicture} \begin{axis} [#1] #2 \end{axis} \end{tikzpicture} }
 \cs_generate_variant:Nn \__tt_plot_axis:nn { V }
