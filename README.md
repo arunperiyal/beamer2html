@@ -159,7 +159,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   only), double-click or ⟲ to zoom out, click a legend entry to hide / show a
   line. The data is embedded in `slides.html`, so the deck needs no data files.
   Options `width`, `height`, `xlabel`, `ylabel`, `xmin`, `xmax`, `ymin`,
-  `ymax`, `grid`, `legend` (`north east`, …, `none`); per line `x`, `y`,
+  `ymax`, `grid`, `legend` (`north east`, `north west`, `south east`, `south
+  west`, `outer east`, `outer north`, `none`); per line `x`, `y`,
   `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
   the x values, to line up series recorded at different times), `sep`,
   `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow

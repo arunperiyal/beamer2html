@@ -1264,7 +1264,7 @@
       `<rect class="plot-frame" width="${w}" height="${h}"/></g></svg>`);
     el._geo = { W, H, L, T, w, h, r, sx, sy };
     [["l", L], ["t", T], ["r", W - L - w], ["b", H - T - h]].forEach(([k, v]) =>
-      area.style.setProperty("--plot-" + k, v.toFixed(1) + "px"));   // legend, ⟲ inside the axes
+      el.style.setProperty("--plot-" + k, v.toFixed(1) + "px"));   // legend, ⟲ lined up with the axes
     el.querySelectorAll(".plot-key").forEach((k) => k.classList.toggle("off", off.has(+k.dataset.series)));
     const reset = area.querySelector(".plot-reset");
     if (reset) reset.hidden = !el._view;

@@ -22,7 +22,8 @@ from .units import length_css
 from .vocabulary import PARA
 
 SEPARATORS = {"comma": ",", "semicolon": ";", "tab": "\t", "space": None}
-LEGEND = ("north east", "north west", "south east", "south west", "none")
+LEGEND = ("north east", "north west", "south east", "south west", "outer east", "outer north",
+          "none")
 LINE_STYLES = ("solid", "dashed", "dotted")
 TOO_MANY = 200000       # points in one plot: warn, the page gets large
 
@@ -128,14 +129,16 @@ class PlotMixin:
         xlabel, ylabel = label("xlabel"), label("ylabel")
         keys = ('<div class="plot-legend" data-pos="%s">%s</div>' % (pos.replace(" ", "-"), "".join(legend))
                 if legend and pos != "none" else "")
+        inner, east, north = (keys, "", "") if not pos.startswith("outer") else \
+            ("", keys, "") if pos == "outer east" else ("", "", keys)
         return PARA + (
-            '<div class="plot" style="%s">'
+            '<div class="plot" style="%s">%s'
             '<div class="plot-main">%s<div class="plot-area"%s>%s'
-            '<div class="plot-tip" hidden></div></div></div>%s'
+            '<div class="plot-tip" hidden></div></div>%s</div>%s'
             '<script type="application/json" class="plot-data">%s</script></div>'
-            % (style,
+            % (style, north,
                '<div class="plot-ylabel"><span>%s</span></div>' % ylabel if ylabel else "",
-               area, keys,
+               area, inner, east,
                '<div class="plot-xlabel">%s</div>' % xlabel if xlabel else "",
                payload)) + PARA
 
