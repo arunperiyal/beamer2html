@@ -1,4 +1,5 @@
-"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip]] [--watch]"""
+"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]]
+               [--watch]"""
 import argparse
 import os
 import sys
@@ -27,6 +28,11 @@ def main(argv=None):
                     help="also write a zip with the deck and only the files it "
                          "uses, to copy to the presenting computer (default "
                          "name: the HTML file's name with .zip)")
+    ap.add_argument("--compress", nargs="?", type=int, const=960, metavar="PX",
+                    help="with --pack: put the images and animation frames in the "
+                         "zip as WebP, at most PX pixels wide and high (default "
+                         "960) -- a much smaller zip; the project's files are "
+                         "not changed")
     ap.add_argument("-w", "--watch", action="store_true",
                     help="keep running and rebuild whenever a source file "
                          "changes (like latexmk -pvc); an open deck reloads "
@@ -39,6 +45,13 @@ def main(argv=None):
         ap.error("%s not found" % a.tex)
     if a.watch and a.pack is not None:
         ap.error("--pack makes a copy for presenting: run it without --watch")
+    if os.path.splitext(a.output)[1].lower() not in (".html", ".htm"):
+        ap.error("-o %s: -o names the HTML file (e.g. -o talk.html); the zip's "
+                 "name goes after --pack (--pack talk.zip)" % a.output)
+    if a.compress is not None and a.pack is None:
+        ap.error("--compress goes with --pack")
+    if a.compress is not None and a.compress < 64:
+        ap.error("--compress %d: give the largest size in pixels, e.g. 960" % a.compress)
     out = a.output if os.path.isabs(a.output) else os.path.join(root, a.output)
 
     if a.watch:
@@ -61,7 +74,7 @@ def main(argv=None):
 
     _, config = build(tex, root, out)
     if a.pack is not None:
-        do_pack(a.pack, root, out, config)
+        do_pack(a.pack, root, out, config, a.compress)
     print_warnings()
     return 0
 
@@ -104,18 +117,18 @@ def build(tex, root, out, live=False):
     return files, config
 
 
-def do_pack(dest, root, out, config):
+def do_pack(dest, root, out, config, size=None):
     zip_path = os.path.abspath(dest) if dest else os.path.splitext(out)[0] + ".zip"
     if os.path.relpath(out, root).startswith(".."):
         log.warn("--pack: the HTML file must be inside the project folder; not packed")
         return
-    count, size, _ = pack(root, out, zip_path, config)
+    count, size, _ = pack(root, out, zip_path, config, size)
     shown = os.path.relpath(zip_path)
     if shown.startswith(".."):
         shown = zip_path
     print("packed %s: %d files, %.1f MB -- unzip it and open %s/%s" % (
         shown, count, size / 1e6, os.path.splitext(os.path.basename(zip_path))[0],
-        os.path.relpath(out, root)))
+        os.path.join(os.path.dirname(os.path.relpath(out, root)), "slides.html")))
 
 
 def print_warnings():

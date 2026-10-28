@@ -23,6 +23,7 @@ See [`template/README.md`](template/README.md).
 python3 path/to/tex2html                 # main.tex -> slides.html
 python3 path/to/tex2html main.tex -o talk.html
 python3 path/to/tex2html --pack talk.zip # also: zip for the presenting computer
+python3 path/to/tex2html --pack --compress  # ... with the images as smaller WebP
 python3 path/to/tex2html --watch         # rebuild on every change (like latexmk -pvc)
 ```
 
@@ -37,6 +38,16 @@ good `slides.html` in place. Ctrl+C stops it. For the PDF, run
 `html/` and exactly the images, animation frames and videos the slides use into a zip
 that unpacks to one folder; open `slides.html` inside it. Sources, the `.bib`,
 PDFs and unused figures are left out.
+
+`--compress [PX]` (with `--pack`) puts the raster images and animation frames
+(PNG, JPEG, TIFF, BMP) in the zip as WebP, scaled down to at most PX pixels
+wide and high (default 960), and points the packed deck at them. Renders are
+usually far larger than they are shown on a slide, so this often makes the zip
+5–10 times smaller with no visible difference. Your figures, `slides.html` and
+the PDF are not changed. The copies are cached in `html/cache/webp-<PX>/`, so
+packing again only converts new or changed images; the first run on thousands
+of frames takes a few minutes. It needs Pillow (`pip install pillow`); without
+it the images are packed as they are. GIFs, SVGs and videos are not touched.
 
 Run it in the folder with your `main.tex`. Each run also installs into that
 project:
@@ -203,7 +214,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `commands.py`, `environments.py`, `animation.py`, `plot.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, plots, overlay specs, TikZ pictures |
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
-| `pack.py` | `--pack`: zip of the deck and the files it uses |
+| `pack.py` | `--pack`: zip of the deck and the files it uses; `--compress`: images as WebP |
 | `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
 | `latex/titletemplates.sty` | the beamer templates |
