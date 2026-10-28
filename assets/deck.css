@@ -8,7 +8,8 @@
 
 /* TeX Gyre Termes (the Times clone TeX uses) comes with the deck: phones and
    tablets have no Times-like font, and their wider fallback serif made lines
-   wrap and slides overflow. Used only where Times New Roman is missing. */
+   wrap and slides overflow. It comes first in --serif: Android answers to
+   "Times New Roman" with that wider serif, so a fallback would never load. */
 @font-face { font-family: "Deck Termes"; font-style: normal; font-weight: 400; font-display: block;
              src: local("TeX Gyre Termes"), local("TeXGyreTermes-Regular"),
                   url("vendor/fonts/termes/texgyretermes-regular.woff2") format("woff2"); }
@@ -33,7 +34,7 @@
   --pad-x:       32px;                 /* title bar / footer side margin (\SetBarMargin, 0.4cm) */
   --body-l:      80px;                 /* slide body margins (\setbeamersize, beamer: 1cm) */
   --body-r:      80px;
-  --serif: "Times New Roman", "Deck Termes", serif;
+  --serif: "Deck Termes", "Times New Roman", serif;
 }
 
 * { box-sizing: border-box; }
