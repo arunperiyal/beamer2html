@@ -165,9 +165,10 @@ def rewrite(page, conv, config):
 
 
 def pack(root, out_html, zip_path, config, size=None):
-    """Write zip_path with out_html (as slides.html's own name) and its files;
-    with size, raster images as WebP fitted in size x size pixels. Returns
-    (number of files, total bytes, missing paths)."""
+    """Write zip_path with out_html and its files; with size, raster images
+    as WebP fitted in size x size pixels. The page is always named
+    slides.html in the zip (the viewer apps look for it), whatever -o named
+    it. Returns (number of files, total bytes, missing paths)."""
     with open(out_html, encoding="utf-8") as f:
         page = f.read()
     files = referenced_files(page, root, config)
@@ -186,11 +187,15 @@ def pack(root, out_html, zip_path, config, size=None):
             name = rel
             if rel in conv:
                 name, full = conv[rel]
+            elif rel == out_rel:
+                name = os.path.join(os.path.dirname(rel), "slides.html")
             kind = zipfile.ZIP_STORED if os.path.splitext(name)[1].lower() in STORED \
                 else zipfile.ZIP_DEFLATED
             if rel == out_rel and conv:
                 data = rewrite(page, conv, config).encode("utf-8")
-                z.writestr(os.path.join(folder, rel), data, compress_type=kind)
+                info = zipfile.ZipInfo.from_file(full, os.path.join(folder, name))
+                info.compress_type = kind
+                z.writestr(info, data)
                 total += len(data)
             else:
                 z.write(full, os.path.join(folder, name), compress_type=kind)

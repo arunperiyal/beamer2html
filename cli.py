@@ -45,6 +45,9 @@ def main(argv=None):
         ap.error("%s not found" % a.tex)
     if a.watch and a.pack is not None:
         ap.error("--pack makes a copy for presenting: run it without --watch")
+    if os.path.splitext(a.output)[1].lower() not in (".html", ".htm"):
+        ap.error("-o %s: -o names the HTML file (e.g. -o talk.html); the zip's "
+                 "name goes after --pack (--pack talk.zip)" % a.output)
     if a.compress is not None and a.pack is None:
         ap.error("--compress goes with --pack")
     if a.compress is not None and a.compress < 64:
@@ -125,7 +128,7 @@ def do_pack(dest, root, out, config, size=None):
         shown = zip_path
     print("packed %s: %d files, %.1f MB -- unzip it and open %s/%s" % (
         shown, count, size / 1e6, os.path.splitext(os.path.basename(zip_path))[0],
-        os.path.relpath(out, root)))
+        os.path.join(os.path.dirname(os.path.relpath(out, root)), "slides.html")))
 
 
 def print_warnings():
