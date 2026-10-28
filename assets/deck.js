@@ -548,6 +548,32 @@
     else if (idx > 0) show(idx - 1, Infinity);     // previous slide, fully revealed
   }
 
+  // Android (Chrome, and the viewer app's WebView) draws text at the system
+  // font size times text-size-adjust, whatever the CSS says; a slide is laid
+  // out at a fixed size, so larger text runs off it. Measure the factor
+  // against a canvas (which it leaves alone) and divide it out.
+  function undoFontScale() {
+    const els = [document.documentElement, document.body];
+    for (const el of els) {
+      el.style.removeProperty("text-size-adjust");
+      el.style.removeProperty("-webkit-text-size-adjust");
+    }
+    const text = "MMMMMMMMMM", span = document.createElement("span");
+    span.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;font:100px serif";
+    span.textContent = text;
+    document.body.appendChild(span);
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (ctx) ctx.font = "100px serif";
+    const k = ctx ? span.getBoundingClientRect().width / ctx.measureText(text).width : 1;
+    span.remove();
+    if (!(Math.abs(k - 1) > 0.005)) return;
+    for (const el of els) {
+      el.style.setProperty("text-size-adjust", (100 / k).toFixed(2) + "%");
+      el.style.setProperty("-webkit-text-size-adjust", (100 / k).toFixed(2) + "%");
+    }
+  }
+  undoFontScale();
+
   function fit() {
     const k = Math.min(innerWidth / 1280, innerHeight / 720);
     deck.style.transform = `scale(${k})`;
