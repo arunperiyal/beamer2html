@@ -1041,8 +1041,10 @@
 % \plotline options: x, y (the column's name, or its number counting from 1;
 %   default 1 and 2), label (legend entry; lines with the same label share
 %   one colour and one entry), color (plotcolor1, 2, ... in turn), style
-%   (solid, dashed, dotted), offset (added to the x values: lines that cover
-%   the same span at different times, e.g. offset=-100, start together), sep
+%   (solid, dashed, dotted), xscale, yscale (the x / y values are multiplied
+%   by them: other units, e.g. xscale=1000 for s -> ms, or yscale=-1 to flip),
+%   offset (added to the x values, after xscale: lines that cover the same
+%   span at different times, e.g. offset=-100, start together), sep
 %   (comma, semicolon, tab, space: instead of guessing from the file name),
 %   pdfevery=N (the PDF plots every N-th point only -- for long series that
 %   TeX is slow with or runs out of memory on; the HTML always has all of
@@ -1135,6 +1137,8 @@
 \fp_new:N \l__tt_plot_sylo_fp
 \fp_new:N \l__tt_plot_syhi_fp
 \fp_new:N \l__tt_plot_off_fp
+\fp_new:N \l__tt_plot_xs_fp
+\fp_new:N \l__tt_plot_ys_fp
 \fp_new:N \l__tt_plot_lo_fp
 \fp_new:N \l__tt_plot_hi_fp
 \fp_new:N \l__tt_plot_x_fp
@@ -1185,6 +1189,8 @@
     style    .initial:n = solid,
     sep      .tl_set:N  = \l__tt_plotline_sep_tl,
     offset   .tl_set:N  = \l__tt_plotline_offset_tl,
+    xscale   .tl_set:N  = \l__tt_plotline_xscale_tl,
+    yscale   .tl_set:N  = \l__tt_plotline_yscale_tl,
     pdfevery .tl_set:N  = \l__tt_plotline_every_tl,
     pdfevery .initial:n = 1,
   }
@@ -1336,7 +1342,8 @@
     \str_set:Ne \l__tt_plot_ckey_str
       {
         \file_timestamp:n {#1} | #1 | \l__tt_plotline_x_tl | \l__tt_plotline_y_tl | \l__tt_plotline_sep_tl |
-        \l__tt_plotline_offset_tl | \l__tt_plot_xmin_tl | \l__tt_plot_xmax_tl
+        \l__tt_plotline_offset_tl | \l__tt_plotline_xscale_tl | \l__tt_plotline_yscale_tl |
+        \l__tt_plot_xmin_tl | \l__tt_plot_xmax_tl
       }
     \prop_get:NVNF \g__tt_plot_cache_prop \l__tt_plot_ckey_str \l__tt_plot_cval_tl
       {
@@ -1374,6 +1381,10 @@
     \fp_set:Nn \l__tt_plot_syhi_fp { -inf }
     \fp_set:Nn \l__tt_plot_off_fp
       { \tl_if_empty:NTF \l__tt_plotline_offset_tl { 0 } { \l__tt_plotline_offset_tl } }
+    \fp_set:Nn \l__tt_plot_xs_fp
+      { \tl_if_empty:NTF \l__tt_plotline_xscale_tl { 1 } { \l__tt_plotline_xscale_tl } }
+    \fp_set:Nn \l__tt_plot_ys_fp
+      { \tl_if_empty:NTF \l__tt_plotline_yscale_tl { 1 } { \l__tt_plotline_yscale_tl } }
     \fp_set:Nn \l__tt_plot_lo_fp
       { \tl_if_empty:NTF \l__tt_plot_xmin_tl { -inf } { \l__tt_plot_xmin_tl } }
     \fp_set:Nn \l__tt_plot_hi_fp
@@ -1450,7 +1461,7 @@
         \tl_set:Ne \l__tt_plot_yv_tl { \seq_item:Nn \l__tt_plot_row_seq { \l__tt_plot_yi_int } }
         \bool_lazy_or:nnF { \tl_if_empty_p:N \l__tt_plot_xv_tl } { \tl_if_empty_p:N \l__tt_plot_yv_tl }
           {
-            \fp_set:Nn \l__tt_plot_x_fp { \l__tt_plot_xv_tl + \l__tt_plot_off_fp }
+            \fp_set:Nn \l__tt_plot_x_fp { \l__tt_plot_xv_tl * \l__tt_plot_xs_fp + \l__tt_plot_off_fp }
             \fp_compare:nNnTF \l__tt_plot_x_fp < \l__tt_plot_sxlo_fp
               { \fp_set_eq:NN \l__tt_plot_sxlo_fp \l__tt_plot_x_fp }
               {
@@ -1463,7 +1474,7 @@
               { ! \fp_compare_p:nNn \l__tt_plot_x_fp < \l__tt_plot_lo_fp }
               { ! \fp_compare_p:nNn \l__tt_plot_x_fp > \l__tt_plot_hi_fp }
               {
-                \fp_set:Nn \l__tt_plot_y_fp { \l__tt_plot_yv_tl }
+                \fp_set:Nn \l__tt_plot_y_fp { \l__tt_plot_yv_tl * \l__tt_plot_ys_fp }
                 \fp_compare:nNnTF \l__tt_plot_y_fp < \l__tt_plot_sylo_fp
                   { \fp_set_eq:NN \l__tt_plot_sylo_fp \l__tt_plot_y_fp }
                   {
@@ -1878,22 +1889,10 @@
                 \str_if_eq:VnF \l__tt_plotline_sep_tl { space }
                   { \tl_put_right:Ne \l__tt_plot_table_tl { col~sep = \l__tt_plotline_sep_tl, } }
               }
-            \tl_if_empty:NTF \l__tt_plotline_offset_tl
-              { \__tt_plot_column:nV { x } \l__tt_plotline_x_tl }
-              {                                      % x + offset
-                \regex_match:nVTF { \A \d+ \Z } \l__tt_plotline_x_tl
-                  {
-                    \tl_put_right:Ne \l__tt_plot_table_tl
-                      { , x~expr = \exp_not:N \thisrowno { \int_eval:n { \l__tt_plotline_x_tl - 1 } }
-                                   + ( \l__tt_plotline_offset_tl ) }
-                  }
-                  {
-                    \tl_put_right:Ne \l__tt_plot_table_tl
-                      { , x~expr = \exp_not:N \thisrow { \exp_not:V \l__tt_plotline_x_tl }
-                                   + ( \l__tt_plotline_offset_tl ) }
-                  }
-              }
-            \__tt_plot_column:nV { y } \l__tt_plotline_y_tl
+            \__tt_plot_coord:nVVV { x } \l__tt_plotline_x_tl         % x * xscale + offset
+              \l__tt_plotline_xscale_tl \l__tt_plotline_offset_tl
+            \__tt_plot_coord:nVVV { y } \l__tt_plotline_y_tl         % y * yscale
+              \l__tt_plotline_yscale_tl \c_empty_tl
             % a legend entry (one axis): the first line of a label, unless legend=none
             \bool_set:Nn \l__tt_plot_key_bool
               {
@@ -1935,6 +1934,25 @@
       { \tl_put_right:Nn \l__tt_plot_table_tl { , #1 = {#2} } }
   }
 \cs_generate_variant:Nn \__tt_plot_column:nn { nV }
+% a coordinate: the column (#2), times #3, plus #4 (either may be empty)
+\cs_new_protected:Npn \__tt_plot_coord:nnnn #1#2#3#4
+  {
+    \bool_lazy_and:nnTF { \tl_if_empty_p:n {#3} } { \tl_if_empty_p:n {#4} }
+      { \__tt_plot_column:nn {#1} {#2} }
+      {
+        \regex_match:nnTF { \A \d+ \Z } {#2}
+          { \tl_set:Ne \l__tt_plot_cell_tl { \exp_not:N \thisrowno { \int_eval:n { #2 - 1 } } } }
+          { \tl_set:Nn \l__tt_plot_cell_tl { \thisrow {#2} } }
+        \tl_put_right:Ne \l__tt_plot_table_tl
+          {
+            , #1~expr = \exp_not:V \l__tt_plot_cell_tl
+              \tl_if_empty:nF {#3} { * ( \exp_not:n {#3} ) }
+              \tl_if_empty:nF {#4} { + ( \exp_not:n {#4} ) }
+          }
+      }
+  }
+\cs_generate_variant:Nn \__tt_plot_coord:nnnn { nVVV }
+\tl_new:N \l__tt_plot_cell_tl
 \cs_new_protected:Npn \__tt_plot_line:n #1
   {
     \__tt_plot_add:VVn \l__tt_plot_draw_tl \l__tt_plot_table_tl {#1}

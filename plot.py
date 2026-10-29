@@ -80,7 +80,7 @@ class PlotMixin:
     def env_slideplot(self, body):
         """\\begin{slideplot}[width, height, xlabel, ylabel, xmin, xmax, ymin,
         ymax, grid, legend, rows, columns, share] with \\plotline<spec>[x, y,
-        label, color, style, offset, sep, pdfevery]{file} lines -- or with
+        label, color, style, offset, xscale, yscale, sep, pdfevery]{file} lines -- or with
         \\plotpanel<spec>[title, xlabel, ylabel] lines, each followed by the
         \\plotline lines of that panel."""
         opt, j = read_opt(body, 0)
@@ -241,19 +241,25 @@ class PlotMixin:
         yi = column(str(o.get("y", "2")), header, "y", path)
         if xi is None or yi is None:
             return None
-        offset = o.get("offset", "")
-        offset = number(offset) if isinstance(offset, str) and offset.strip() else 0
-        if offset is None:
-            warn("\\plotline: offset=%s is not a number" % o["offset"])
-            offset = 0
+        def num(key, default):
+            v = o.get(key, "")
+            v = number(v) if isinstance(v, str) and v.strip() else default
+            if v is None:
+                warn("\\plotline: %s=%s is not a number" % (key, o[key]))
+                v = default
+            return v
+        offset, xscale, yscale = num("offset", 0), num("xscale", 1), num("yscale", 1)
+        if not xscale or not yscale:
+            warn("\\plotline: xscale / yscale = 0 (left at 1)")
+            xscale, yscale = xscale or 1, yscale or 1
         xs, ys = [], []
         for r in rows:
             x = number(r[xi]) if xi < len(r) else None
             if x is None:
                 continue
             y = number(r[yi]) if yi < len(r) else None
-            xs.append(float("%.7g" % (x + offset)))      # offset: shifted along x
-            ys.append(None if y is None else float("%.6g" % y))   # None: a gap
+            xs.append(float("%.7g" % (x * xscale + offset)))   # offset: shifted along x
+            ys.append(None if y is None else float("%.6g" % (y * yscale)))   # None: a gap
         if not xs:
             warn("\\plotline: no numbers in %s" % path)
             return None
@@ -266,6 +272,6 @@ class PlotMixin:
         label = o.get("label")
         label = self.inline(label).strip() if isinstance(label, str) else ""
         data = {"x": xs, "y": ys}
-        if offset:
-            data["offset"] = offset                 # the readout also gives the file's x
+        if offset or xscale != 1:                   # the readout also gives the file's x
+            data.update(offset=offset, xscale=xscale)
         return data, label, color, style

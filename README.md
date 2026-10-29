@@ -161,8 +161,11 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   Options `width`, `height`, `xlabel`, `ylabel`, `xmin`, `xmax`, `ymin`,
   `ymax`, `grid`, `legend` (`north east`, `north west`, `south east`, `south
   west`, `outer east`, `outer north`, `none`); per line `x`, `y`,
-  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
-  the x values, to line up series recorded at different times), `sep`,
+  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `xscale` /
+  `yscale` (the x / y values are multiplied by them: other units, e.g.
+  `xscale=1000` for s → ms, or `yscale=-1` to flip a line), `offset` (added
+  to the x values after `xscale`, to line up series recorded at different
+  times), `sep`,
   `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow
   with); `\plotline<2->` adds a line at a step, with the axes unchanged.
   Lines with the same `label` share one colour and one legend entry

@@ -1140,7 +1140,7 @@
   // ------------------------------------------------------------ plots
   // \begin{slideplot} -> <div class="plot"> with its data in <script
   // class="plot-data"> ({panels: [{series: [{x, y, color, style, spec, key,
-  // offset}]}], axis: {xmin, ...}, grid, rows, cols, share: {x, y}}) and one
+  // offset, xscale}]}], axis: {xmin, ...}, grid, rows, cols, share: {x, y}}) and one
   // empty .plot-area per panel (\plotpanel; a plot without panels has one),
   // in a CSS grid of rows x cols. Drawn here as SVG: every plot once at the
   // start (so copies -- slide grid, presenter view, printing -- have it too),
@@ -1354,7 +1354,7 @@
       rows += `<div><span class="plot-swatch" style="--c:${s.color}" data-style="${s.style}"></span>` +
         `${key ? `<span class="plot-name">${key.innerHTML}</span>` : ""}` +
         `<b>${valueText(s.y[k])}</b>` +
-        (s.offset ? `<i class="plot-own">at ${valueText(s.x[k] - s.offset)}</i>` : "") + "</div>";
+        ("offset" in s ? `<i class="plot-own">at ${valueText((s.x[k] - s.offset) / s.xscale)}</i>` : "") + "</div>";
     });
     if (!rows) { clearArea(area); return; }
     const cross = svg.querySelector(".plot-cross"), cx = G.sx(xv).toFixed(1);
