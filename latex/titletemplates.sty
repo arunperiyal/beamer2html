@@ -1051,8 +1051,10 @@
 %   them).
 % \plotline<2->: the line is drawn from step 2 on; the axes stay the same.
 %
-% Panels: \plotpanel[title, xlabel, ylabel] starts a panel; the \plotline
-% lines after it are drawn in it.
+% Panels: \plotpanel[title, xlabel, ylabel, xmin, xmax, ymin, ymax] starts a
+% panel; the \plotline lines after it are drawn in it. A panel's xmin, ...
+% are for an axis it does not share (share=none, or y for xmin / xmax); they
+% override the slideplot's.
 %   \begin{slideplot}[columns=3, xlabel={$t$}, ylabel={$y/D$}, legend=outer north]
 %     \plotpanel[title={$U_r = 4.0$}]
 %       \plotline[x=time, y=disp, label=Helical]{data/U4.csv}
@@ -1176,6 +1178,10 @@
     title   .tl_set:N   = \l__tt_plotpanel_title_tl,
     xlabel  .tl_set:N   = \l__tt_plotpanel_xlabel_tl,
     ylabel  .tl_set:N   = \l__tt_plotpanel_ylabel_tl,
+    xmin    .tl_set:N   = \l__tt_plotpanel_xmin_tl,
+    xmax    .tl_set:N   = \l__tt_plotpanel_xmax_tl,
+    ymin    .tl_set:N   = \l__tt_plotpanel_ymin_tl,
+    ymax    .tl_set:N   = \l__tt_plotpanel_ymax_tl,
   }
 \keys_define:nn { tt / plotline }
   {
@@ -1732,6 +1738,16 @@
               { xlabel = { \exp_not:V \l__tt_plotpanel_xlabel_tl }, }
             \tl_if_empty:NF \l__tt_plotpanel_ylabel_tl
               { ylabel = { \exp_not:V \l__tt_plotpanel_ylabel_tl }, }
+            \bool_if:NF \l__tt_plot_sharex_bool       % the panel's own range
+              {
+                \tl_if_empty:NF \l__tt_plotpanel_xmin_tl { xmin = \l__tt_plotpanel_xmin_tl, }
+                \tl_if_empty:NF \l__tt_plotpanel_xmax_tl { xmax = \l__tt_plotpanel_xmax_tl, }
+              }
+            \bool_if:NF \l__tt_plot_sharey_bool
+              {
+                \tl_if_empty:NF \l__tt_plotpanel_ymin_tl { ymin = \l__tt_plotpanel_ymin_tl, }
+                \tl_if_empty:NF \l__tt_plotpanel_ymax_tl { ymax = \l__tt_plotpanel_ymax_tl, }
+              }
             \bool_if:NT \l__tt_plot_sharex_bool       % tick labels on the outer panels
               {
                 \int_compare:nNnF { \g__tt_plot_panel_int + \l__tt_plot_cols_int } > \l__tt_plot_n_int

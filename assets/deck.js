@@ -1140,10 +1140,11 @@
   // ------------------------------------------------------------ plots
   // \begin{slideplot} -> <div class="plot"> with its data in <script
   // class="plot-data"> ({panels: [{series: [{x, y, color, style, spec, key,
-  // offset, xscale}]}], axis: {xmin, ...}, grid, rows, cols, share: {x, y}}) and one
-  // empty .plot-area per panel (\plotpanel; a plot without panels has one),
-  // in a CSS grid of rows x cols. Drawn here as SVG: every plot once at the
-  // start (so copies -- slide grid, presenter view, printing -- have it too),
+  // offset, xscale}], axis: {xmin, ...}}], axis: {xmin, ...}, grid, rows,
+  // cols, share: {x, y}}) and one empty .plot-area per panel (\plotpanel; a
+  // plot without panels has one), in a CSS grid of rows x cols. Drawn here
+  // as SVG: every plot once at the start (so copies -- slide grid, presenter
+  // view, printing -- have it too),
   // again when its size or view changes. A shared axis has one range and its
   // tick labels on the outer panels only; the grid's outer column / row is
   // wider by them, so all axes are the same size. On the deck's own plots:
@@ -1169,10 +1170,11 @@
     return (Math.abs(v) < st * 1e-9 ? 0 : v).toFixed(d).replace("-", "−");
   }
   const valueText = (v) => (+v.toPrecision(5)).toString().replace("-", "−");
-  // the axis ranges of panel i: given (xmin, ...), zoomed, or from the data
+  // the axis ranges of panel i: given (xmin, ... of the panel or the plot),
+  // zoomed, or from the data
   // -- of every panel along a shared axis; y over the lines shown in x0..x1
   function panelRange(P, i, views, off) {
-    const ax = P.axis, view = views[i] || {};
+    const ax = { ...P.axis, ...P.panels[i].axis }, view = views[i] || {};
     let x0 = ax.xmin, x1 = ax.xmax;
     if (x0 === undefined || x1 === undefined) {
       let lo = Infinity, hi = -Infinity;

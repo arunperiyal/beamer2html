@@ -81,7 +81,8 @@ class PlotMixin:
         """\\begin{slideplot}[width, height, xlabel, ylabel, xmin, xmax, ymin,
         ymax, grid, legend, rows, columns, share] with \\plotline<spec>[x, y,
         label, color, style, offset, xscale, yscale, sep, pdfevery]{file} lines -- or with
-        \\plotpanel<spec>[title, xlabel, ylabel] lines, each followed by the
+        \\plotpanel<spec>[title, xlabel, ylabel, xmin, xmax, ymin, ymax] lines,
+        each followed by the
         \\plotline lines of that panel."""
         opt, j = read_opt(body, 0)
         o = keyvals(opt)
@@ -156,14 +157,26 @@ class PlotMixin:
             warn("slideplot: %d points embedded in the page -- thin the data file "
                  "if the deck gets slow" % total)
 
-        axis = {}
-        for k in ("xmin", "xmax", "ymin", "ymax"):
-            v = o.get(k)
-            if isinstance(v, str) and v.strip():
-                if number(v) is None:
-                    warn("slideplot: %s=%s is not a number" % (k, v))
-                else:
-                    axis[k] = number(v)
+        def limits(opts, what):
+            axis = {}
+            for k in ("xmin", "xmax", "ymin", "ymax"):
+                v = opts.get(k)
+                if isinstance(v, str) and v.strip():
+                    if number(v) is None:
+                        warn("%s: %s=%s is not a number" % (what, k, v))
+                    else:
+                        axis[k] = number(v)
+            return axis
+        axis = limits(o, "slideplot")
+        shared = {"x": share in ("x", "both"), "y": share in ("y", "both")}
+        for p, d in zip(panels, out):          # a panel's own range: unshared axes only
+            own = limits(p["opts"], "\\plotpanel")
+            for k in [k for k in own if shared[k[0]]]:
+                warn("\\plotpanel: %s ignored -- the %s axis is shared (share=%s)"
+                     % (k, k[0], share))
+                del own[k]
+            if own:
+                d["axis"] = own
         grid = str(o.get("grid", "true")).strip().lower() in ("true", "")
         pos = str(o.get("legend", "north east")).strip()
         if pos not in LEGEND:
@@ -175,8 +188,7 @@ class PlotMixin:
             warn("slideplot: height=%s -- give an absolute length (cm, pt)" % o["height"])
             height = None
         payload = json.dumps({"panels": out, "axis": axis, "grid": grid, "rows": rows,
-                              "cols": cols, "share": {"x": share in ("x", "both"),
-                                                      "y": share in ("y", "both")}},
+                              "cols": cols, "share": shared},
                              separators=(",", ":")).replace("</", "<\\/")
 
         def text(opts, key):

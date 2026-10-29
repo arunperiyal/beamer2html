@@ -171,6 +171,8 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   Lines with the same `label` share one colour and one legend entry
 - plot panels: `\plotpanel[title=.., xlabel=.., ylabel=..]` inside a
   `slideplot` starts a panel; the `\plotline` lines after it are drawn in it.
+  A panel's own `xmin`, `xmax`, `ymin`, `ymax` override the `slideplot`'s, on
+  an axis it does not share (e.g. `share=none`).
   `rows` / `columns` lay the panels out (row by row; give one and the other
   follows from the number of panels; neither: one column). `share=x`, `y`,
   `both` or `none` (default: one column → `x`, one row → `y`, a grid →
