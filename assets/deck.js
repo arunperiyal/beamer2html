@@ -1165,14 +1165,21 @@
 
   // ------------------------------------------------------------ plots
   // \begin{slideplot} -> <div class="plot"> with its data in <script
-  // class="plot-data"> ({series: [{x, y, color, style, spec, offset}],
-  // axis: {xmin, ...}, grid}) and an empty .plot-area, drawn here as SVG: every plot once
-  // at the start (so copies -- slide grid, presenter view, printing -- have
-  // it too), again when its size or view changes. On the deck's own plots:
-  // the values under the pointer, drag to zoom in (a flat drag zooms the x
-  // axis only), double-click or the ⟲ button to zoom out, a legend entry
-  // hides / shows its line. A line with a step spec (\plotline<2->) gets
-  // data-spec, so showStep hides it; the axes always include every line.
+  // class="plot-data"> ({panels: [{series: [{x, y, color, style, spec, key,
+  // offset, xscale}], axis: {xmin, ...}}], axis: {xmin, ...}, grid, rows,
+  // cols, share: {x, y}}) and one empty .plot-area per panel (\plotpanel; a
+  // plot without panels has one), in a CSS grid of rows x cols. Drawn here
+  // as SVG: every plot once at the start (so copies -- slide grid, presenter
+  // view, printing -- have it too),
+  // again when its size or view changes. A shared axis has one range and its
+  // tick labels on the outer panels only; the grid's outer column / row is
+  // wider by them, so all axes are the same size. On the deck's own plots:
+  // the values under the pointer (with x shared, the same x is marked in
+  // every panel), drag to zoom in (a flat drag zooms the x axis only; a
+  // shared axis zooms in every panel), double-click or the ⟲ button to zoom
+  // out, a legend entry hides / shows its lines in every panel. A line or
+  // panel with a step spec gets data-spec, so showStep hides it; the axes
+  // always include every line.
   const plotData = [];
   const PLOT_LW = 0.8 * PX_PER_PT;               // line width = 0.8pt, as in the PDF
   const DASH = { dashed: "9 6", dotted: "2.5 5" };
@@ -1189,26 +1196,31 @@
     return (Math.abs(v) < st * 1e-9 ? 0 : v).toFixed(d).replace("-", "−");
   }
   const valueText = (v) => (+v.toPrecision(5)).toString().replace("-", "−");
-  function plotRange(P, off, view) {
-    const ax = P.axis;
+  // the axis ranges of panel i: given (xmin, ... of the panel or the plot),
+  // zoomed, or from the data
+  // -- of every panel along a shared axis; y over the lines shown in x0..x1
+  function panelRange(P, i, views, off) {
+    const ax = { ...P.axis, ...P.panels[i].axis }, view = views[i] || {};
     let x0 = ax.xmin, x1 = ax.xmax;
     if (x0 === undefined || x1 === undefined) {
       let lo = Infinity, hi = -Infinity;
-      P.series.forEach((s) => s.x.forEach((x) => { lo = Math.min(lo, x); hi = Math.max(hi, x); }));
+      (P.share.x ? P.panels : [P.panels[i]]).forEach((p) => p.series.forEach((s) =>
+        s.x.forEach((x) => { if (x < lo) lo = x; if (x > hi) hi = x; })));
+      if (lo > hi) { lo = 0; hi = 1; }
       if (x0 === undefined) x0 = lo;
       if (x1 === undefined) x1 = hi;
     }
-    if (view) [x0, x1] = view.x;
-    let y0 = view && view.y ? view.y[0] : ax.ymin, y1 = view && view.y ? view.y[1] : ax.ymax;
-    if (y0 === undefined || y1 === undefined) {   // over the lines shown, within x0..x1
+    if (view.x) [x0, x1] = view.x;
+    let y0 = view.y ? view.y[0] : ax.ymin, y1 = view.y ? view.y[1] : ax.ymax;
+    if (y0 === undefined || y1 === undefined) {
       let lo = Infinity, hi = -Infinity;
-      P.series.forEach((s, i) => {
-        if (off.has(i)) return;
+      (P.share.y ? P.panels : [P.panels[i]]).forEach((p) => p.series.forEach((s) => {
+        if (off.has(s.key)) return;
         s.x.forEach((x, k) => {
           const y = s.y[k];
-          if (y !== null && x >= x0 && x <= x1) { lo = Math.min(lo, y); hi = Math.max(hi, y); }
+          if (y !== null && x >= x0 && x <= x1) { if (y < lo) lo = y; if (y > hi) hi = y; }
         });
-      });
+      }));
       if (lo > hi) { lo = 0; hi = 1; }
       const pad = (hi - lo || Math.abs(hi) || 1) * 0.05;
       if (y0 === undefined) y0 = lo - pad;
@@ -1246,63 +1258,89 @@
     return d;
   }
   function drawPlot(el) {
-    const P = plotData[el.dataset.plot], area = el.querySelector(".plot-area");
-    if (!P || !area) return;
-    const W = area.clientWidth, H = area.clientHeight;
-    if (!W || !H) return;
-    const off = el._off || new Set(), r = plotRange(P, off, el._view);
-    const fsz = parseFloat(getComputedStyle(area).fontSize) || 24;
-    const xt = niceTicks(r.x0, r.x1, Math.max(2, Math.round(W / (5.5 * fsz))));
-    const yt = niceTicks(r.y0, r.y1, Math.max(2, Math.round(H / (2.6 * fsz))));
-    const ylabs = yt.ticks.map((v) => tickText(v, yt.step));
-    const xlabs = xt.ticks.map((v) => tickText(v, xt.step));
-    const L = Math.max(...ylabs.map((t) => t.length)) * 0.56 * fsz + 0.6 * fsz;
-    const R = 0.4 * fsz + Math.min(0.3 * fsz * xlabs[xlabs.length - 1].length, 0.15 * W);
-    const T = 0.6 * fsz, B = 1.45 * fsz;
-    const w = Math.max(10, W - L - R), h = Math.max(10, H - T - B);
-    const sx = (x) => ((x - r.x0) / (r.x1 - r.x0)) * w;
-    const sy = (y) => h - ((y - r.y0) / (r.y1 - r.y0)) * h;
-    let g = "";
-    yt.ticks.forEach((v, i) => {
-      const y = sy(v).toFixed(1);
-      if (P.grid) g += `<line class="plot-grid" x1="0" x2="${w}" y1="${y}" y2="${y}"/>`;
-      g += `<line class="plot-tick" x1="0" x2="${0.25 * fsz}" y1="${y}" y2="${y}"/>` +
-           `<text x="${-0.3 * fsz}" y="${y}" dy="0.35em" text-anchor="end">${ylabs[i]}</text>`;
+    const P = plotData[el.dataset.plot], box = el.querySelector(".plot-panels");
+    if (!P || !box || !box.clientWidth || !box.clientHeight) return;
+    const areas = [...el.querySelectorAll(".plot-area")];
+    const C = P.cols, R = P.rows, n = P.panels.length;
+    const views = el._views || [], off = el._off || new Set();
+    const fsz = parseFloat(getComputedStyle(areas[0]).fontSize) || 24;
+    const ranges = P.panels.map((_, i) => panelRange(P, i, views, off));
+    const cw = box.clientWidth / C, ch = box.clientHeight / R;     // tick counts: roughly
+    const ticks = ranges.map((r) => {
+      const xt = niceTicks(r.x0, r.x1, Math.max(2, Math.round(cw / (5.5 * fsz))));
+      const yt = niceTicks(r.y0, r.y1, Math.max(2, Math.round(ch / (2.6 * fsz))));
+      return { xt, yt, xl: xt.ticks.map((v) => tickText(v, xt.step)),
+               yl: yt.ticks.map((v) => tickText(v, yt.step)) };
     });
-    xt.ticks.forEach((v, i) => {
-      const x = sx(v).toFixed(1);
-      if (P.grid) g += `<line class="plot-grid" x1="${x}" x2="${x}" y1="0" y2="${h}"/>`;
-      g += `<line class="plot-tick" x1="${x}" x2="${x}" y1="${h}" y2="${h - 0.25 * fsz}"/>` +
-           `<text x="${x}" y="${h + 1.05 * fsz}" text-anchor="middle">${xlabs[i]}</text>`;
+    const row = (i) => Math.floor(i / C), col = (i) => i % C;
+    const showY = (i) => !P.share.y || col(i) === 0;            // tick labels shown
+    const showX = (i) => !P.share.x || i + C >= n;              // (nothing below)
+    const pad = 0.35 * fsz, T = 0.6 * fsz, B = 1.45 * fsz;
+    const Lt = Math.max(...ticks.map((t) => Math.max(...t.yl.map((s) => s.length)))) * 0.56 * fsz + 0.6 * fsz;
+    const Rt = 0.4 * fsz + Math.min(0.15 * cw,
+      Math.max(...ticks.map((t) => 0.3 * fsz * t.xl[t.xl.length - 1].length)));
+    const sharedCols = P.share.y && C > 1, sharedRows = P.share.x && R > 1;
+    if (n > 1) {                         // the outer column / row also holds the tick labels
+      const cs = getComputedStyle(box);
+      const cg = parseFloat(cs.columnGap) || 0, rg = parseFloat(cs.rowGap) || 0;
+      const A = (box.clientWidth - cg * (C - 1) - (Lt - pad)) / C;
+      box.style.gridTemplateColumns = sharedCols
+        ? `${(A + Lt - pad).toFixed(1)}px repeat(${C - 1}, ${A.toFixed(1)}px)` : "";
+      const Ah = (box.clientHeight - rg * (R - 1) - (B - pad)) / R;
+      box.style.gridTemplateRows = sharedRows
+        ? `repeat(${R - 1}, ${Ah.toFixed(1)}px) ${(Ah + B - pad).toFixed(1)}px` : "";
+    }
+    areas.forEach((area, i) => {
+      const W = area.clientWidth, H = area.clientHeight;
+      if (!W || !H || !P.panels[i]) return;
+      const r = ranges[i], t = ticks[i];
+      const L = sharedCols && col(i) > 0 ? pad : Lt;
+      const Bm = sharedRows && row(i) < R - 1 ? pad : B;   // above an empty cell: labels overflow
+      const w = Math.max(10, W - L - Rt), h = Math.max(10, H - T - Bm);
+      const sx = (x) => ((x - r.x0) / (r.x1 - r.x0)) * w;
+      const sy = (y) => h - ((y - r.y0) / (r.y1 - r.y0)) * h;
+      let g = "";
+      t.yt.ticks.forEach((v, k) => {
+        const y = sy(v).toFixed(1);
+        if (P.grid) g += `<line class="plot-grid" x1="0" x2="${w}" y1="${y}" y2="${y}"/>`;
+        g += `<line class="plot-tick" x1="0" x2="${0.25 * fsz}" y1="${y}" y2="${y}"/>` +
+          (showY(i) ? `<text x="${-0.3 * fsz}" y="${y}" dy="0.35em" text-anchor="end">${t.yl[k]}</text>` : "");
+      });
+      t.xt.ticks.forEach((v, k) => {
+        const x = sx(v).toFixed(1);
+        if (P.grid) g += `<line class="plot-grid" x1="${x}" x2="${x}" y1="0" y2="${h}"/>`;
+        g += `<line class="plot-tick" x1="${x}" x2="${x}" y1="${h}" y2="${h - 0.25 * fsz}"/>` +
+          (showX(i) ? `<text x="${x}" y="${h + 1.05 * fsz}" text-anchor="middle">${t.xl[k]}</text>` : "");
+      });
+      const lines = P.panels[i].series.map((s) => `<path class="plot-line" d="${linePath(s, sx, sy, r.x0, r.x1)}" ` +
+        `stroke="${s.color}" stroke-width="${PLOT_LW.toFixed(2)}"` +
+        (DASH[s.style] ? ` stroke-dasharray="${DASH[s.style]}"` : "") +
+        (s.spec ? ` data-spec="${esc(s.spec)}"` : "") +
+        (off.has(s.key) ? ' style="display:none"' : "") + "/>").join("");
+      area.querySelectorAll(":scope > svg").forEach((sv) => sv.remove());
+      area.insertAdjacentHTML("afterbegin",
+        `<svg class="plot-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+        `<g transform="translate(${L.toFixed(1)} ${T.toFixed(1)})">${g}` +
+        `<svg class="plot-lines" width="${w}" height="${h}">${lines}` +
+        `<line class="plot-cross" y1="0" y2="${h}" visibility="hidden"/><g class="plot-dots"></g>` +
+        `<rect class="plot-zoom" visibility="hidden"/></svg>` +
+        `<rect class="plot-frame" width="${w}" height="${h}"/></g></svg>`);
+      area._geo = { W, H, L, T, w, h, r, sx, sy, i };
+      const vars = [["l", L], ["t", T], ["r", W - L - w], ["b", H - T - h]];
+      vars.forEach(([k, v]) => {                   // legend, ⟲ lined up with the axes
+        area.style.setProperty("--plot-" + k, v.toFixed(1) + "px");
+        if (i === 0) el.style.setProperty("--plot-" + k, v.toFixed(1) + "px");
+      });
     });
-    const lines = P.series.map((s, i) => `<path class="plot-line" d="${linePath(s, sx, sy, r.x0, r.x1)}" ` +
-      `stroke="${s.color}" stroke-width="${PLOT_LW.toFixed(2)}"` +
-      (DASH[s.style] ? ` stroke-dasharray="${DASH[s.style]}"` : "") +
-      (s.spec ? ` data-spec="${esc(s.spec)}"` : "") +
-      (off.has(i) ? ' style="display:none"' : "") + "/>").join("");
-    area.querySelectorAll(":scope > svg").forEach((sv) => sv.remove());
-    area.insertAdjacentHTML("afterbegin",
-      `<svg class="plot-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
-      `<g transform="translate(${L.toFixed(1)} ${T.toFixed(1)})">${g}` +
-      `<svg class="plot-lines" width="${w}" height="${h}">${lines}` +
-      `<line class="plot-cross" y1="0" y2="${h}" visibility="hidden"/><g class="plot-dots"></g>` +
-      `<rect class="plot-zoom" visibility="hidden"/></svg>` +
-      `<rect class="plot-frame" width="${w}" height="${h}"/></g></svg>`);
-    el._geo = { W, H, L, T, w, h, r, sx, sy };
-    [["l", L], ["t", T], ["r", W - L - w], ["b", H - T - h]].forEach(([k, v]) =>
-      el.style.setProperty("--plot-" + k, v.toFixed(1) + "px"));   // legend, ⟲ lined up with the axes
-    el.querySelectorAll(".plot-key").forEach((k) => k.classList.toggle("off", off.has(+k.dataset.series)));
-    const reset = area.querySelector(".plot-reset");
-    if (reset) reset.hidden = !el._view;
+    el.querySelectorAll(".plot-key").forEach((k) => k.classList.toggle("off", off.has(+k.dataset.key)));
+    const reset = el.querySelector(".plot-reset");
+    if (reset) reset.hidden = !views.some((v) => v && (v.x || v.y));
     const s = el.closest(".slide");
     if (s && s === slides[idx]) showStep(s, step);  // the new lines' step visibility
   }
-  function plotsIn(root) {                        // every plot of a slide copy
-    root.querySelectorAll(".plot").forEach(drawPlot);
-  }
-  function plotPoint(el, e) {                     // pointer -> plot area pixels
-    const area = el.querySelector(".plot-area"), b = area.getBoundingClientRect();
-    const k = b.width / area.clientWidth || 1, G = el._geo;
+  function plotPoint(area, e) {                   // pointer -> axes pixels
+    const b = area.getBoundingClientRect(), G = area._geo;
+    const k = b.width / area.clientWidth || 1;
     return [(e.clientX - b.left) / k - G.L, (e.clientY - b.top) / k - G.T];
   }
   function nearest(xs, x) {                       // index of the point closest in x
@@ -1314,36 +1352,48 @@
     } else xs.forEach((v, k) => { if (Math.abs(v - x) < Math.abs(xs[best] - x)) best = k; });
     return best;
   }
-  function plotHover(el, e) {
-    const G = el._geo, P = plotData[el.dataset.plot];
-    if (!G) return;
-    const [px, py] = plotPoint(el, e), area = el.querySelector(".plot-area");
-    const tip = area.querySelector(".plot-tip"), svg = area.querySelector(".plot-lines");
-    const cross = svg.querySelector(".plot-cross"), dots = svg.querySelector(".plot-dots");
+  function plotHover(el, area, e) {
+    const G = area._geo, P = plotData[el.dataset.plot];
+    if (!G || !P) return;
+    const [px, py] = plotPoint(area, e);
     if (px < 0 || px > G.w || py < 0 || py > G.h) { plotLeave(el); return; }
     const x = G.r.x0 + (px / G.w) * (G.r.x1 - G.r.x0);
+    el.querySelectorAll(".plot-area").forEach((a) => {
+      if (a === area || P.share.x) markAt(el, P, a, x, a === area);
+      else clearArea(a);
+    });
+  }
+  // the crosshair and the values at x in one panel; the readout in the
+  // panel under the pointer only
+  function markAt(el, P, area, x, own) {
+    const G = area._geo, svg = area.querySelector(".plot-lines");
+    const panel = area.closest(".plot-panel");
+    if (!G || !svg || (panel && panel.style.visibility === "hidden")) { clearArea(area); return; }
     const paths = svg.querySelectorAll(".plot-line");
     let rows = "", circles = "", xv = null;
-    P.series.forEach((s, i) => {
+    P.panels[G.i].series.forEach((s, i) => {
       const p = paths[i];
       if (!p || p.style.display === "none" || p.style.visibility === "hidden") return;
       const k = nearest(s.x, x);
       if (s.y[k] === null || s.x[k] < G.r.x0 || s.x[k] > G.r.x1) return;
       if (xv === null || Math.abs(s.x[k] - x) < Math.abs(xv - x)) xv = s.x[k];
-      const key = el.querySelector(`.plot-key[data-series="${i}"] .plot-name`);
+      const key = el.querySelector(`.plot-key[data-key="${s.key}"] .plot-name`);
       circles += `<circle cx="${G.sx(s.x[k]).toFixed(1)}" cy="${G.sy(s.y[k]).toFixed(1)}" r="5" fill="${s.color}"/>`;
       rows += `<div><span class="plot-swatch" style="--c:${s.color}" data-style="${s.style}"></span>` +
         `${key ? `<span class="plot-name">${key.innerHTML}</span>` : ""}` +
         `<b>${valueText(s.y[k])}</b>` +
-        (s.offset ? `<i class="plot-own">at ${valueText(s.x[k] - s.offset)}</i>` : "") + "</div>";
+        ("offset" in s ? `<i class="plot-own">at ${valueText((s.x[k] - s.offset) / s.xscale)}</i>` : "") + "</div>";
     });
-    if (!rows) { plotLeave(el); return; }
-    const cx = G.sx(xv).toFixed(1);
+    if (!rows) { clearArea(area); return; }
+    const cross = svg.querySelector(".plot-cross"), cx = G.sx(xv).toFixed(1);
     cross.setAttribute("x1", cx);
     cross.setAttribute("x2", cx);
     cross.setAttribute("visibility", "visible");
-    dots.innerHTML = circles;
-    const xl = el.querySelector(".plot-xlabel");
+    svg.querySelector(".plot-dots").innerHTML = circles;
+    const tip = area.querySelector(".plot-tip");
+    if (!own) { tip.hidden = true; return; }
+    const pxl = panel && panel.querySelector(".plot-xlabel");
+    const xl = pxl && pxl.textContent.trim() ? pxl : el.querySelector(":scope > .plot-xlabel");
     tip.innerHTML = `<div class="plot-tip-x">${xl ? xl.innerHTML + " = " : ""}${valueText(xv)}</div>` + rows;
     tip.hidden = false;
     const left = G.L + G.sx(xv), right = left > G.L + G.w / 2;
@@ -1351,70 +1401,83 @@
     tip.style.right = right ? G.W - left + 14 + "px" : "";
     tip.style.top = G.T + 6 + "px";
   }
-  function plotLeave(el) {
-    const area = el.querySelector(".plot-area"), svg = area.querySelector(".plot-lines");
-    area.querySelector(".plot-tip").hidden = true;
+  function clearArea(area) {
+    const svg = area.querySelector(".plot-lines"), tip = area.querySelector(".plot-tip");
+    if (tip) tip.hidden = true;
     if (!svg) return;
     svg.querySelector(".plot-cross").setAttribute("visibility", "hidden");
     svg.querySelector(".plot-dots").innerHTML = "";
   }
+  function plotLeave(el) {
+    el.querySelectorAll(".plot-area").forEach(clearArea);
+  }
   function plotSetup(el) {
-    const area = el.querySelector(".plot-area");
-    area.insertAdjacentHTML("beforeend",
+    const areas = [...el.querySelectorAll(".plot-area")];
+    el._views = [];
+    el._off = new Set();
+    areas[0].insertAdjacentHTML("beforeend",
       '<button type="button" class="plot-reset" title="Zoom out (double-click)" hidden>⟲</button>');
+    const zoomOut = () => { el._views = []; plotLeave(el); drawPlot(el); };
     let drag = null;
-    area.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0 || e.target.closest(".plot-reset, .plot-key")) return;
-      const [px, py] = plotPoint(el, e);
-      if (px < 0 || px > el._geo.w || py < 0 || py > el._geo.h) return;
-      drag = { px, py, id: e.pointerId };
-      area.setPointerCapture(e.pointerId);
-      plotHover(el, e);
+    areas.forEach((area) => {
+      area.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0 || e.target.closest(".plot-reset, .plot-key") || !area._geo) return;
+        const [px, py] = plotPoint(area, e);
+        if (px < 0 || px > area._geo.w || py < 0 || py > area._geo.h) return;
+        drag = { area, px, py, id: e.pointerId };
+        area.setPointerCapture(e.pointerId);
+        plotHover(el, area, e);
+      });
+      area.addEventListener("pointermove", (e) => {
+        plotHover(el, area, e);
+        if (!drag || drag.area !== area || e.pointerId !== drag.id) return;
+        const G = area._geo, [px, py] = plotPoint(area, e);
+        const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
+        const flat = Math.abs(qy - drag.py) < 12;   // flat drag: x only, full height
+        const z = area.querySelector(".plot-zoom");
+        z.setAttribute("x", Math.min(drag.px, qx));
+        z.setAttribute("width", Math.abs(qx - drag.px));
+        z.setAttribute("y", flat ? 0 : Math.min(drag.py, qy));
+        z.setAttribute("height", flat ? G.h : Math.abs(qy - drag.py));
+        z.setAttribute("visibility", Math.abs(qx - drag.px) > 3 ? "visible" : "hidden");
+      });
+      const end = (e) => {
+        if (!drag || drag.area !== area || e.pointerId !== drag.id) return;
+        const G = area._geo, d = drag, [px, py] = plotPoint(area, e);
+        drag = null;
+        area.querySelector(".plot-zoom").setAttribute("visibility", "hidden");
+        if (e.type !== "pointerup") return;
+        const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
+        if (Math.abs(qx - d.px) < 8) return;           // a click / tap: just the values
+        const P = plotData[el.dataset.plot], flat = Math.abs(qy - d.py) < 12;
+        const xv = (p) => G.r.x0 + (p / G.w) * (G.r.x1 - G.r.x0);
+        const yv = (p) => G.r.y1 - (p / G.h) * (G.r.y1 - G.r.y0);
+        const xr = [xv(Math.min(d.px, qx)), xv(Math.max(d.px, qx))];
+        const yr = flat ? null : [yv(Math.max(d.py, qy)), yv(Math.min(d.py, qy))];
+        P.panels.forEach((_, j) => {               // a shared axis zooms in every panel
+          const v = el._views[j] || (el._views[j] = {});
+          if (j === G.i || P.share.x) { v.x = xr; if (flat) v.y = null; }
+          if (!flat && (j === G.i || P.share.y)) v.y = yr;
+        });
+        drawPlot(el);
+        if (e.pointerType === "mouse") plotHover(el, area, e);
+      };
+      area.addEventListener("pointerup", end);
+      area.addEventListener("pointercancel", end);
+      area.addEventListener("pointerleave", (e) => { if (!drag && e.pointerType === "mouse") plotLeave(el); });
+      area.addEventListener("dblclick", zoomOut);
+      new ResizeObserver(() => {                  // shown, or the layout changed
+        const G = area._geo;
+        if (area.clientWidth && (!G || G.W !== area.clientWidth || G.H !== area.clientHeight)) drawPlot(el);
+      }).observe(area);
     });
-    area.addEventListener("pointermove", (e) => {
-      plotHover(el, e);
-      if (!drag || e.pointerId !== drag.id) return;
-      const G = el._geo, [px, py] = plotPoint(el, e);
-      const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
-      const flat = Math.abs(qy - drag.py) < 12;   // flat drag: x only, full height
-      const z = area.querySelector(".plot-zoom");
-      z.setAttribute("x", Math.min(drag.px, qx));
-      z.setAttribute("width", Math.abs(qx - drag.px));
-      z.setAttribute("y", flat ? 0 : Math.min(drag.py, qy));
-      z.setAttribute("height", flat ? G.h : Math.abs(qy - drag.py));
-      z.setAttribute("visibility", Math.abs(qx - drag.px) > 3 ? "visible" : "hidden");
-    });
-    const end = (e) => {
-      if (!drag || e.pointerId !== drag.id) return;
-      const G = el._geo, d = drag, [px, py] = plotPoint(el, e);
-      drag = null;
-      area.querySelector(".plot-zoom").setAttribute("visibility", "hidden");
-      if (e.type !== "pointerup") return;
-      const qx = Math.max(0, Math.min(G.w, px)), qy = Math.max(0, Math.min(G.h, py));
-      if (Math.abs(qx - d.px) < 8) return;           // a click / tap: just the values
-      const xv = (p) => G.r.x0 + (p / G.w) * (G.r.x1 - G.r.x0);
-      const yv = (p) => G.r.y1 - (p / G.h) * (G.r.y1 - G.r.y0);
-      el._view = { x: [xv(Math.min(d.px, qx)), xv(Math.max(d.px, qx))],
-                   y: Math.abs(qy - d.py) < 12 ? null : [yv(Math.max(d.py, qy)), yv(Math.min(d.py, qy))] };
-      drawPlot(el);
-      if (e.pointerType === "mouse") plotHover(el, e);
-    };
-    area.addEventListener("pointerup", end);
-    area.addEventListener("pointercancel", end);
-    area.addEventListener("pointerleave", (e) => { if (!drag && e.pointerType === "mouse") plotLeave(el); });
-    const zoomOut = () => { el._view = null; plotLeave(el); drawPlot(el); };
-    area.addEventListener("dblclick", zoomOut);
-    area.querySelector(".plot-reset").addEventListener("click", zoomOut);
+    el.querySelector(".plot-reset").addEventListener("click", zoomOut);
     el.querySelectorAll(".plot-key").forEach((k) => k.addEventListener("click", () => {
-      const off = el._off || (el._off = new Set()), i = +k.dataset.series;
-      off.has(i) ? off.delete(i) : off.add(i);
+      const off = el._off, key = +k.dataset.key;
+      off.has(key) ? off.delete(key) : off.add(key);
       plotLeave(el);
       drawPlot(el);
     }));
-    new ResizeObserver(() => {                    // shown, or the layout changed
-      const G = el._geo;
-      if (area.clientWidth && (!G || G.W !== area.clientWidth || G.H !== area.clientHeight)) drawPlot(el);
-    }).observe(area);
   }
 
   // ================================================================ start

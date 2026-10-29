@@ -475,22 +475,32 @@ cite a { color: var(--blue); text-decoration: none; }
 }
 
 /* ------------------------------------------------------------ plots */
-/* \begin{slideplot}: deck.js draws the axes and lines as SVG in .plot-area
-   and sets --plot-l/t/r/b (the space around the axes) on the .plot */
+/* \begin{slideplot}: deck.js draws the axes and lines as SVG in each
+   .plot-area (one per \plotpanel, in the .plot-panels grid) and sets
+   --plot-l/t/r/b (the space around the axes) on the areas and the .plot */
 .plot { margin: 0.3em auto; display: flex; flex-direction: column; }
 .plot-main { display: flex; }
+.plot-panels {
+  flex: 1; min-width: 0; display: grid; gap: 0.35em 0.5em;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
+}
+.plot-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.plot-title { text-align: center; font-size: 0.85em; line-height: 1.25; min-height: 1.25em; }
+.plot-cell { flex: 1; display: flex; min-height: 0; }
 .plot-ylabel { flex: 0 0 1.5em; position: relative; font-size: 0.9em; }
 .plot-ylabel > span {
   position: absolute; left: 50%; top: 50%; white-space: nowrap;
   transform: translate(-50%, -50%) rotate(-90deg);
 }
 .plot-area {
-  flex: 1; min-width: 0; position: relative; aspect-ratio: 2 / 1;
+  flex: 1; min-width: 0; position: relative;
   font-size: 0.8em; line-height: 1.25;              /* tick labels: \footnotesize */
   touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair;
 }
-.plot-xlabel { text-align: center; font-size: 0.9em; line-height: 1.2; }
-.plot:has(.plot-ylabel) .plot-xlabel { padding-left: 1.5em; }
+.plot-xlabel { text-align: center; font-size: 0.9em; line-height: 1.2; min-height: 1.2em; }
+.plot-main:has(> .plot-ylabel) + .plot-xlabel,
+.plot-panel:has(.plot-ylabel) > .plot-xlabel { padding-left: 1.5em; }   /* under the axes */
 .plot-svg { position: absolute; inset: 0; overflow: visible; }
 .plot-svg text { fill: var(--text); font-family: var(--serif); }
 .plot-grid { stroke: rgba(0, 0, 0, 0.1); stroke-width: 1; }
@@ -530,6 +540,7 @@ cite a { color: var(--blue); text-decoration: none; }
   padding: 0.25em 0.55em; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .plot-tip > div { display: flex; align-items: center; gap: 0.45em; }
+.plot-tip .plot-name { flex: none; white-space: nowrap; }
 .plot-tip b { margin-left: auto; padding-left: 0.6em; font-weight: normal;
               font-variant-numeric: tabular-nums; }
 .plot-tip-x { color: var(--muted); }

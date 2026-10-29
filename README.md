@@ -172,10 +172,26 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   Options `width`, `height`, `xlabel`, `ylabel`, `xmin`, `xmax`, `ymin`,
   `ymax`, `grid`, `legend` (`north east`, `north west`, `south east`, `south
   west`, `outer east`, `outer north`, `none`); per line `x`, `y`,
-  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `offset` (added to
-  the x values, to line up series recorded at different times), `sep`,
+  `label`, `color`, `style` (`solid`, `dashed`, `dotted`), `xscale` /
+  `yscale` (the x / y values are multiplied by them: other units, e.g.
+  `xscale=1000` for s → ms, or `yscale=-1` to flip a line), `offset` (added
+  to the x values after `xscale`, to line up series recorded at different
+  times), `sep`,
   `pdfevery=N` (the PDF plots every N-th point only, for series TeX is slow
-  with); `\plotline<2->` adds a line at a step, with the axes unchanged
+  with); `\plotline<2->` adds a line at a step, with the axes unchanged.
+  Lines with the same `label` share one colour and one legend entry
+- plot panels: `\plotpanel[title=.., xlabel=.., ylabel=..]` inside a
+  `slideplot` starts a panel; the `\plotline` lines after it are drawn in it.
+  A panel's own `xmin`, `xmax`, `ymin`, `ymax` override the `slideplot`'s, on
+  an axis it does not share (e.g. `share=none`).
+  `rows` / `columns` lay the panels out (row by row; give one and the other
+  follows from the number of panels; neither: one column). `share=x`, `y`,
+  `both` or `none` (default: one column → `x`, one row → `y`, a grid →
+  `both`): a shared axis has one range, tick labels on the outer panels only,
+  and in the HTML deck linked zoom; with x shared the pointer marks the same
+  x in every panel. The `slideplot`'s `xlabel` / `ylabel` are written once,
+  centred; one legend for all panels. `\plotpanel<2->` shows a panel from a
+  step on
 - animations: `animation` environment with `\animpanel{label}{path_\N}` lines
   (`frames=first:last:step`, `fps`, `width`, `controls` — including `hover`:
   buttons only on mouse-over in HTML, none in PDF — `autoplay`, `loop`,

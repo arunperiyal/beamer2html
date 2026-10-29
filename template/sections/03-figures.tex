@@ -34,13 +34,32 @@
 % the pointer, drag to zoom in, double-click to zoom out, click a legend entry
 % to hide / show its line. \plotline<2->: a line from step 2 on.
 % Options: width, height, xlabel, ylabel, xmin, xmax, ymin, ymax, grid,
-% legend; per line x, y, label, color, style, offset (shifts the line along
-% x), sep, pdfevery.
+% legend; per line x, y, label, color, style, xscale / yscale (multiply the
+% values: xscale=1000 for s -> ms), offset (shifts the line along x), sep,
+% pdfevery.
 \begin{frame}{Plots from data}{interactive in the HTML deck}
   \begin{slideplot}[width=0.9\linewidth, height=5cm, xlabel={Time $t$ (s)},
                     ylabel={Response $y$}]
     \plotline[x=time, y=case1, label={Case 1}]{figures/sample-response.csv}
     \plotline[x=time, y=case2, label={Case 2}]{figures/sample-response.csv}
     \plotline<2->[x=time, y=case3, label={Case 3}, style=dashed]{figures/sample-response.csv}
+  \end{slideplot}
+\end{frame}
+
+% Panels: \plotpanel[title, xlabel, ylabel] starts a panel, the \plotline
+% lines after it are drawn in it. rows / columns lay them out; share=x, y,
+% both, none (default: one column -> x, one row -> y, a grid -> both): a
+% shared axis has one range and tick labels on the outer panels only, and in
+% the HTML deck zooming one panel zooms all. The slideplot's xlabel / ylabel
+% are written once; one legend for all panels (one entry per label).
+\begin{frame}{Plots in panels}{shared axes, one legend}
+  \begin{slideplot}[columns=3, width=0.95\linewidth, height=5cm, xlabel={Time $t$ (s)},
+                    ylabel={Response $y$}, legend=outer north]
+    \plotpanel[title={Case 1}]
+      \plotline[x=time, y=case1, label={Response}]{figures/sample-response.csv}
+    \plotpanel[title={Case 2}]
+      \plotline[x=time, y=case2, label={Response}]{figures/sample-response.csv}
+    \plotpanel<2->[title={Case 3}]
+      \plotline[x=time, y=case3, label={Response}]{figures/sample-response.csv}
   \end{slideplot}
 \end{frame}

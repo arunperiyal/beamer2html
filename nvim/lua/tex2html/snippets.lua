@@ -117,6 +117,12 @@ local snippets = {
 	\plotline[x=<>, y=<>, label={<>}]{<>}
 \end{slideplot}]], { i(1, "$t$"), i(2, "$y$"), i(3, "5cm"), i(4, "time"), i(5, "y"), i(6, "Case 1"), i(0, "data/file.csv") }),
 
+  snip("panels", "slideplot with panels (shared axes, one legend)", [[
+\begin{slideplot}[columns=<>, xlabel={<>}, ylabel={<>}, legend=outer north]
+	\plotpanel[title={<>}]
+		\plotline[x=<>, y=<>, label={<>}]{<>}
+\end{slideplot}]], { i(1, "2"), i(2, "$t$"), i(3, "$y$"), i(4, "Case 1"), i(5, "time"), i(6, "y"), i(7, "Label"), i(0, "data/file.csv") }),
+
   snip("annot", "annotate: shapes over a figure (grid shows the 0..1 coordinates)", [[
 \begin{figure}
 	\begin{annotate}[grid]

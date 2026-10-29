@@ -6,6 +6,15 @@ html/deck.js -- mixin for Converter.
       \\plotline<2->[x=time, y=aleDisp_y, label={$U_r = 6$}]{data/U6/data_dy.csv}
     \\end{slideplot}
 
+Panels side by side or stacked, with shared axes and one legend:
+
+    \\begin{slideplot}[rows=2, xlabel={$t$}, legend=outer east]
+      \\plotpanel[ylabel={$y/D$}]
+        \\plotline[x=time, y=disp, label=Helical]{data/helical.csv}
+      \\plotpanel[ylabel={$C_L$}]
+        \\plotline[x=time, y=cl, label=Helical]{data/helical.csv}
+    \\end{slideplot}
+
 The data files are read here and their columns embedded in the page (a deck
 opened as a file cannot load them itself); the PDF plots the same files with
 pgfplots.
@@ -25,6 +34,7 @@ SEPARATORS = {"comma": ",", "semicolon": ";", "tab": "\t", "space": None}
 LEGEND = ("north east", "north west", "south east", "south west", "outer east", "outer north",
           "none")
 LINE_STYLES = ("solid", "dashed", "dotted")
+SHARES = ("x", "y", "both", "none")
 TOO_MANY = 200000       # points in one plot: warn, the page gets large
 
 
@@ -69,45 +79,104 @@ def column(spec, header, what, path):
 class PlotMixin:
     def env_slideplot(self, body):
         """\\begin{slideplot}[width, height, xlabel, ylabel, xmin, xmax, ymin,
-        ymax, grid, legend] with \\plotline<spec>[x, y, label, color, style,
-        offset, sep, pdfevery]{file} lines."""
+        ymax, grid, legend, rows, columns, share] with \\plotline<spec>[x, y,
+        label, color, style, offset, xscale, yscale, sep, pdfevery]{file} lines -- or with
+        \\plotpanel<spec>[title, xlabel, ylabel, xmin, xmax, ymin, ymax] lines,
+        each followed by the
+        \\plotline lines of that panel."""
         opt, j = read_opt(body, 0)
         o = keyvals(opt)
         rest = body[j:]
-        series, legend = [], []
-        for n, m in enumerate(re.finditer(r"\\plotline\b", rest)):
+        marks = list(re.finditer(r"\\plot(panel|line)\b", rest))
+        multi = any(m.group(1) == "panel" for m in marks)
+        panels = [] if multi else [{"spec": None, "opts": {}, "lines": []}]
+        for m in marks:
             spec, k = self.read_spec(rest, m.end())
             popt, k = read_opt(rest, k)
-            path, k = read_arg(rest, k)
-            line = self.plot_line(self.expand(path).strip(), keyvals(popt), n)
-            if line is None:
+            if m.group(1) == "panel":
+                panels.append({"spec": spec, "opts": keyvals(popt), "lines": []})
                 continue
-            data, label, color, style = line
-            series.append(data)
-            if label:
-                legend.append('<button type="button" class="plot-key" data-series="%d"%s>'
-                              '<span class="plot-swatch" style="--c:%s" data-style="%s"></span>'
-                              '<span class="plot-name">%s</span></button>'
-                              % (len(series) - 1, self.spec_attr(spec) +
-                                 (' data-mode="only"' if spec else ""),   # the box shrinks
-                                 color, style, label))
-            data.update(color=color, style=style, spec=spec or "")
-        if not series:
+            path, k = read_arg(rest, k)
+            if not panels:
+                warn("slideplot: \\plotline before the first \\plotpanel (left out)")
+                continue
+            panels[-1]["lines"].append((spec, keyvals(popt), self.expand(path).strip()))
+
+        # layout: rows x columns, filled row by row; the other one from the count
+        def count(key):
+            v = o.get(key)
+            if not isinstance(v, str) or not v.strip():
+                return None
+            if not v.strip().isdigit() or int(v) < 1:
+                warn("slideplot: %s=%s should be a whole number" % (key, v))
+                return None
+            return int(v)
+        rows, cols = (count("rows"), count("columns")) if multi else (1, 1)
+        n = len(panels)
+        cols = cols or (-(-n // rows) if rows else 1)
+        rows = rows or -(-n // cols)
+        if n > rows * cols:
+            warn("slideplot: %d panels do not fit in %d x %d (the last ones left out)"
+                 % (n, rows, cols))
+            panels, n = panels[:rows * cols], rows * cols
+        share = str(o.get("share", "")).strip()
+        if share and share not in SHARES:
+            warn("slideplot: share=%s (one of %s)" % (share, ", ".join(SHARES)))
+            share = ""
+        if not share:                      # stacked: x, side by side: y, grid: both
+            share = "x" if cols == 1 < rows else "y" if rows == 1 < cols else "both"
+
+        # lines: one colour and one legend entry per label, across the panels
+        colors, keys, out, used = {}, [], [], 0
+        for p in panels:
+            series = []
+            for spec, lo, path in p["lines"]:
+                line = self.plot_line(path, lo)
+                if line is None:
+                    continue
+                data, label, color, style = line
+                if label and label in colors:
+                    color, key = colors[label]
+                else:
+                    if not color:
+                        used += 1
+                        color = css_color("plotcolor%d" % ((used - 1) % 7 + 1))
+                    key = -1
+                    if label:
+                        key = len(keys)
+                        colors[label] = (color, key)
+                        keys.append((label, color, style, spec))
+                data.update(color=color, style=style, spec=spec or "", key=key)
+                series.append(data)
+            out.append({"series": series})
+        if not any(p["series"] for p in out):
             warn("slideplot: no \\plotline with data")
             return ""
-        total = sum(len(s["x"]) for s in series)
+        total = sum(len(s["x"]) for p in out for s in p["series"])
         if total > TOO_MANY:
             warn("slideplot: %d points embedded in the page -- thin the data file "
                  "if the deck gets slow" % total)
 
-        axis = {}
-        for k in ("xmin", "xmax", "ymin", "ymax"):
-            v = o.get(k)
-            if isinstance(v, str) and v.strip():
-                if number(v) is None:
-                    warn("slideplot: %s=%s is not a number" % (k, v))
-                else:
-                    axis[k] = number(v)
+        def limits(opts, what):
+            axis = {}
+            for k in ("xmin", "xmax", "ymin", "ymax"):
+                v = opts.get(k)
+                if isinstance(v, str) and v.strip():
+                    if number(v) is None:
+                        warn("%s: %s=%s is not a number" % (what, k, v))
+                    else:
+                        axis[k] = number(v)
+            return axis
+        axis = limits(o, "slideplot")
+        shared = {"x": share in ("x", "both"), "y": share in ("y", "both")}
+        for p, d in zip(panels, out):          # a panel's own range: unshared axes only
+            own = limits(p["opts"], "\\plotpanel")
+            for k in [k for k in own if shared[k[0]]]:
+                warn("\\plotpanel: %s ignored -- the %s axis is shared (share=%s)"
+                     % (k, k[0], share))
+                del own[k]
+            if own:
+                d["axis"] = own
         grid = str(o.get("grid", "true")).strip().lower() in ("true", "")
         pos = str(o.get("legend", "north east")).strip()
         if pos not in LEGEND:
@@ -118,32 +187,57 @@ class PlotMixin:
         if height and height.endswith("%"):
             warn("slideplot: height=%s -- give an absolute length (cm, pt)" % o["height"])
             height = None
-        style = "width:%s" % (width or "100%")
-        area = ' style="height:%s"' % height if height else ""
-        payload = json.dumps({"series": series, "axis": axis, "grid": grid},
+        payload = json.dumps({"panels": out, "axis": axis, "grid": grid, "rows": rows,
+                              "cols": cols, "share": shared},
                              separators=(",", ":")).replace("</", "<\\/")
 
-        def label(key):
-            v = o.get(key)
+        def text(opts, key):
+            v = opts.get(key)
             return self.inline(v).strip() if isinstance(v, str) else ""
-        xlabel, ylabel = label("xlabel"), label("ylabel")
-        keys = ('<div class="plot-legend" data-pos="%s">%s</div>' % (pos.replace(" ", "-"), "".join(legend))
-                if legend and pos != "none" else "")
-        inner, east, north = (keys, "", "") if not pos.startswith("outer") else \
-            ("", keys, "") if pos == "outer east" else ("", "", keys)
+        legend = "".join(
+            '<button type="button" class="plot-key" data-key="%d"%s>'
+            '<span class="plot-swatch" style="--c:%s" data-style="%s"></span>'
+            '<span class="plot-name">%s</span></button>'
+            % (k, self.spec_attr(spec) + (' data-mode="only"' if spec and not multi else ""),
+               html.escape(color), style, label)     # one panel: the box shrinks
+            for k, (label, color, style, spec) in enumerate(keys))
+        keybox = ('<div class="plot-legend" data-pos="%s">%s</div>' % (pos.replace(" ", "-"), legend)
+                  if legend and pos != "none" else "")
+        inner = "" if pos.startswith("outer") else keybox
+        last_row = (n - 1) // cols * cols          # first panel of the last row
+        corner = {"north east": min(cols, n) - 1, "north west": 0,
+                  "south east": n - 1, "south west": last_row}.get(pos, 0)
+        titles = [text(p["opts"], "title") for p in panels]
+        pxl = [text(p["opts"], "xlabel") for p in panels]
+        pyl = [text(p["opts"], "ylabel") for p in panels]
+        cells = []
+        for i, p in enumerate(panels):
+            cells.append(
+                '<div class="plot-panel"%s>%s<div class="plot-cell">%s'
+                '<div class="plot-area" data-panel="%d">%s<div class="plot-tip" hidden></div></div>'
+                '</div>%s</div>'
+                % (self.spec_attr(p["spec"]),
+                   '<div class="plot-title">%s</div>' % titles[i] if any(titles) else "",
+                   '<div class="plot-ylabel"><span>%s</span></div>' % pyl[i] if any(pyl) else "",
+                   i, inner if i == corner else "",
+                   '<div class="plot-xlabel">%s</div>' % pxl[i] if any(pxl) else ""))
+        xlabel, ylabel = text(o, "xlabel"), text(o, "ylabel")
         return PARA + (
-            '<div class="plot" style="%s">%s'
-            '<div class="plot-main">%s<div class="plot-area"%s>%s'
-            '<div class="plot-tip" hidden></div></div>%s</div>%s'
+            '<div class="plot%s" style="width:%s">%s'
+            '<div class="plot-main">%s<div class="plot-panels" style="--cols:%d;--rows:%d;%s">%s</div>'
+            '%s</div>%s'
             '<script type="application/json" class="plot-data">%s</script></div>'
-            % (style, north,
+            % (" plot-multi" if multi else "", width or "100%",
+               keybox if pos == "outer north" else "",
                '<div class="plot-ylabel"><span>%s</span></div>' % ylabel if ylabel else "",
-               area, inner, east,
+               cols, rows, "height:%s" % height if height else "aspect-ratio:2", "".join(cells),
+               keybox if pos == "outer east" else "",
                '<div class="plot-xlabel">%s</div>' % xlabel if xlabel else "",
                payload)) + PARA
 
-    def plot_line(self, path, o, n):
-        """One \\plotline: ({x, y}, label HTML, CSS colour, line style), or None."""
+    def plot_line(self, path, o):
+        """One \\plotline: ({x, y}, label HTML, CSS colour or None (not given),
+        line style), or None."""
         full = os.path.join(self.root, path)
         if not os.path.isfile(full):
             warn("plot data not found: %s" % path)
@@ -159,25 +253,30 @@ class PlotMixin:
         yi = column(str(o.get("y", "2")), header, "y", path)
         if xi is None or yi is None:
             return None
-        offset = o.get("offset", "")
-        offset = number(offset) if isinstance(offset, str) and offset.strip() else 0
-        if offset is None:
-            warn("\\plotline: offset=%s is not a number" % o["offset"])
-            offset = 0
+        def num(key, default):
+            v = o.get(key, "")
+            v = number(v) if isinstance(v, str) and v.strip() else default
+            if v is None:
+                warn("\\plotline: %s=%s is not a number" % (key, o[key]))
+                v = default
+            return v
+        offset, xscale, yscale = num("offset", 0), num("xscale", 1), num("yscale", 1)
+        if not xscale or not yscale:
+            warn("\\plotline: xscale / yscale = 0 (left at 1)")
+            xscale, yscale = xscale or 1, yscale or 1
         xs, ys = [], []
         for r in rows:
             x = number(r[xi]) if xi < len(r) else None
             if x is None:
                 continue
             y = number(r[yi]) if yi < len(r) else None
-            xs.append(float("%.7g" % (x + offset)))      # offset: shifted along x
-            ys.append(None if y is None else float("%.6g" % y))   # None: a gap
+            xs.append(float("%.7g" % (x * xscale + offset)))   # offset: shifted along x
+            ys.append(None if y is None else float("%.6g" % (y * yscale)))   # None: a gap
         if not xs:
             warn("\\plotline: no numbers in %s" % path)
             return None
         color = o.get("color")
-        color = css_color(color) if isinstance(color, str) and color.strip() \
-            else css_color("plotcolor%d" % (n % 7 + 1))
+        color = css_color(color) if isinstance(color, str) and color.strip() else None
         style = str(o.get("style", "solid")).strip()
         if style not in LINE_STYLES:
             warn("\\plotline: style=%s (one of %s)" % (style, ", ".join(LINE_STYLES)))
@@ -185,6 +284,6 @@ class PlotMixin:
         label = o.get("label")
         label = self.inline(label).strip() if isinstance(label, str) else ""
         data = {"x": xs, "y": ys}
-        if offset:
-            data["offset"] = offset                 # the readout also gives the file's x
-        return data, label, html.escape(color), style
+        if offset or xscale != 1:                   # the readout also gives the file's x
+            data.update(offset=offset, xscale=xscale)
+        return data, label, color, style
