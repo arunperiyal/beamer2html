@@ -100,7 +100,7 @@ Open `slides.html` and use:
 | → ↓ Space PgDn / ← ↑ PgUp | next / previous step or slide |
 | Home / End, *number* Enter | first / last / go to slide |
 | F | fullscreen |
-| S | presenter view: notes, next slide, timer (second window); on a touch screen, its ◀ ⏯ ▶ buttons, a swipe, or a tap on the next-slide preview |
+| S | presenter view: notes, next slide, timer (second window); on a touch screen, its ◀ ⏯ ▶ buttons, a swipe, or a tap on the next-slide preview. Its ▦ button (or G there) opens the slide grid in the presenter window only, so you can pick a slide while the audience keeps seeing the current one |
 | P | play / pause the animations and videos on the slide |
 | G | slide grid: every slide as a thumbnail; click one (or arrows, Enter) to go there, G / Esc to close |
 | H | help |
