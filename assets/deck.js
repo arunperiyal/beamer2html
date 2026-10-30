@@ -9,6 +9,7 @@
  *        P                    play / pause the animations and videos on the current slide
  *        G                    slide grid: every slide as a thumbnail, click one to go there
  *        S                    presenter view (notes, next slide, timer) in a new window
+ *                             (touch: its buttons, a swipe, a tap on the next preview)
  *        H                    show / hide this help
  *        <number> Enter       go to slide <number>
  */
@@ -646,15 +647,19 @@
     else if (k === "f" || k === "F") {
       document.fullscreenElement ? document.exitFullscreen()
         : document.documentElement.requestFullscreen();
-    } else if (k === "p" || k === "P") {
-      anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
-      const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
-      on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
-    } else if (k === "g" || k === "G") openGrid();
+    } else if (k === "p" || k === "P") togglePlay();
+    else if (k === "g" || k === "G") openGrid();
     else if (k === "h" || k === "H") hud.classList.toggle("show");
     else if ((k === "s" || k === "S") && !noPresenter) openPresenter();
     else return;
     e.preventDefault();
+  }
+
+  // P: play / pause the animations and videos on the current slide
+  function togglePlay() {
+    anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
+    const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
+    on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
   }
 
   // ------------------------------------------------------------ presenter view
@@ -662,13 +667,15 @@
   // a second window -- put it on the laptop screen, the slides on the
   // projector -- with the current slide, the next step or slide, the notes,
   // a clock and an elapsed-time timer. It is driven from this window and
-  // forwards its keys here, so either window can be used to navigate.
+  // forwards its keys here, so either window can be used to navigate. For a
+  // touch screen: buttons under the previews (back, play / pause, next), a
+  // swipe left / right anywhere, or a tap on the next-step preview.
   let pw = null, t0 = 0;
 
   const PRESENTER_CSS = `
     html, body { background: #15181d; color: #e8e8e8; overflow: auto; height: auto;
                  font-family: system-ui, sans-serif; margin: 0; }
-    .pv { display: flex; flex-direction: column; height: 100vh; padding: 14px;
+    .pv { touch-action: pan-y; display: flex; flex-direction: column; height: 100vh; padding: 14px;
           box-sizing: border-box; gap: 12px; }
     .pv-bar { display: flex; gap: 28px; align-items: center; font-size: 22px; }
     .pv-timer { font-variant-numeric: tabular-nums; color: #9fd4ff; font-weight: 600; }
@@ -683,6 +690,13 @@
     .pv-frame { position: relative; width: 480px; height: 270px; overflow: hidden;
                 background: #fff; border-radius: 3px; }
     .pv-frame.small { width: 384px; height: 216px; }
+    .pv-next { cursor: pointer; }
+    .pv-nav { display: flex; gap: 10px; margin-top: 10px; }
+    .pv-nav button { flex: 1; font-size: 26px; padding: 12px 0; background: #2a2f37;
+                     color: #e8e8e8; border: 1px solid #444; border-radius: 8px;
+                     cursor: pointer; touch-action: manipulation; }
+    .pv-nav .pv-go { flex: 2; }
+    .pv-nav button:active { background: #3d4450; }
     .pv-frame .deck { position: absolute; transform-origin: 0 0; }
     .pv-frame .anim-controls { display: none; }
     .pv-end { color: #777; font-size: 16px; padding: 12px 0; }
@@ -728,12 +742,33 @@
           <div class="pv-slides">
             <div class="pv-label">Current</div><div class="pv-frame pv-cur"></div>
             <div class="pv-label pv-next-label">Next</div><div class="pv-frame small pv-next"></div>
+            <div class="pv-nav">
+              <button class="pv-back" title="Previous step / slide (←)">◀</button>
+              <button class="pv-play" title="Play / pause animations and videos (P)">⏯</button>
+              <button class="pv-go" title="Next step / slide (→)">▶</button>
+            </div>
           </div>
           <div class="pv-notes"></div>
         </div>
       </div>`;
     d.addEventListener("keydown", onKey);
     d.querySelector(".pv-reset").addEventListener("click", () => { t0 = Date.now(); tick(); });
+    d.querySelector(".pv-back").addEventListener("click", prev);
+    d.querySelector(".pv-play").addEventListener("click", togglePlay);
+    d.querySelector(".pv-go").addEventListener("click", next);
+    d.querySelector(".pv-next").addEventListener("click", next);
+    let sw = null;                                 // swipe: left -> next, right -> back
+    d.addEventListener("pointerdown", (e) => {
+      sw = e.pointerType === "mouse" || !e.isPrimary ? null : { x: e.clientX, y: e.clientY };
+    });
+    d.addEventListener("pointercancel", () => { sw = null; });
+    d.addEventListener("pointerup", (e) => {
+      const t = sw;
+      sw = null;
+      if (!t) return;
+      const dx = e.clientX - t.x, dy = e.clientY - t.y;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) dx < 0 ? next() : prev();
+    });
     t0 = Date.now();
     renderPresenter();
   }
