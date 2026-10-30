@@ -9,6 +9,8 @@
  *        P                    play / pause the animations and videos on the current slide
  *        G                    slide grid: every slide as a thumbnail, click one to go there
  *        S                    presenter view (notes, next slide, timer) in a new window
+ *                             (touch: its buttons, a swipe, a tap on the next preview;
+ *                             its ▦ button or G opens the slide grid there, not on the slides)
  *        H                    show / hide this help
  *        <number> Enter       go to slide <number>
  */
@@ -646,15 +648,19 @@
     else if (k === "f" || k === "F") {
       document.fullscreenElement ? document.exitFullscreen()
         : document.documentElement.requestFullscreen();
-    } else if (k === "p" || k === "P") {
-      anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
-      const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
-      on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
-    } else if (k === "g" || k === "G") openGrid();
+    } else if (k === "p" || k === "P") togglePlay();
+    else if (k === "g" || k === "G") openGrid();
     else if (k === "h" || k === "H") hud.classList.toggle("show");
     else if ((k === "s" || k === "S") && !noPresenter) openPresenter();
     else return;
     e.preventDefault();
+  }
+
+  // P: play / pause the animations and videos on the current slide
+  function togglePlay() {
+    anims.forEach((a) => { if (slides[idx].contains(a.el)) a.toggle(); });
+    const on = videos.filter((v) => v._on), playing = on.some((v) => !v.paused);
+    on.forEach((v) => (playing ? v.pause() : playVideo(v)));   // any playing: pause all
   }
 
   // ------------------------------------------------------------ presenter view
@@ -662,13 +668,16 @@
   // a second window -- put it on the laptop screen, the slides on the
   // projector -- with the current slide, the next step or slide, the notes,
   // a clock and an elapsed-time timer. It is driven from this window and
-  // forwards its keys here, so either window can be used to navigate.
-  let pw = null, t0 = 0;
+  // forwards its keys here, so either window can be used to navigate. For a
+  // touch screen: buttons under the previews (back, play / pause, slide
+  // grid, next), a swipe left / right anywhere, or a tap on the next-step
+  // preview. Its slide grid (▦ or G) opens in the presenter window only.
+  let pw = null, t0 = 0, pgrid = null;
 
   const PRESENTER_CSS = `
     html, body { background: #15181d; color: #e8e8e8; overflow: auto; height: auto;
                  font-family: system-ui, sans-serif; margin: 0; }
-    .pv { display: flex; flex-direction: column; height: 100vh; padding: 14px;
+    .pv { touch-action: pan-y; display: flex; flex-direction: column; height: 100vh; padding: 14px;
           box-sizing: border-box; gap: 12px; }
     .pv-bar { display: flex; gap: 28px; align-items: center; font-size: 22px; }
     .pv-timer { font-variant-numeric: tabular-nums; color: #9fd4ff; font-weight: 600; }
@@ -683,6 +692,17 @@
     .pv-frame { position: relative; width: 480px; height: 270px; overflow: hidden;
                 background: #fff; border-radius: 3px; }
     .pv-frame.small { width: 384px; height: 216px; }
+    .pv-next { cursor: pointer; }
+    .pv-nav { display: flex; gap: 10px; margin-top: 10px; }
+    .pv-nav button { flex: 1; font-size: 26px; padding: 12px 0; background: #2a2f37;
+                     color: #e8e8e8; border: 1px solid #444; border-radius: 8px;
+                     cursor: pointer; touch-action: manipulation; }
+    .pv-nav .pv-go { flex: 2; }
+    .pv-nav button:active { background: #3d4450; }
+    .pv-grid-close { position: fixed; top: 12px; right: 18px; z-index: 21; width: 52px;
+                     height: 52px; font-size: 24px; border-radius: 50%; background: #2a2f37;
+                     color: #e8e8e8; border: 1px solid #555; cursor: pointer;
+                     touch-action: manipulation; }
     .pv-frame .deck { position: absolute; transform-origin: 0 0; }
     .pv-frame .anim-controls { display: none; }
     .pv-end { color: #777; font-size: 16px; padding: 12px 0; }
@@ -728,14 +748,63 @@
           <div class="pv-slides">
             <div class="pv-label">Current</div><div class="pv-frame pv-cur"></div>
             <div class="pv-label pv-next-label">Next</div><div class="pv-frame small pv-next"></div>
+            <div class="pv-nav">
+              <button class="pv-back" title="Previous step / slide (←)">◀</button>
+              <button class="pv-play" title="Play / pause animations and videos (P)">⏯</button>
+              <button class="pv-grid" title="Slide grid: pick a slide (G)">▦</button>
+              <button class="pv-go" title="Next step / slide (→)">▶</button>
+            </div>
           </div>
           <div class="pv-notes"></div>
         </div>
       </div>`;
-    d.addEventListener("keydown", onKey);
+    pgrid = null;
+    d.addEventListener("keydown", (e) => {          // G here: the grid in this window
+      if (pgrid) gridKey(e, pgrid, closePresenterGrid);
+      else if ((e.key === "g" || e.key === "G") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        openPresenterGrid();
+      } else onKey(e);
+    });
     d.querySelector(".pv-reset").addEventListener("click", () => { t0 = Date.now(); tick(); });
+    d.querySelector(".pv-back").addEventListener("click", prev);
+    d.querySelector(".pv-play").addEventListener("click", togglePlay);
+    d.querySelector(".pv-go").addEventListener("click", next);
+    d.querySelector(".pv-grid").addEventListener("click", openPresenterGrid);
+    pw.addEventListener("resize", () => sizeGrid(pgrid));
+    d.querySelector(".pv-next").addEventListener("click", next);
+    let sw = null;                                 // swipe: left -> next, right -> back
+    d.addEventListener("pointerdown", (e) => {
+      sw = e.pointerType === "mouse" || !e.isPrimary || pgrid ? null
+        : { x: e.clientX, y: e.clientY };
+    });
+    d.addEventListener("pointercancel", () => { sw = null; });
+    d.addEventListener("pointerup", (e) => {
+      const t = sw;
+      sw = null;
+      if (!t) return;
+      const dx = e.clientX - t.x, dy = e.clientY - t.y;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) dx < 0 ? next() : prev();
+    });
     t0 = Date.now();
     renderPresenter();
+  }
+
+  // the slide grid over the presenter view: the audience keeps seeing the
+  // slide while one is picked; a tap goes there, ✕ (G, Esc) closes it
+  function openPresenterGrid() {
+    if (!pw || pw.closed || pgrid) return;
+    pgrid = buildGrid(pw.document, (i) => { closePresenterGrid(); show(i, 0); });
+    const x = pw.document.createElement("button");
+    x.className = "pv-grid-close";
+    x.title = "Close (G / Esc)";
+    x.textContent = "✕";
+    x.addEventListener("click", closePresenterGrid);
+    pgrid.appendChild(x);
+  }
+  function closePresenterGrid() {
+    if (pgrid) pgrid.remove();
+    pgrid = null;
   }
 
   // copy of a slide at a given step, scaled into a preview frame
@@ -1072,14 +1141,17 @@
       (_, w) => w ? String(n).padStart(+w, "0") : String(n));
   }
   function openGrid() {
-    if (grid) return;
-    grid = document.createElement("div");
-    grid.className = "deck-grid";
+    if (!grid) grid = buildGrid(document, (i) => { closeGrid(); show(i, 0); });
+  }
+  // the grid in a document (this one, or the presenter view's); pick(i) on a click
+  function buildGrid(doc, pick) {
+    const g = doc.createElement("div");
+    g.className = "deck-grid";
     slides.forEach((s, i) => {
-      const cell = document.createElement("button");
+      const cell = doc.createElement("button");
       cell.className = "deck-grid-cell" + (i === idx ? " current" : "");
       cell.title = "Slide " + (i + 1);
-      const wrap = document.createElement("div");
+      const wrap = doc.createElement("div");
       wrap.className = "deck deck-grid-thumb";
       const c = s.cloneNode(true);
       c.classList.remove("active");
@@ -1089,35 +1161,36 @@
       c.querySelectorAll(".anim-controls").forEach((el) => el.remove());
       showStep(c, s._steps);
       wrap.appendChild(c);
-      const num = document.createElement("span");
+      const num = doc.createElement("span");
       num.className = "deck-grid-num";
       num.textContent = i + 1;
       cell.append(wrap, num);
-      cell.addEventListener("click", () => { closeGrid(); show(i, 0); });
-      grid.appendChild(cell);
+      cell.addEventListener("click", () => pick(i));
+      g.appendChild(cell);
     });
-    document.body.appendChild(grid);
-    sizeGrid();
-    const cur = grid.querySelector(".current");
+    doc.body.appendChild(g);
+    sizeGrid(g);
+    const cur = g.querySelector(".current");
     cur.scrollIntoView({ block: "center" });
     cur.focus({ preventScroll: true });
+    return g;
   }
   function closeGrid() {
     if (!grid) return;
     grid.remove();
     grid = null;
   }
-  function sizeGrid() {                        // thumbnails: the slide scaled to a cell
-    if (grid) grid.style.setProperty("--k", grid.firstChild.clientWidth / 1280);
+  function sizeGrid(g) {                       // thumbnails: the slide scaled to a cell
+    if (g) g.style.setProperty("--k", g.firstChild.clientWidth / 1280);
   }
-  addEventListener("resize", sizeGrid);
-  function gridKey(e) {
-    const cells = [...grid.children];
-    let i = cells.indexOf(document.activeElement);
+  addEventListener("resize", () => sizeGrid(grid));
+  function gridKey(e, g = grid, close = closeGrid) {
+    const cells = [...g.querySelectorAll(".deck-grid-cell")];
+    let i = cells.indexOf(g.ownerDocument.activeElement);
     if (i < 0) i = idx;
     const cols = cells.filter((c) => c.offsetTop === cells[0].offsetTop).length;
     const k = e.key;
-    if (k === "Escape" || k === "g" || k === "G") closeGrid();
+    if (k === "Escape" || k === "g" || k === "G") close();
     else if (k === "Enter" || k === " ") cells[i].click();
     else if (k === "ArrowRight") i++;
     else if (k === "ArrowLeft") i--;
@@ -1127,7 +1200,7 @@
     else if (k === "End") i = cells.length - 1;
     else return;
     e.preventDefault();
-    if (grid) cells[Math.max(0, Math.min(cells.length - 1, i))].focus();
+    if (g.isConnected) cells[Math.max(0, Math.min(cells.length - 1, i))].focus();
   }
   window.deckGrid = {
     open: openGrid, close: closeGrid,
