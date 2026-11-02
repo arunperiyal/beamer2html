@@ -1,5 +1,5 @@
-"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]]
-               [--watch]"""
+"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]
+               [--slide-range 20:30,32:35]] [--watch]"""
 import argparse
 import os
 import sys
@@ -33,6 +33,11 @@ def main(argv=None):
                          "zip as WebP, at most PX pixels wide and high (default "
                          "960) -- a much smaller zip; the project's files are "
                          "not changed")
+    ap.add_argument("--slide-range", metavar="RANGES",
+                    help="with --pack: put only these slides in the zip, e.g. 20:30,32:35 "
+                         "(numbers as the HTML deck shows them; 5 = one slide, 20: = "
+                         "from 20 on, :10 = up to 10); the deck in the zip numbers them "
+                         "from 1, and only the files they use go in")
     ap.add_argument("-w", "--watch", action="store_true",
                     help="keep running and rebuild whenever a source file "
                          "changes (like latexmk -pvc); an open deck reloads "
@@ -50,6 +55,13 @@ def main(argv=None):
                  "name goes after --pack (--pack talk.zip)" % a.output)
     if a.compress is not None and a.pack is None:
         ap.error("--compress goes with --pack")
+    if a.slide_range is not None and a.pack is None:
+        ap.error("--slide-range goes with --pack")
+    if a.slide_range is not None:
+        try:
+            ranges = parse_ranges(a.slide_range)
+        except ValueError as e:
+            ap.error("--slide-range %s: %s" % (a.slide_range, e))
     if a.compress is not None and a.compress < 64:
         ap.error("--compress %d: give the largest size in pixels, e.g. 960" % a.compress)
     out = a.output if os.path.isabs(a.output) else os.path.join(root, a.output)
@@ -62,7 +74,7 @@ def main(argv=None):
                 print("[%s] changed: %s%s" % (time.strftime("%H:%M:%S"), names, more),
                       flush=True)
             try:
-                files, _ = build(tex, root, out, live=True)
+                files, _, _ = build(tex, root, out, live=True)
                 print_warnings()
                 return files
             except Exception as e:             # keep watching; last good deck stays
@@ -72,16 +84,24 @@ def main(argv=None):
         watch(rebuild)
         return 0
 
-    _, config = build(tex, root, out)
+    _, config, slides = build(tex, root, out)
     if a.pack is not None:
-        do_pack(a.pack, root, out, config, a.compress)
+        page = None
+        if a.slide_range is not None:
+            keep = pick_slides(ranges, len(slides))
+            if not keep:
+                ap.error("--slide-range %s: the deck has %d slides" % (a.slide_range, len(slides)))
+            page = render_page(os.path.basename(tex), config, [slides[i] for i in keep])
+            print("packing slides %s (%d of %d)" % (a.slide_range, len(keep), len(slides)))
+        do_pack(a.pack, root, out, config, a.compress, page)
     print_warnings()
     return 0
 
 
 def build(tex, root, out, live=False):
     """Convert once. Returns (files whose change should trigger a rebuild,
-    DECK_CONFIG). With live=True the page reloads itself after rebuilds."""
+    DECK_CONFIG, the slides' HTML). With live=True the page reloads itself
+    after rebuilds."""
     log.warnings.clear()
     log.where = ""
     install_assets(root)                       # html/deck.js, deck.css, MathJax
@@ -114,15 +134,49 @@ def build(tex, root, out, live=False):
         for dirpath, dirs, names in os.walk(folder):
             dirs[:] = [d for d in dirs if d != "vendor"]
             files.update(os.path.join(dirpath, n) for n in names)
-    return files, config
+    return files, config, slides
 
 
-def do_pack(dest, root, out, config, size=None):
+def parse_ranges(spec):
+    """'20:30,32:35' -> [(20, 30), (32, 35)]; '5' -> (5, 5), '20:' -> (20,
+    None), ':10' -> (1, 10). Raises ValueError."""
+    out = []
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        a, sep, b = part.partition(":")
+        try:
+            lo = int(a) if a.strip() else 1
+            hi = (int(b) if b.strip() else None) if sep else lo
+        except ValueError:
+            raise ValueError("'%s' is not a slide number or first:last" % part)
+        if lo < 1 or (hi is not None and hi < lo):
+            raise ValueError("'%s': slides count from 1, first before last" % part)
+        out.append((lo, hi))
+    if not out:
+        raise ValueError("no slides given")
+    return out
+
+
+def pick_slides(ranges, count):
+    """Indexes (from 0, in deck order) of the slides in the ranges; numbers
+    past the end are warned about and left out."""
+    keep = set()
+    for lo, hi in ranges:
+        if max(lo, hi or 0) > count:
+            log.warn("--slide-range: %d%s goes past the last slide (%d)" % (
+                lo, "" if hi == lo else ":%s" % (hi or ""), count))
+        keep.update(range(lo - 1, min(hi or count, count)))
+    return sorted(keep)
+
+
+def do_pack(dest, root, out, config, size=None, page=None):
     zip_path = os.path.abspath(dest) if dest else os.path.splitext(out)[0] + ".zip"
     if os.path.relpath(out, root).startswith(".."):
         log.warn("--pack: the HTML file must be inside the project folder; not packed")
         return
-    count, size, _ = pack(root, out, zip_path, config, size)
+    count, size, _ = pack(root, out, zip_path, config, size, page)
     shown = os.path.relpath(zip_path)
     if shown.startswith(".."):
         shown = zip_path

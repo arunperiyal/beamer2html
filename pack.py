@@ -10,6 +10,9 @@ The zip holds one folder named after the zip (talk.zip -> talk/), so it
 unpacks cleanly; open talk/slides.html. Nothing else from the project (.tex,
 .bib, PDFs, unused figures) is included.
 
+With --slide-range only the chosen slides go in (and only the files they
+use); the deck numbers them from 1.
+
 With --compress the raster images and animation frames go in as WebP copies
 no larger than the given size (they are shown far smaller than they are
 usually rendered); the deck in the zip points at them. The copies are cached
@@ -164,13 +167,16 @@ def rewrite(page, conv, config):
     return page
 
 
-def pack(root, out_html, zip_path, config, size=None):
+def pack(root, out_html, zip_path, config, size=None, page=None):
     """Write zip_path with out_html and its files; with size, raster images
-    as WebP fitted in size x size pixels. The page is always named
+    as WebP fitted in size x size pixels; with page, that page in place of
+    out_html's content (some of the slides only). The page is always named
     slides.html in the zip (the viewer apps look for it), whatever -o named
     it. Returns (number of files, total bytes, missing paths)."""
-    with open(out_html, encoding="utf-8") as f:
-        page = f.read()
+    own = page is not None
+    if not own:
+        with open(out_html, encoding="utf-8") as f:
+            page = f.read()
     files = referenced_files(page, root, config)
     out_rel = os.path.relpath(out_html, root)
     conv = compress(root, files, size) if size else {}
@@ -191,7 +197,7 @@ def pack(root, out_html, zip_path, config, size=None):
                 name = os.path.join(os.path.dirname(rel), "slides.html")
             kind = zipfile.ZIP_STORED if os.path.splitext(name)[1].lower() in STORED \
                 else zipfile.ZIP_DEFLATED
-            if rel == out_rel and conv:
+            if rel == out_rel and (conv or own):
                 data = rewrite(page, conv, config).encode("utf-8")
                 info = zipfile.ZipInfo.from_file(full, os.path.join(folder, name))
                 info.compress_type = kind

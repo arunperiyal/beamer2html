@@ -24,6 +24,7 @@ python3 path/to/tex2html                 # main.tex -> slides.html
 python3 path/to/tex2html main.tex -o talk.html
 python3 path/to/tex2html --pack talk.zip # also: zip for the presenting computer
 python3 path/to/tex2html --pack --compress  # ... with the images as smaller WebP
+python3 path/to/tex2html --pack --slide-range 20:30,32:35  # ... only these slides
 python3 path/to/tex2html --watch         # rebuild on every change (like latexmk -pvc)
 ```
 
@@ -38,6 +39,12 @@ good `slides.html` in place. Ctrl+C stops it. For the PDF, run
 `html/` and exactly the images, animation frames and videos the slides use into a zip
 that unpacks to one folder; open `slides.html` inside it. Sources, the `.bib`,
 PDFs and unused figures are left out.
+
+`--slide-range 20:30,32:35` (with `--pack`) puts only those slides in the zip,
+with only the files they use — for a shorter talk from the same deck. The
+numbers are the ones the HTML deck shows; `5` is one slide, `20:` from 20 to
+the end, `:10` up to 10. The packed deck numbers its slides from 1;
+`slides.html` in the project keeps all of them.
 
 `--compress [PX]` (with `--pack`) puts the raster images and animation frames
 (PNG, JPEG, TIFF, BMP) in the zip as WebP, scaled down to at most PX pixels
@@ -230,7 +237,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `commands.py`, `environments.py`, `animation.py`, `plot.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, plots, overlay specs, TikZ pictures |
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
-| `pack.py` | `--pack`: zip of the deck and the files it uses; `--compress`: images as WebP |
+| `pack.py` | `--pack`: zip of the deck and the files it uses; `--compress`: images as WebP; `--slide-range`: some slides only |
 | `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
 | `latex/titletemplates.sty` | the beamer templates |
