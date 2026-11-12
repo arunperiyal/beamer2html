@@ -1,5 +1,5 @@
--- LuaSnip snippets for tex2html decks (titletemplates.sty), filetype tex.
--- Loaded by plugin/tex2html.lua when LuaSnip is installed. Type the trigger,
+-- LuaSnip snippets for beamer2html decks (beamer2html.sty), filetype tex.
+-- Loaded by plugin/beamer2html.lua when LuaSnip is installed. Type the trigger,
 -- pick it from the completion menu (or expand it), then <Tab> through the
 -- fields; default values can be accepted or typed over.
 
@@ -9,7 +9,7 @@ local s, i = ls.snippet, ls.insert_node
 local fmta = require("luasnip.extras.fmt").fmta
 
 local function snip(trig, desc, body, nodes)
-  return s({ trig = trig, desc = "tex2html: " .. desc }, fmta(body, nodes))
+  return s({ trig = trig, desc = "beamer2html: " .. desc }, fmta(body, nodes))
 end
 
 local snippets = {
@@ -149,4 +149,4 @@ local snippets = {
 \slideshape[color=<>]{<>}{<>}{<>}]], { i(1, "red"), i(2, "rect"), i(3, "0.1,0.1"), i(0, "0.3,0.3") }),
 }
 
-ls.add_snippets("tex", snippets, { key = "tex2html" })
+ls.add_snippets("tex", snippets, { key = "beamer2html" })
