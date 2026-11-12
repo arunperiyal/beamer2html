@@ -34,13 +34,10 @@ build again and upload the whole package again with the same form.
 | Summary | Convert beamer presentations into offline HTML slide decks |
 | Suggested CTAN directory | `/macros/latex/contrib/beamer-contrib/beamer2html` or `/support/beamer2html` (the team decides) |
 | License | LaTeX Project Public License 1.3c (bundled: Apache License 2.0 for MathJax, GUST Font License for the TeX Gyre Termes subset) |
-| Home page | https://github.com/arunperiyal/tex2html |
-| Bug tracker | https://github.com/arunperiyal/tex2html/issues |
-| Repository | https://github.com/arunperiyal/tex2html |
+| Home page | https://github.com/arunperiyal/beamer2html |
+| Bug tracker | https://github.com/arunperiyal/beamer2html/issues |
+| Repository | https://github.com/arunperiyal/beamer2html |
 | Topics (suggestion) | presentation, beamer, HTML, conversion, animation |
-
-If you rename the GitHub repository to `beamer2html` first (GitHub redirects
-the old address), use the new address in the three link fields.
 
 ### Description
 

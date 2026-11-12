@@ -54,6 +54,6 @@ a WOFF2 subset of TeX Gyre Termes (GUST Font License,
 
 ## Links
 
-Source and issues: https://github.com/arunperiyal/tex2html
+Source and issues: https://github.com/arunperiyal/beamer2html
 
 Version 1.0, 2026-11-12.
