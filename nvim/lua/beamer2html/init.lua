@@ -1,14 +1,14 @@
--- tex2html.nvim -- build, watch, open and sync tex2html decks from Neovim.
--- See :help tex2html.
+-- beamer2html.nvim -- build, watch, open and sync beamer2html decks in Neovim.
+-- See :help beamer2html.
 
 local M = {}
 
--- repository root: this file is <repo>/nvim/lua/tex2html/init.lua
+-- repository root: this file is <repo>/nvim/lua/beamer2html/init.lua
 local REPO = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
 
 M.config = {
   python = "python3",
-  tool = REPO,                -- path given to python: the tex2html package folder
+  tool = REPO,                -- path given to python: the beamer2html package folder
   main = nil,                 -- main .tex file; nil = found automatically
   output = "slides.html",
   browser = nil,              -- command to open the deck; nil = xdg-open / open
@@ -19,7 +19,7 @@ M.config = {
 local state = { watch = nil, log = {}, qf = {}, flush = nil, slides = 0, last_goto = nil }
 
 local function notify(msg, level)
-  vim.notify(msg, level or vim.log.levels.INFO, { title = "tex2html" })
+  vim.notify(msg, level or vim.log.levels.INFO, { title = "beamer2html" })
 end
 
 -- ============================================================ project files
@@ -33,10 +33,10 @@ local function has_documentclass(file)
   return false
 end
 
--- The deck's main .tex file: g/b:tex2html_main or setup{main}, the current
+-- The deck's main .tex file: g/b:beamer2html_main or setup{main}, the current
 -- file if it has \documentclass, else main.tex in this folder or a parent.
 function M.main_file()
-  local set = vim.b.tex2html_main or vim.g.tex2html_main or M.config.main
+  local set = vim.b.beamer2html_main or vim.g.beamer2html_main or M.config.main
   if set then return vim.fn.fnamemodify(set, ":p") end
   local cur = vim.api.nvim_buf_get_name(0)
   if cur:match("%.tex$") and has_documentclass(cur) then return cur end
@@ -55,7 +55,7 @@ local function root_of(main) return vim.fn.fnamemodify(main, ":h") end
 
 -- ============================================================ slide map
 -- Walk the sources in document order (following \input / \include) and
--- record where each slide starts, as tex2html numbers them: every frame and
+-- record where each slide starts, as beamer2html numbers them: every frame and
 -- every template slide (\SeminarTitleFrame, \OverviewFrame, ...).
 
 local TEMPLATE_CMDS = {
@@ -165,7 +165,7 @@ local function qf_item(text, main)
 end
 
 local function set_qf(main, items)
-  vim.fn.setqflist({}, "r", { title = "tex2html", items = items })
+  vim.fn.setqflist({}, "r", { title = "beamer2html", items = items })
   state.qf = items
 end
 
@@ -225,7 +225,7 @@ end
 local function need_main()
   local main = M.main_file()
   if not main then
-    notify("no main .tex file found (set g:tex2html_main or open main.tex)", vim.log.levels.ERROR)
+    notify("no main .tex file found (set g:beamer2html_main or open main.tex)", vim.log.levels.ERROR)
   end
   return main
 end
@@ -237,7 +237,7 @@ function M.build()
   vim.cmd("silent! wall")
   state.log = {}
   run(main, {}, { on_exit = function(code)
-    if code ~= 0 then notify("build failed -- :Tex2HtmlLog", vim.log.levels.ERROR) end
+    if code ~= 0 then notify("build failed -- :Beamer2HtmlLog", vim.log.levels.ERROR) end
   end })
 end
 
@@ -249,7 +249,7 @@ function M.watch_start()
     state.watch = nil
     vim.cmd("redrawstatus")
   end })
-  if id <= 0 then notify("could not start tex2html", vim.log.levels.ERROR); return end
+  if id <= 0 then notify("could not start beamer2html", vim.log.levels.ERROR); return end
   state.watch = { id = id, main = main }
   notify("watching " .. vim.fn.fnamemodify(main, ":~:."))
   vim.cmd("redrawstatus")
@@ -288,18 +288,18 @@ function M.open()
   local main = need_main(); if not main then return end
   local deck = deck_path(main)
   if vim.fn.filereadable(deck) == 0 then
-    notify(M.config.output .. " not built yet -- :Tex2Html", vim.log.levels.WARN); return
+    notify(M.config.output .. " not built yet -- :Beamer2Html", vim.log.levels.WARN); return
   end
   local slide, step = M.cursor_slide(main)
   local hash = slide and ("#" .. slide .. (step > 0 and ("." .. step) or "")) or ""
   open_url("file://" .. deck .. hash)
 end
 
--- move the open deck to the slide under the cursor (needs :Tex2HtmlWatch)
+-- move the open deck to the slide under the cursor (needs :Beamer2HtmlWatch)
 function M.sync(quiet)
   local main = (state.watch and state.watch.main) or need_main(); if not main then return end
   if not state.watch then
-    if not quiet then notify("sync needs :Tex2HtmlWatch (the deck must be built in watch mode)", vim.log.levels.WARN) end
+    if not quiet then notify("sync needs :Beamer2HtmlWatch (the deck must be built in watch mode)", vim.log.levels.WARN) end
     return
   end
   local slide, step = M.cursor_slide(main)
@@ -317,14 +317,14 @@ function M.log()
   vim.cmd("botright new")
   local b = vim.api.nvim_get_current_buf()
   vim.bo[b].buftype, vim.bo[b].bufhidden, vim.bo[b].swapfile = "nofile", "wipe", false
-  vim.api.nvim_buf_set_name(b, "tex2html://log")
+  vim.api.nvim_buf_set_name(b, "beamer2html://log")
   vim.api.nvim_buf_set_lines(b, 0, -1, false, #state.log > 0 and state.log or { "(no output yet)" })
   vim.bo[b].modifiable = false
 end
 
 -- copy the starter template to `dir` and open its main.tex
 function M.new(dir)
-  if not dir or dir == "" then notify("usage: :Tex2HtmlNew {directory}", vim.log.levels.ERROR); return end
+  if not dir or dir == "" then notify("usage: :Beamer2HtmlNew {directory}", vim.log.levels.ERROR); return end
   dir = vim.fn.fnamemodify(dir, ":p"):gsub("/$", "")
   if vim.fn.isdirectory(dir) == 1 and #vim.fn.readdir(dir) > 0 then
     notify(dir .. " exists and is not empty", vim.log.levels.ERROR); return
@@ -336,9 +336,9 @@ function M.new(dir)
   notify("new deck in " .. vim.fn.fnamemodify(dir, ":~"))
 end
 
--- statusline component: "tex2html: watching" while --watch runs
+-- statusline component: "beamer2html: watching" while --watch runs
 function M.status()
-  return state.watch and "tex2html: watching" or ""
+  return state.watch and "beamer2html: watching" or ""
 end
 
 -- ============================================================ setup
@@ -350,7 +350,7 @@ end
 function M.buffer_setup(buf)
   if M.config.mappings then
     local map = function(lhs, fn, desc)
-      vim.keymap.set("n", "<localleader>m" .. lhs, fn, { buffer = buf, desc = "tex2html: " .. desc })
+      vim.keymap.set("n", "<localleader>m" .. lhs, fn, { buffer = buf, desc = "beamer2html: " .. desc })
     end
     map("b", M.build, "build slides.html")
     map("w", M.watch_toggle, "watch on/off")

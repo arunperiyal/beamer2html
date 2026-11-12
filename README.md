@@ -92,18 +92,18 @@ vim.opt.rtp:append("path/to/beamer2html/nvim")   -- then :helptags path/to/beame
 
 | Command | Mapping | |
 |---------|---------|---|
-| `:Tex2Html` | `<localleader>mb` | build (warnings → quickfix) |
-| `:Tex2HtmlWatch` | `<localleader>mw` | watch on/off |
-| `:Tex2HtmlOpen` | `<localleader>mo` | open the deck at the cursor's slide |
-| `:Tex2HtmlSync` | `<localleader>ms` | move the open deck to the cursor (while watching) |
-| `:Tex2HtmlPack [zip]` | `<localleader>mp` | zip for presenting |
-| `:Tex2HtmlLog` | `<localleader>ml` | show the output |
-| `:Tex2HtmlNew {dir}` | | new deck from `template/` |
+| `:Beamer2Html` | `<localleader>mb` | build (warnings → quickfix) |
+| `:Beamer2HtmlWatch` | `<localleader>mw` | watch on/off |
+| `:Beamer2HtmlOpen` | `<localleader>mo` | open the deck at the cursor's slide |
+| `:Beamer2HtmlSync` | `<localleader>ms` | move the open deck to the cursor (while watching) |
+| `:Beamer2HtmlPack [zip]` | `<localleader>mp` | zip for presenting |
+| `:Beamer2HtmlLog` | `<localleader>ml` | show the output |
+| `:Beamer2HtmlNew {dir}` | | new deck from `template/` |
 
-`require("tex2html").setup{ autosync = true }` makes a watched deck follow the
+`require("beamer2html").setup{ autosync = true }` makes a watched deck follow the
 cursor. With LuaSnip, snippets for the templates are added (`frame`, `cols`,
 `rows`, `block`, `stab`, `lit`, `prog`, `pubs`, `note`, `fig`, `anim`, ...).
-See `:help tex2html`.
+See `:help beamer2html`.
 
 ## Presenting
 
@@ -249,7 +249,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
 | `latex/beamer2html.sty` | the beamer templates |
 | `template/` | starter deck using every template |
-| `nvim/` | Neovim plugin (`plugin/`, `lua/tex2html/`, `doc/`) |
+| `nvim/` | Neovim plugin (`plugin/`, `lua/beamer2html/`, `doc/`) |
 | `ctan/` | the CTAN package: manual source, CTAN README, `build.py` (makes the upload zip), `UPLOAD.md` (how to upload) |
 
 Requires Python 3.8+; poppler (`pdftocairo`, `pdftoppm`, `pdfimages`, `pdfinfo`) for PDF figures;
