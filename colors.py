@@ -3,7 +3,7 @@
     red            -> rgb(255,0,0)        (xcolor's values, not CSS's names)
     green!60!black -> 60% green, 40% black
     red!30         -> 30% red, 70% white
-    bannerblue     -> \\definecolor'd in titletemplates.sty or the preamble
+    bannerblue     -> \\definecolor'd in beamer2html.sty or the preamble
 """
 import re
 

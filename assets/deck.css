@@ -24,7 +24,7 @@
                   url("vendor/fonts/termes/texgyretermes-bolditalic.woff2") format("woff2"); }
 
 :root {
-  --blue:        rgb(31, 73, 125);     /* bannerblue in titletemplates.sty */
+  --blue:        rgb(31, 73, 125);     /* bannerblue in beamer2html.sty */
   --blue-soft:   rgba(31, 73, 125, 0.06);
   --on-blue:     #fff;
   --text:        #000;
@@ -115,7 +115,7 @@ html, body {
 .body ul ul > li::before { width: 0.3em; height: 0.3em; }
 .body ol li::marker { color: var(--blue); }
 
-/* pieces produced by tools/tex2html.py */
+/* pieces produced by beamer2html */
 .body .p { margin: 0.15em 0; }
 .center { text-align: center; }
 .center img { display: inline-block; }

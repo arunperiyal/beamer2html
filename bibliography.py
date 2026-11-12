@@ -20,5 +20,5 @@ def bib_to_js(bibs, root):
     text = "\n".join(texts)
     bib = ", ".join(bibs) or "no .bib file"
     with open(os.path.join(root, "html", "references.js"), "w", encoding="utf-8") as f:
-        f.write("// Generated from %s by tools/tex2html -- do not edit by hand.\n"
+        f.write("// Generated from %s by beamer2html -- do not edit by hand.\n"
                 "window.BIBTEX = String.raw`%s`;\n" % (bib, text))

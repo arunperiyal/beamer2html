@@ -310,7 +310,7 @@ class CommandsMixin:
         return '<img src="%s" style="%s" alt="">' % (html.escape(found), ";".join(style))
 
     def video(self, path, opts):
-        """<video> for \\slidevideo (titletemplates.sty); deck.js plays it with
+        """<video> for \\slidevideo (beamer2html.sty); deck.js plays it with
         its slide (data-autoplay), pauses it on leaving and keeps it to
         data-start..data-end."""
         found = resolve_video(path, self.root)

@@ -66,7 +66,7 @@ def diagram_preamble(pre):
 
 def local_packages(pre, root):
     """Fingerprint of the project's own packages in the preamble (e.g.
-    titletemplates.sty with the flow styles): editing one re-draws the
+    beamer2html.sty with the flow styles): editing one re-draws the
     pictures."""
     h = hashlib.sha1()
     for group in re.findall(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}", pre):

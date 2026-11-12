@@ -1,4 +1,4 @@
-"""slideplot environment (titletemplates.sty) -> an interactive plot drawn by
+"""slideplot environment (beamer2html.sty) -> an interactive plot drawn by
 html/deck.js -- mixin for Converter.
 
     \\begin{slideplot}[xlabel={$t$}, ylabel={$y/D$}, height=5cm]

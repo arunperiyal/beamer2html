@@ -3,7 +3,7 @@
 Changes are detected by polling modification times, so nothing has to be
 installed and it works on any OS. The list of watched files comes from each
 build (main .tex, every \\input file, the .bib, the images the slides use,
-and the tool's own deck.js/deck.css/titletemplates.sty), so files added to
+and the tool's own deck.js/deck.css/beamer2html.sty), so files added to
 the deck are picked up. A deck built in watch mode reloads itself in the
 browser after each rebuild (see the live-reload part of deck.js).
 """
