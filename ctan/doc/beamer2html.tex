@@ -1,0 +1,385 @@
+% beamer2html.tex -- the manual of beamer2html (compile: pdflatex, twice)
+%
+% Copyright (C) 2026 Arun Periyal
+% This work may be distributed and/or modified under the conditions of the
+% LaTeX Project Public License, either version 1.3c of this license or (at
+% your option) any later version (https://www.latex-project.org/lppl.txt).
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\DisableLigatures[-]{family=tt*}   % --pack, not an en dash
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs,tabularx,array}
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand\pkg{\textsf{beamer2html}}
+\newcommand\cs[1]{\texttt{\textbackslash #1}}
+\newcommand\env[1]{\texttt{#1}}
+\newcommand\opt[1]{\texttt{#1}}
+\newcommand\file[1]{\texttt{#1}}
+\newcommand\key[1]{\fbox{\footnotesize\strut #1}}
+\fvset{frame=single, framerule=0.4pt, fontsize=\small, xleftmargin=1em, xrightmargin=1em}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\title{\pkg: beamer decks as offline HTML slide decks\\[0.5ex]
+  \large version 1.0}
+\author{Arun Periyal\\ \url{https://github.com/arunperiyal/tex2html}}
+\date{2026-11-12}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent \pkg{} turns a beamer presentation into a self-contained HTML slide
+deck that runs offline in any modern browser, so animations, step-by-step
+reveals, interactive plots, videos and speaker notes work without depending
+on a particular PDF viewer. The same sources still give the PDF. It has two
+parts: the LaTeX package \file{beamer2html.sty} (title slides, title bar,
+footer, layout, tables, plots, animations, shapes, videos, flowcharts), used
+in the beamer source, and the program \texttt{beamer2html} (Python), which
+writes \file{slides.html} from that source.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+
+A beamer deck is usually presented from its PDF. That works until the deck
+needs more than a PDF viewer offers everywhere: an animation (the
+\textsf{animate} package needs Adobe Reader or a recent Okular), a video, a
+plot whose values one wants to read off, or a presenter view with notes.
+\pkg{} keeps the beamer source as the one source of the talk and adds an HTML
+version of it:
+\begin{itemize}
+\item \file{slides.html} with \file{html/} next to it: a 16:9 deck that runs in
+  any modern browser, offline, from a local file;
+\item step-by-step reveals (\cs{pause}, overlay specifications) as in the PDF;
+\item animations from image sequences, with play/pause, a time bar and
+  synchronised panels;
+\item interactive plots from data files (values under the pointer, zoom,
+  hide lines), drawn by \textsf{pgfplots} in the PDF;
+\item videos that play when their slide comes up;
+\item a presenter view (notes, next slide, timer, slide grid; touch
+  controls), a slide grid and fullscreen;
+\item one zip with exactly the files the deck uses, for the presenting
+  computer (\opt{--pack}), optionally with the images made smaller.
+\end{itemize}
+
+The program understands the LaTeX of decks written with
+\file{beamer2html.sty}: its own commands and environments, beamer frames and
+overlays, and common LaTeX (lists, figures, tables, math, citations). It does
+not understand LaTeX in general. Anything it does not know is kept as plain
+text and reported as a warning with the slide it is on, so nothing
+disappears silently.
+
+\section{Requirements and installation}
+
+\begin{itemize}
+\item Python 3.8 or later. Nothing else is needed for the conversion itself.
+\item Poppler (\texttt{pdftocairo}, \texttt{pdftoppm}, \texttt{pdfimages},
+  \texttt{pdfinfo}) for PDF figures: browsers cannot show PDF images, so
+  vector figures become SVG and figures with embedded bitmaps PNG.
+\item A TeX distribution (\texttt{pdflatex}, \texttt{pdfcrop}) and
+  Ghostscript (\texttt{gs}) for TikZ pictures, which are drawn by LaTeX
+  itself.
+\item Optional: Pillow (\texttt{pip install pillow}) for
+  \opt{--pack --compress}.
+\item For the PDF: beamer, \textsf{tikz}, \textsf{pgfplots},
+  \textsf{animate}, \textsf{biblatex} with \texttt{biber}, as usual.
+\end{itemize}
+
+\paragraph{From a TeX distribution.} When \pkg{} is installed by TeX Live or
+MiKTeX, \file{beamer2html.sty} is found by LaTeX, and the program is the
+command \texttt{beamer2html}.
+
+\paragraph{From the CTAN package or the source repository.} Unpack it
+anywhere. The program is the folder \file{scripts/beamer2html/} (in the
+repository: its top folder); run it with Python:
+\begin{Verbatim}
+python3 path/to/beamer2html [main.tex] [options]
+\end{Verbatim}
+or through the launcher \file{beamer2html.py} in that folder, which can be
+linked into a directory on the \texttt{PATH}. The program finds
+\file{beamer2html.sty} next to itself (\file{latex/} in the repository,
+\file{tex/} in the CTAN package) or through \texttt{kpsewhich}, and copies
+it into each project it converts, so the PDF build finds it too; nothing has
+to be installed into the TeX tree.
+
+\section{Quick start}
+
+The folder \file{example/} (in the repository: \file{template/}) is a
+working deck that shows every element, one section each, with the options
+explained in comments. Copy it to start a talk:
+\begin{Verbatim}
+cp -r path/to/example my-talk
+cd my-talk
+beamer2html              # -> slides.html (installs beamer2html.sty and html/)
+latexmk -pdf main.tex    # -> main.pdf
+\end{Verbatim}
+Open \file{slides.html} in a browser. Fill in the \texttt{[placeholders]} in
+\file{main.tex}, write your sections (copy the frames you need from the
+tutorial ones), change the \cs{input} lines, and delete the tutorial
+sections and the sample figures.
+
+\section{The command line}
+
+\begin{Verbatim}
+beamer2html [main.tex] [-o slides.html] [--watch]
+            [--pack [talk.zip] [--compress [PX]] [--slide-range RANGES]]
+\end{Verbatim}
+Run it in the folder of the main \file{.tex} file (default
+\file{main.tex}); all paths are relative to that folder.
+
+\medskip\noindent
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+Option & Meaning \\
+\midrule
+\opt{-o} \textit{file} & the HTML file to write (default \file{slides.html}) \\
+\opt{-w}, \opt{--watch} & keep running and rebuild whenever \file{main.tex},
+  an \cs{input} file, the \file{.bib}, an image or data file the slides use,
+  or the tool's own files change. An open deck built this way reloads itself
+  and stays on the same slide and step; a failed build leaves the last good
+  deck in place. Ctrl+C stops it. Run \texttt{latexmk -pdf -pvc main.tex}
+  alongside for the PDF. \\
+\opt{--pack} [\textit{zip}] & also write a zip with the deck and exactly the
+  images, animation frames, videos and \file{html/} files it uses (default
+  name: the HTML file's name with \file{.zip}). It unpacks to one folder;
+  open \file{slides.html} in it. Sources, the \file{.bib}, PDFs and unused
+  figures are left out. \\
+\opt{--compress} [\textit{PX}] & with \opt{--pack}: raster images and
+  animation frames (PNG, JPEG, TIFF, BMP) go into the zip as WebP, at most
+  \textit{PX} pixels wide and high (default 960). This often makes the zip
+  5--10 times smaller with no visible difference; your files are not
+  changed. Copies are cached in \file{html/cache/webp-PX/}. Needs Pillow. \\
+\opt{--slide-range} \textit{R} & with \opt{--pack}: only these slides, e.g.\
+  \texttt{20:30,32:35}; \texttt{5} is one slide, \texttt{20:} from 20 to the
+  end, \texttt{:10} up to 10. The numbers are those the HTML deck shows; the
+  packed deck numbers its slides from 1. \\
+\opt{--version} & print the version \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Each run also installs into the project: \file{beamer2html.sty} next to the
+main file; \file{html/deck.js}, \file{html/deck.css} and MathJax in
+\file{html/}; \file{html/references.js} from the \cs{addbibresource} file;
+and converted PDF figures and TikZ pictures in \file{html/cache/}. A copy of
+\file{beamer2html.sty} that was edited in the project is saved as
+\file{beamer2html.sty.bak} before it is replaced.
+
+\section{Presenting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+Key & Action \\
+\midrule
+$\rightarrow$ $\downarrow$ Space PgDn & next step or slide \\
+$\leftarrow$ $\uparrow$ PgUp & previous step or slide \\
+Home, End; \textit{number} Enter & first, last slide; go to a slide \\
+\key{F} & fullscreen \\
+\key{P} & play / pause the animations and videos on the slide \\
+\key{G} & slide grid: every slide as a thumbnail; click one to go there \\
+\key{S} & presenter view in a second window \\
+\key{H} & help \\
+swipe, tap & on a touch screen: swipe left / right, or tap the right two
+  thirds / left third \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+The presenter view shows the current slide, the next step or slide, the
+notes (\cs{note}), a clock and a timer. Put it on the laptop screen and the
+slides on the projector; either window navigates. On a touch screen it has
+buttons for back, play/pause, next and a slide grid that opens in the
+presenter window only, so a slide can be picked while the audience keeps
+seeing the current one; a swipe or a tap on the next-slide preview also
+moves on. Printing (Ctrl+P, Save as PDF) gives a static copy, one page per
+slide.
+
+On a phone or tablet, browsers do not load the files next to a local HTML
+file. The companion viewer (\url{https://arunperiyal.github.io/tex2html-viewer/},
+also an Android app) opens a \opt{--pack} zip and presents it full screen,
+offline.
+
+\section{The \texttt{beamer2html} package}
+
+Load it after beamer, together with the packages it works with:
+\begin{Verbatim}
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{beamer2html}
+\usepackage{animate}         % for the animation environment
+\usepackage[backend=biber]{biblatex}  % for \ReferencesFrame and citations
+\end{Verbatim}
+The class font size option (8pt to 20pt) scales all text, in the PDF and
+the HTML. The example deck shows every command below with its options in
+comments; this section is an overview.
+
+\subsection{Title slides and fields}
+
+Set the fields in the preamble, then use a title slide:
+\begin{Verbatim}
+\SetTitle{...}  \SetSeminar{...}  \SetDegree{...}  \SetPresenter{...}
+\SetRollNo{...} \SetSupervisor{...} \SetDepartment{...} \SetInstitute{...}
+\SetLogo{figures/logo}          % without extension; a placeholder until it exists
+\SetAuthorOne{...} \SetAuthorTwo{...} \SetConference{...}
+\SetShortTitle{...} \SetFootAuthor{...}   % footer of content slides
+\end{Verbatim}
+\cs{SeminarTitleFrame} (thesis or seminar talk), \cs{ConferenceTitleFrame}
+(two authors), \cs{OverviewFrame} (the \cs{section} names),
+\cs{ReferencesFrame} (the bibliography; a long list continues on
+``References (cont.)'' slides) and \cs{ThankYouFrame} make whole slides.
+
+\subsection{Content slides}
+
+Ordinary \verb|\begin{frame}{Title}{Subtitle}| frames get a title bar and a
+footer. These switches work in the preamble and between frames:
+\cs{TitleBarOn}/\cs{TitleBarOff}, \cs{SetTitleHeight}\verb|{len}|,
+\cs{SectionNameOn}/\cs{SectionNameOff}, \cs{FooterOn}, \cs{FooterNumberOnly},
+\cs{FooterOff}, \cs{SetTextMargins}\verb|{left}{right}| (the slide body;
+beamer's \verb|\setbeamersize{text margin left=...}| is read too),
+\cs{SetBarMargin}\verb|{len}| (title bar and footer),
+\cs{SetCaptionSize}\verb|{\footnotesize}|, and
+\cs{showdividers}/\cs{hidedividers}, an editing aid that outlines rows and
+columns.
+
+\subsection{Layout and tables}
+
+The \env{rows} environment with \verb|\begin{row}{0.35}| (a share of the
+slide height) holds beamer \env{columns}, giving a grid.
+\env{slidetable} is a table in one of four styles, \opt{plain},
+\opt{lines}, \opt{header} and \opt{striped}; its first row is the header,
+and \texttt{p\{3cm\}}, \texttt{m\{..\}}, \texttt{b\{..\}} column widths carry
+over to the HTML (\cs{slidetablestretch} sets the row spacing).
+\env{progress} with \cs{task} lines is a timeline, \env{publications} with
+\cs{pub}, \cs{pubtext} and \cs{pubsection} a list with status badges, and
+\env{litreview} with \cs{study}, \cs{studytext} a literature table.
+\cs{FigurePlaceholder} keeps the space of a figure that is not made yet.
+
+\subsection{Shapes}
+
+\verb|\begin{annotate}[grid] ... \end{annotate}| around an image or table,
+with \verb|\shape<spec>[options]{kind}{x1,y1}{x2,y2}| lines, draws over it;
+coordinates are fractions of the element, from the bottom left.
+\cs{slideshape} uses fractions of the slide, and \cs{slidegrid} shows a grid
+for reading them off. Kinds: \opt{rect}, \opt{ellipse}/\opt{circle},
+\opt{line}, \opt{arrow}, \opt{text} (\verb|{x,y}{text}|) and \opt{axes} (a
+coordinate indicator). Options: \opt{color}, \opt{width}, \opt{fill},
+\opt{opacity}, \opt{dashed}, \opt{rounded}, \opt{label}, \opt{labelpos},
+\opt{textsize}, \opt{border}. Shapes never change the layout.
+
+\subsection{Videos}
+
+\verb|\slidevideo[options]{file}| (MP4, WebM) with \opt{width},
+\opt{height}, \opt{poster}, \opt{autoplay} (when its slide or step comes
+up), \opt{loop}, \opt{muted}, \opt{controls}, \opt{start} and \opt{end} in
+seconds; \verb|\slidevideo<2->| for a step. In the PDF it is the poster (or
+a box with the file name) linking to the video, or with
+\verb|\usepackage{multimedia}| a \cs{movie}.
+
+\subsection{Plots}
+
+\begin{Verbatim}
+\begin{slideplot}[xlabel={$t$}, ylabel={$y/D$}, height=5cm]
+  \plotline[x=time, y=disp, label={$U_r = 4$}]{data/U4.csv}
+  \plotline<2->[x=time, y=disp, label={$U_r = 6$}, style=dashed]{data/U6.csv}
+\end{slideplot}
+\end{Verbatim}
+draws lines from data files (CSV or space-separated columns, optional header
+row; columns by name or by number from 1). The PDF uses \textsf{pgfplots};
+the HTML plot is interactive. Options of \env{slideplot}: \opt{width},
+\opt{height}, \opt{xlabel}, \opt{ylabel}, \opt{xmin}, \opt{xmax},
+\opt{ymin}, \opt{ymax}, \opt{grid}, \opt{legend} (\opt{north east},
+\opt{north west}, \opt{south east}, \opt{south west}, \opt{outer east},
+\opt{outer north}, \opt{none}), \opt{rows}, \opt{columns}, \opt{share}. Per
+line: \opt{x}, \opt{y}, \opt{label}, \opt{color}, \opt{style}
+(\opt{solid}, \opt{dashed}, \opt{dotted}), \opt{xscale}, \opt{yscale}
+(multiply the values), \opt{offset} (added to x, after \opt{xscale}),
+\opt{sep}, \opt{pdfevery=N} (the PDF plots every $N$-th point). Lines with
+the same label share one colour and one legend entry.
+
+\verb|\plotpanel[title=..., xlabel=..., ylabel=...]| starts a panel; the
+lines after it are drawn in it. \opt{rows}/\opt{columns} lay the panels
+out, \opt{share} (\opt{x}, \opt{y}, \opt{both}, \opt{none}) links axes, and
+a panel's own \opt{xmin}, \opt{xmax}, \opt{ymin}, \opt{ymax} apply to an
+axis it does not share. There is one legend for all panels.
+
+\subsection{Animations}
+
+\begin{Verbatim}
+\begin{animation}[frames=0:22:2, fps=3, controls=hover, dt=0.1, timebar]
+  \animpanel{Case 1}{figures/anim/case1_\N}
+  \animpanel{Case 2}{figures/anim/case2_\N}
+\end{animation}
+\end{Verbatim}
+plays image sequences in synchronised panels (\cs{N} is the frame number).
+Options: \opt{frames=first:last:step}, \opt{fps}, \opt{width},
+\opt{controls} (including \opt{hover}), \opt{autoplay}, \opt{loop},
+\opt{subcaptions}, \opt{dt} with \opt{timelabel}, \opt{timedigits},
+\opt{timeunit}, \opt{time=false}, \opt{timebar}, \opt{columns=N}; a panel
+can have its own \verb|\animpanel[frames=a:b:s, dt=...]|. In the PDF it is
+an \textsf{animate} animation. \textsf{animate}'s own \env{animateinline}
+with \cs{multiframe} is understood too.
+
+\subsection{Diagrams}
+
+\env{tikzpicture} and \cs{tikz} are drawn by LaTeX itself: each picture is
+compiled on its own with the deck's preamble, cropped and turned into one
+SVG per overlay step, so the HTML matches the PDF; overlays (\verb|\node<2->|,
+\verb|visible on=<2->|, \cs{pause} inside the picture) work as in beamer.
+The package has flowchart styles in the deck's colours: \opt{flow} on the
+picture, nodes \opt{flowbox}, \opt{flowstart}, \opt{flowdecision},
+\opt{flowio}, and \opt{flowarrow}/\opt{flowlabel}.
+
+\section{What the conversion understands}
+
+\begin{itemize}
+\item beamer: frames (\opt{[t]}, \opt{[plain]}, \cs{frametitle}),
+  \cs{section}, \cs{pause}, overlay specifications (\verb|\item<2->|,
+  \verb|[<+->]|, \cs{only}, \cs{uncover}, \cs{visible}, \cs{invisible},
+  \cs{alt}, \cs{onslide}, environments with \verb|<...>|), \env{columns},
+  \env{block}, \cs{note}, the class font size option;
+\item LaTeX: \env{figure} and \env{table} with \cs{caption} (numbered through
+  the deck), \cs{label} and \cs{ref}, lists, \env{minipage}, \env{center},
+  \env{tabular}, math (MathJax~4, in a Times font when the preamble loads
+  \textsf{newtxmath}, \textsf{mathptmx}, \textsf{txfonts} or \textsf{times},
+  else New Computer Modern), \cs{includegraphics}, font sizes and styles,
+  \cs{color}, \cs{cite}, \cs{textcite}, \cs{citet}, \cs{citeauthor},
+  \cs{href}, \cs{def} and \cs{newcommand} without arguments;
+\item everything in \file{beamer2html.sty} described above.
+\end{itemize}
+Not supported: commands with arguments defined in the document,
+\verb|\alert<...>|.
+
+\section{Decks from before the rename}
+
+\pkg{} was called \textsf{tex2html}, and its package \textsf{titletemplates}.
+A deck that loads \verb|\usepackage{titletemplates}| keeps working: its
+\file{titletemplates.sty} is updated together with \file{beamer2html.sty}.
+To move it over, change the line to \verb|\usepackage{beamer2html}|.
+
+\section{License}
+
+Copyright \copyright{} 2026 Arun Periyal. This work (the program,
+\file{deck.js}, \file{deck.css}, \file{beamer2html.sty}, the example deck
+and this manual) may be distributed and/or modified under the conditions of
+the \LaTeX{} Project Public License, either version 1.3c of this license or
+(at your option) any later version. It has the LPPL maintenance status
+``maintained''; the Current Maintainer is Arun Periyal.
+
+Bundled third-party files keep their own licenses: MathJax and its fonts
+(Apache License 2.0) and a subset of TeX Gyre Termes as WOFF2 (GUST Font
+License), both in the program's \file{assets/vendor/} folder with their
+license files.
+
+\section{Changes}
+
+\begin{description}
+\item[1.0 (2026-11-12)] First release on CTAN, as \pkg{} (formerly
+  \textsf{tex2html} with \textsf{titletemplates.sty}).
+\end{description}
+
+\end{document}

@@ -1,10 +1,10 @@
-# tex2html
+# beamer2html
 
 Converts a beamer presentation into a self-contained HTML slide deck that runs
 offline in any modern browser — so animations, step-by-step reveals and speaker
 notes work without depending on a particular PDF viewer.
 
-It is built for decks that use the bundled `titletemplates.sty` (title slides,
+It is built for decks that use the bundled `beamer2html.sty` (title slides,
 title bar, footer, rows/columns, progress timeline, publications, literature
 table). It understands that LaTeX, not LaTeX in general: anything unknown is
 kept as plain text and reported as a warning.
@@ -12,7 +12,7 @@ kept as plain text and reported as a warning.
 ## Starting a new deck
 
 ```sh
-cp -r path/to/tex2html/template my-talk     # tutorial deck: every element, one section each
+cp -r path/to/beamer2html/template my-talk     # tutorial deck: every element, one section each
 ```
 
 See [`template/README.md`](template/README.md).
@@ -20,17 +20,20 @@ See [`template/README.md`](template/README.md).
 ## Usage
 
 ```sh
-python3 path/to/tex2html                 # main.tex -> slides.html
-python3 path/to/tex2html main.tex -o talk.html
-python3 path/to/tex2html --pack talk.zip # also: zip for the presenting computer
-python3 path/to/tex2html --pack --compress  # ... with the images as smaller WebP
-python3 path/to/tex2html --pack --slide-range 20:30,32:35  # ... only these slides
-python3 path/to/tex2html --watch         # rebuild on every change (like latexmk -pvc)
+beamer2html                       # main.tex -> slides.html
+beamer2html main.tex -o talk.html
+beamer2html --pack talk.zip       # also: zip for the presenting computer
+beamer2html --pack --compress     # ... with the images as smaller WebP
+beamer2html --pack --slide-range 20:30,32:35  # ... only these slides
+beamer2html --watch               # rebuild on every change (like latexmk -pvc)
 ```
+
+`beamer2html` here is `python3 path/to/beamer2html` (the folder with
+`__main__.py`; from a TeX distribution, the `beamer2html` command).
 
 `--watch` (`-w`) keeps running and rebuilds whenever `main.tex`, an `\input`
 file, the `.bib`, an image or plot data file the slides use, or the tool's own `deck.js` /
-`deck.css` / `titletemplates.sty` changes. An open deck built this way reloads
+`deck.css` / `beamer2html.sty` changes. An open deck built this way reloads
 itself and stays on the same slide and step. A failed build leaves the last
 good `slides.html` in place. Ctrl+C stops it. For the PDF, run
 `latexmk -pdf -pvc main.tex` alongside.
@@ -61,15 +64,19 @@ project:
 
 | Installed            | From                              |
 |----------------------|-----------------------------------|
-| `titletemplates.sty` | `latex/` (the beamer templates)   |
+| `beamer2html.sty`    | `latex/` (the beamer templates)   |
 | `html/deck.js`, `html/deck.css`, `html/vendor/mathjax/` | `assets/` |
 | `html/references.js` | the `\addbibresource` `.bib` file |
 | `html/cache/*.svg`, `*.png` | PDF figures: vector ones as SVG (`pdftocairo`, sharp at any size), ones with embedded bitmaps as PNG (`pdftoppm`, at least 2000 px on the longer side) |
 | `html/cache/tikz-*` | TikZ pictures: one SVG per overlay step, compiled by LaTeX (see diagrams below); kept until the picture changes |
 
-A project copy of `titletemplates.sty` that was edited in the project is kept as
-`titletemplates.sty.bak` before being replaced. Make lasting changes here, in
+A project copy of `beamer2html.sty` that was edited in the project is kept as
+`beamer2html.sty.bak` before being replaced. Make lasting changes here, in
 `latex/` and `assets/`.
+
+Decks from before the rename load `\usepackage{titletemplates}`; they keep
+working (their `titletemplates.sty` is updated too). To move one over,
+change the line to `\usepackage{beamer2html}`.
 
 Build the PDF as usual with `latexmk -pdf main.tex` (biblatex + biber).
 
@@ -80,7 +87,7 @@ warnings in the quickfix list at their slide, and the browser opened at — or
 moved to — the slide under the cursor. Add the folder to the runtime path:
 
 ```lua
-vim.opt.rtp:append("path/to/tex2html/nvim")   -- then :helptags path/to/tex2html/nvim/doc
+vim.opt.rtp:append("path/to/beamer2html/nvim")   -- then :helptags path/to/beamer2html/nvim/doc
 ```
 
 | Command | Mapping | |
@@ -127,7 +134,7 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
 
 ## Supported LaTeX
 
-- `titletemplates.sty`: `\Set…` fields, `\SeminarTitleFrame`, `\ConferenceTitleFrame`,
+- `beamer2html.sty`: `\Set…` fields, `\SeminarTitleFrame`, `\ConferenceTitleFrame`,
   `\OverviewFrame`, `\ReferencesFrame`, `\ThankYouFrame`, `\TitleBarOn/Off`,
   `\SetTitleHeight`, `\SectionNameOn/Off`, `\FooterOn/NumberOnly/Off`,
   `\SetTextMargins{left}{right}` (slide body; also between frames — beamer's
@@ -217,7 +224,7 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   overlay step, so the HTML matches the PDF. Overlays work as in beamer:
   `\node<2->`, `visible on=<2->` (keeps the node's space), `<+->`, `\pause`
   inside the picture, and a picture after `\pause` starts at that step.
-  `titletemplates.sty` has flowchart styles in the deck's colours: `[flow]` on
+  `beamer2html.sty` has flowchart styles in the deck's colours: `[flow]` on
   the picture, nodes `flowbox`, `flowstart`, `flowdecision`, `flowio`, and
   `flowarrow` / `flowlabel`. Pictures are cached in `html/cache/` and only
   re-drawn when they, the preamble or a project `.sty` change; a picture that
@@ -231,7 +238,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 
 | Module | Role |
 |--------|------|
-| `cli.py`, `__main__.py` | command line |
+| `cli.py`, `__main__.py`, `beamer2html.py` | command line (`beamer2html.py`: a launcher to link as the `beamer2html` command) |
 | `document.py` | preamble settings, sections, frames, template slides |
 | `converter.py` | core: inline text and block flow |
 | `commands.py`, `environments.py`, `animation.py`, `plot.py`, `overlays.py`, `tikz.py` | LaTeX commands, environments, animations, plots, overlay specs, TikZ pictures |
@@ -240,9 +247,20 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `pack.py` | `--pack`: zip of the deck and the files it uses; `--compress`: images as WebP; `--slide-range`: some slides only |
 | `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
-| `latex/titletemplates.sty` | the beamer templates |
+| `latex/beamer2html.sty` | the beamer templates |
 | `template/` | starter deck using every template |
 | `nvim/` | Neovim plugin (`plugin/`, `lua/tex2html/`, `doc/`) |
+| `ctan/` | the CTAN package: manual source, CTAN README, `build.py` (makes the upload zip), `UPLOAD.md` (how to upload) |
 
 Requires Python 3.8+; poppler (`pdftocairo`, `pdftoppm`, `pdfimages`, `pdfinfo`) for PDF figures;
 a TeX distribution (`pdflatex`, `pdfcrop`) and Ghostscript (`gs`) for TikZ pictures.
+
+## License
+
+Copyright (C) 2026 Arun Periyal. beamer2html (the program, `deck.js`,
+`deck.css` and `beamer2html.sty`) may be distributed and/or modified under
+the conditions of the LaTeX Project Public License, version 1.3c or (at your
+option) any later version (https://www.latex-project.org/lppl.txt). Bundled
+third-party files keep their own licenses: MathJax (Apache-2.0,
+`assets/vendor/mathjax/LICENSE`) and TeX Gyre Termes (GUST Font License,
+`assets/vendor/fonts/termes/GUST-FONT-LICENSE.txt`).

@@ -45,7 +45,7 @@
   if (C.captionSize) document.documentElement.style.setProperty("--caption-size", C.captionSize + "em");
 
   // ------------------------------------------------------------ live reload
-  // Decks built with `tex2html --watch` check two files once a second:
+  // Decks built with `beamer2html --watch` check two files once a second:
   //  * html/build.js -- reload when it names a newer build. The URL keeps
   //    #slide.step, so the reload comes back to the same place.
   //  * html/goto.js  -- written by the editor plugin (:Tex2HtmlSync): go to

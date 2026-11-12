@@ -15,7 +15,7 @@ class AnimationMixin:
     def env_animation(self, body):
         """\\begin{animation}[fps=3, frames=a:b:step, width=, controls=, autoplay=,
         loop=, subcaptions, columns=N] with \\animpanel{label}{path with \\N} lines
-        (titletemplates.sty). Panels play in sync, labels above them."""
+        (beamer2html.sty). Panels play in sync, labels above them."""
         opt, j = read_opt(body, 0)
         o = keyvals(opt)
         fr = re.match(r"\s*(-?\d+)\s*:\s*(-?\d+)\s*(?::\s*(-?\d+))?\s*$", o.get("frames") or "")

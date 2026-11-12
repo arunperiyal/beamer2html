@@ -1,14 +1,14 @@
 # Starter deck and tutorial
 
-A working deck that shows every element of `titletemplates.sty`, one
+A working deck that shows every element of `beamer2html.sty`, one
 section per element. Each slide is a live example, and the comments above
 each frame in the `.tex` files list the options. Copy it to start a new
 presentation:
 
 ```sh
-cp -r path/to/tex2html/template my-talk
+cp -r path/to/beamer2html/template my-talk   # from CTAN: doc/example
 cd my-talk
-tex2html               # -> slides.html (installs titletemplates.sty and html/)
+beamer2html            # -> slides.html (installs beamer2html.sty and html/)
 latexmk -pdf main.tex  # -> main.pdf
 ```
 

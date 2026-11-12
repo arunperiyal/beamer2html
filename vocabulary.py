@@ -33,7 +33,7 @@ TEXT_SYMBOLS = {"&": "&amp;", "%": "%", "_": "_", "$": "$", "#": "#",
                 "{": "{", "}": "}", ",": "&thinsp;", ";": "&ensp;",
                 " ": " ", "!": "", "-": "&shy;", "/": ""}
 
-# colour names from titletemplates.sty -> CSS (others pass through: red, gray...)
+# colour names from beamer2html.sty -> CSS (others pass through: red, gray...)
 
 # \pause -> empty marker element; html/deck.js hides whatever follows the
 # k-th marker of a slide until step k is reached.

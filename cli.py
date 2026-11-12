@@ -1,13 +1,13 @@
-"""Command line:  tex2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]
+"""Command line:  beamer2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]
                [--slide-range 20:30,32:35]] [--watch]"""
 import argparse
 import os
 import sys
 import time
 
-from . import __doc__ as package_doc
+from . import __doc__ as package_doc, __version__
 from . import log
-from .assets import ASSETS, LATEX, install_assets, install_latex
+from .assets import ASSETS, STY, install_assets, install_latex
 from .document import convert
 from .pack import pack, referenced_files
 from .page import render_page
@@ -16,8 +16,9 @@ from .watch import watch
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
-        prog="tex2html", description=package_doc.split("\n\n")[0],
+        prog="beamer2html", description=package_doc.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--version", action="version", version="%(prog)s " + __version__)
     ap.add_argument("tex", nargs="?", default="main.tex",
                     help="main .tex file (default: main.tex); its folder is "
                          "the project folder all paths are relative to")
@@ -105,7 +106,7 @@ def build(tex, root, out, live=False):
     log.warnings.clear()
     log.where = ""
     install_assets(root)                       # html/deck.js, deck.css, MathJax
-    install_latex(root)                        # titletemplates.sty
+    install_latex(root)                        # beamer2html.sty
     config, slides, sources = convert(os.path.basename(tex), root)
     stamp = str(time.time_ns())
     if live:
@@ -130,10 +131,11 @@ def build(tex, root, out, live=False):
     files = set(sources)
     files.update(os.path.join(root, p) for p in used
                  if p.split(os.sep)[0] != "html" and p != os.path.relpath(out, root))
-    for folder in (ASSETS, LATEX):
-        for dirpath, dirs, names in os.walk(folder):
-            dirs[:] = [d for d in dirs if d != "vendor"]
-            files.update(os.path.join(dirpath, n) for n in names)
+    for dirpath, dirs, names in os.walk(ASSETS):
+        dirs[:] = [d for d in dirs if d != "vendor"]
+        files.update(os.path.join(dirpath, n) for n in names)
+    if STY:
+        files.add(STY)
     return files, config, slides
 
 

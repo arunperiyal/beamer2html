@@ -1,4 +1,14 @@
-% titletemplates.sty -- title slide templates for beamer
+% beamer2html.sty -- beamer templates for decks that beamer2html also turns
+% into an HTML slide deck (title slides, title bar, footer, layout, plots,
+% animations, shapes, videos).
+%
+% Copyright (C) 2026 Arun Periyal
+% This work may be distributed and/or modified under the conditions of the
+% LaTeX Project Public License, either version 1.3c of this license or (at
+% your option) any later version. The latest version of this license is in
+% https://www.latex-project.org/lppl.txt
+% This work has the LPPL maintenance status `maintained'.
+% The Current Maintainer of this work is Arun Periyal.
 %
 % Template 1 : \SeminarTitleFrame    (thesis / extension seminar)
 % Template 2 : \ConferenceTitleFrame (conference talk, two authors)
@@ -8,7 +18,7 @@
 % Fill the fields with the setter macros (see main.tex) before \begin{document}.
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{titletemplates}
+\ProvidesPackage{beamer2html}[2026/11/12 v1.0 beamer templates for beamer2html]
 
 \RequirePackage{xcolor}
 \RequirePackage{graphicx}
@@ -698,7 +708,7 @@
       { \bool_set_false:N \l__tt_anim_inbox_bool }
     \bool_if:NT \l__tt_anim_inbox_bool { \begin{minipage}{\linewidth} }
     \@ifpackageloaded { animate } { }
-      { \PackageError { titletemplates } { animation~needs~\string\usepackage{animate} } { } }
+      { \PackageError { beamer2html } { animation~needs~\string\usepackage{animate} } { } }
     % frames = first:last[:step]
     \seq_set_split:NVV \l_tmpa_seq \c_colon_str \l__tt_anim_frames_tl   % ':' is a letter here
     \int_set:Nn \l_tmpa_int { \seq_item:Nn \l_tmpa_seq { 1 } }
@@ -1589,7 +1599,7 @@
       { \int_min:nn { \g__tt_plot_panels_int } { \l__tt_plot_rows_int * \l__tt_plot_cols_int } }
     \int_compare:nNnT { \g__tt_plot_panels_int } > { \l__tt_plot_n_int }
       {
-        \msg_warning:nneee { titletemplates } { plot-panels }
+        \msg_warning:nneee { beamer2html } { plot-panels }
           { \int_use:N \g__tt_plot_panels_int } { \int_use:N \l__tt_plot_rows_int }
           { \int_use:N \l__tt_plot_cols_int }
       }
@@ -1937,11 +1947,11 @@
               }
             \group_end:
           }
-          { \msg_warning:nnn { titletemplates } { plot-file } {#3} }
+          { \msg_warning:nnn { beamer2html } { plot-file } {#3} }
       }
   }
-\msg_new:nnn { titletemplates } { plot-file } { \plotline:~data~file~'#1'~not~found. }
-\msg_new:nnn { titletemplates } { plot-panels }
+\msg_new:nnn { beamer2html } { plot-file } { \plotline:~data~file~'#1'~not~found. }
+\msg_new:nnn { beamer2html } { plot-panels }
   { slideplot:~#1~panels~do~not~fit~in~#2~x~#3~(the~last~ones~left~out). }
 \cs_new_protected:Npn \__tt_plot_column:nn #1#2
   {
@@ -2046,7 +2056,7 @@
         { header }  { \bool_set_true:N \l__tt_band_bool }
         { striped } { \bool_set_true:N \l__tt_band_bool \bool_set_true:N \l__tt_stripe_bool }
       }
-      { \PackageWarning{titletemplates}{slidetable:~unknown~style~'#1'~(plain,~lines,~header,~striped)} }
+      { \PackageWarning{beamer2html}{slidetable:~unknown~style~'#1'~(plain,~lines,~header,~striped)} }
     \__tt_build:n {#3}
     \par \centering
     \renewcommand{\arraystretch}{\slidetablestretch}
@@ -2390,12 +2400,12 @@
             { line }    { \@ttShapeLine { } }
             { arrow }   { \@ttShapeLine { -{Stealth} } }
           }
-          { \msg_warning:nnn { titletemplates } { shape } {#2} }
+          { \msg_warning:nnn { beamer2html } { shape } {#2} }
       }
       }
     \group_end:
   }
-\msg_new:nnn { titletemplates } { shape }
+\msg_new:nnn { beamer2html } { shape }
   { unknown~shape~'#1'~(use~rect,~ellipse,~circle,~line,~arrow,~text~or~axes) }
 
 % \shape / \slideshape: queue the shape (only on the overlays of <spec>)

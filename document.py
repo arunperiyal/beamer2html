@@ -4,7 +4,7 @@ import os
 import re
 
 from . import log
-from .assets import LATEX
+from .assets import STY
 from .bibliography import bib_to_js
 from .colors import read_definecolors
 from .converter import Converter
@@ -16,7 +16,7 @@ from .tikz import clean_cache, diagram_preamble, local_packages
 from .units import length_px
 from .vocabulary import REF_RE, SIZES
 
-# \SetX{...} in titletemplates.sty -> DECK_CONFIG key in deck.js
+# \SetX{...} in beamer2html.sty -> DECK_CONFIG key in deck.js
 SETTERS = {"SetTitle": "title", "SetSeminar": "seminar", "SetDegree": "degree",
            "SetPresenter": "presenter", "SetRollNo": "rollNo",
            "SetSupervisor": "supervisor", "SetDepartment": "department",
@@ -140,8 +140,9 @@ def resolve_refs(cv, html_text):
 
 def read_preamble(cv, pre):
     """\\SetX{...} fields and the option switches before \\begin{document}."""
-    with open(os.path.join(LATEX, "titletemplates.sty"), encoding="utf-8") as f:
-        read_definecolors(f.read())              # bannerblue, dividercolor, ...
+    if STY:
+        with open(STY, encoding="utf-8") as f:
+            read_definecolors(f.read())          # bannerblue, dividercolor, ...
     read_definecolors(pre)
     config, state = {"fontSize": class_font_size(pre),
                      "mathFont": math_font(pre)}, dict(DEFAULTS)
@@ -248,7 +249,7 @@ def safe_frame(cv, s, state, default, section, number):
         warn("could not convert this slide (%s: %s)" % (type(e).__name__, e))
         attrs = ' data-section="%s"' % section.replace('"', "&quot;") if section else ""
         return ('<section class="slide"%s>\n<h2>%s</h2>\n<div class="figure-placeholder">'
-                'tex2html could not convert this slide -- see the warning in the '
+                'beamer2html could not convert this slide -- see the warning in the '
                 'terminal</div>\n</section>' % (attrs, cv.inline(title or "")))
     finally:
         cv.macros = saved
