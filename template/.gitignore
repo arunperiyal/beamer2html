@@ -4,6 +4,7 @@ slides.html
 beamer2html.sty
 titletemplates.sty
 *.zip
+*.poster.jpg
 # LaTeX build files
 main.pdf
 *.aux

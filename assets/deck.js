@@ -591,7 +591,7 @@
   // the animation controls / time bar, animation images (play / pause) and
   // plots (values, zoom) keep their own meaning. Ignored while two fingers are down or the page is
   // pinch-zoomed in.
-  const TOUCH_OWN = "a, button, input, select, textarea, video, " +
+  const TOUCH_OWN = "a, button, input, select, textarea, video, .video.yt, " +
     ".anim-controls, .anim-bar, .anim img, .plot-area";
   const zoomed = () => window.visualViewport && visualViewport.scale > 1.01;
   let touch = null, fingers = 0;
@@ -821,6 +821,7 @@
     const c = slide.cloneNode(true);
     c.classList.add("active");
     c.querySelectorAll("video").forEach((v) => { v.removeAttribute("controls"); v.preload = "none"; });
+    c.querySelectorAll(".video.yt iframe").forEach((f) => f.remove());     // a copy never loads YouTube
     showStep(c, st);
     wrap.appendChild(c);
     frame.appendChild(wrap);
@@ -1158,6 +1159,7 @@
       c.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
       c.querySelectorAll("img[data-src]:not([src])").forEach((img) => { img.src = frameSrc(img); });
       c.querySelectorAll("video").forEach((v) => { v.removeAttribute("controls"); v.preload = "none"; });
+      c.querySelectorAll(".video.yt iframe").forEach((f) => f.remove());
       c.querySelectorAll(".anim-controls").forEach((el) => el.remove());
       showStep(c, s._steps);
       wrap.appendChild(c);
@@ -1235,6 +1237,47 @@
     });
   }
   let videos = [];
+
+  // \slidevideo{youtu.be/ID} -> <div class="video yt" data-yt data-start data-end
+  // data-autoplay data-loop data-muted data-nocontrols>: a poster and a play
+  // button. Playing it (click, P, or autoplay with its slide / step) adds a
+  // youtube-nocookie <iframe>, so nothing is requested from YouTube before
+  // that. It then has the same play() / pause() / paused as a <video>, so
+  // syncVideos and P treat both alike; pausing goes through the iframe's
+  // postMessage API (no YouTube script is loaded).
+  function youtubeSetup(el) {
+    let playing = false;
+    const post = (func) => {
+      const f = el.querySelector("iframe");
+      if (f && f.contentWindow) {
+        f.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }),
+                                    "https://www.youtube-nocookie.com");
+      }
+    };
+    el.play = () => {
+      playing = true;
+      if (el.querySelector("iframe")) { post("playVideo"); return; }
+      const d = el.dataset, id = d.yt;
+      const q = ["enablejsapi=1", "playsinline=1", "rel=0", "autoplay=1"];
+      if (d.start) q.push("start=" + d.start);
+      if (d.end) q.push("end=" + d.end);
+      if (d.loop !== undefined) q.push("loop=1", "playlist=" + id);
+      if (d.muted !== undefined) q.push("mute=1");
+      if (d.nocontrols !== undefined) q.push("controls=0");
+      const f = document.createElement("iframe");
+      f.src = "https://www.youtube-nocookie.com/embed/" + id + "?" + q.join("&");
+      f.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture";
+      f.allowFullscreen = true;
+      f.title = "YouTube video";
+      el.appendChild(f);
+    };
+    el.pause = () => { playing = false; post("pauseVideo"); };
+    Object.defineProperty(el, "paused", { get: () => !playing });
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("a") || el.querySelector("iframe")) return;
+      el.play();
+    });
+  }
 
   // ------------------------------------------------------------ plots
   // \begin{slideplot} -> <div class="plot"> with its data in <script
@@ -1567,8 +1610,9 @@
     drawPlot(el);
     if (hidden) s.style.display = "";
   });
-  videos = Array.from(deck.querySelectorAll("video.video"));
+  videos = Array.from(deck.querySelectorAll("video.video, .video.yt"));
   videos.forEach((v) => {
+    if (v.dataset.yt) { youtubeSetup(v); return; }
     const start = +(v.dataset.start || 0), end = +(v.dataset.end || Infinity);
     v.addEventListener("timeupdate", () => {
       if (v.currentTime < end) return;

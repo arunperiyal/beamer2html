@@ -112,6 +112,12 @@ local snippets = {
 	\caption{<>}\label{fig:<>}
 \end{figure}]], { i(1, "0.8\\linewidth"), i(2, "poster.png"), i(3, "video.mp4"), i(4, "Caption."), i(0, "name") }),
 
+  snip("youtube", "slidevideo: a YouTube video (plays when clicked; a link in the PDF)", [[
+\begin{figure}
+	\slidevideo[width=<>]{https://youtu.be/<>}
+	\caption{<>}\label{fig:<>}
+\end{figure}]], { i(1, "0.8\\linewidth"), i(2, "VIDEO_ID"), i(3, "Caption."), i(0, "name") }),
+
   snip("plot", "slideplot: lines from a data file, interactive in the HTML deck", [[
 \begin{slideplot}[xlabel={<>}, ylabel={<>}, height=<>]
 	\plotline[x=<>, y=<>, label={<>}]{<>}

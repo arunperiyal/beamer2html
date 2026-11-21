@@ -1,5 +1,5 @@
 """Command line:  beamer2html [main.tex] [-o slides.html] [--pack [talk.zip] [--compress [PX]]
-               [--slide-range 20:30,32:35]] [--watch]"""
+               [--slide-range 20:30,32:35]] [--posters] [--watch]"""
 import argparse
 import os
 import sys
@@ -9,6 +9,7 @@ from . import __doc__ as package_doc, __version__
 from . import log
 from .assets import ASSETS, STY, install_assets, install_latex
 from .document import convert
+from . import video_poster
 from .pack import pack, referenced_files
 from .page import render_page
 from .watch import watch
@@ -39,6 +40,12 @@ def main(argv=None):
                          "(numbers as the HTML deck shows them; 5 = one slide, 20: = "
                          "from 20 on, :10 = up to 10); the deck in the zip numbers them "
                          "from 1, and only the files they use go in")
+    ap.add_argument("--posters", action="store_true",
+                    help="make video posters the PDF and the deck can show: the first "
+                         "frame of each \\slidevideo file without poster= (ffmpeg, "
+                         "written as name.poster.jpg next to the video), and the "
+                         "thumbnail of each YouTube video (downloaded once to "
+                         "html/cache/); existing up-to-date ones are kept")
     ap.add_argument("-w", "--watch", action="store_true",
                     help="keep running and rebuild whenever a source file "
                          "changes (like latexmk -pvc); an open deck reloads "
@@ -65,6 +72,7 @@ def main(argv=None):
             ap.error("--slide-range %s: %s" % (a.slide_range, e))
     if a.compress is not None and a.compress < 64:
         ap.error("--compress %d: give the largest size in pixels, e.g. 960" % a.compress)
+    video_poster.enabled = a.posters
     out = a.output if os.path.isabs(a.output) else os.path.join(root, a.output)
 
     if a.watch:

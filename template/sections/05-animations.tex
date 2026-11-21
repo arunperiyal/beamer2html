@@ -85,3 +85,25 @@
     \end{column}
   \end{columns}
 \end{frame}
+
+% A video without poster=: run \texttt{beamer2html --posters} once and its first
+% frame (or the frame at start=) becomes figures/sample-video.poster.jpg, which the
+% deck and the PDF both use. A YouTube address works in the same command: the deck
+% loads YouTube only when it is played (it needs the internet); the PDF has the
+% thumbnail (html/cache/, also from --posters) as a link.
+\begin{frame}{Posters and YouTube}{\texttt{\textbackslash slidevideo}}
+  \begin{columns}[c]
+    \begin{column}{0.48\textwidth}
+      \begin{figure}
+        \slidevideo[width=\linewidth, start=1]{figures/sample-video.mp4}
+        \caption{No \texttt{poster=}: the first frame, made by \texttt{--posters}.}
+      \end{figure}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{figure}
+        \slidevideo[width=\linewidth, start=2]{https://youtu.be/jNQXAC9IVRw}
+        \caption{A YouTube video; plays when clicked.}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
