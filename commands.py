@@ -1,9 +1,11 @@
 """LaTeX commands (\\name ...) -- mixin for Converter."""
 import html
+import os
 import re
 
 from .colors import css_color
 from .images import resolve_image, resolve_video
+from . import video_poster
 from .log import warn
 from .parsing import find_end, keyvals, read_arg, read_opt
 from .units import length_css
@@ -81,7 +83,8 @@ class CommandsMixin:
             path, i = read_arg(s, i)
             res = self.video(self.expand(path).strip(), keyvals(opt))
             if spec:
-                res = res.replace("<video ", '<video data-spec="%s" ' % spec, 1)
+                res = re.sub(r"^<(\w+) ", lambda m: '<%s data-spec="%s" ' % (m.group(1), spec),
+                             res, count=1)
             return res, i, 0
         if name == "FigurePlaceholder":
             w, i = read_opt(s, i)
@@ -313,14 +316,16 @@ class CommandsMixin:
         """<video> for \\slidevideo (beamer2html.sty); deck.js plays it with
         its slide (data-autoplay), pauses it on leaving and keeps it to
         data-start..data-end."""
+        def flag(name, default):
+            v = opts.get(name, default)
+            return v is True or str(v).strip().lower() in ("true", "")
+        yt = video_poster.youtube_id(path)
+        if yt:
+            return self.youtube(yt, opts, flag)
         found = resolve_video(path, self.root)
         if not found:
             warn("video not found: %s" % path)
             found = path
-
-        def flag(name, default):
-            v = opts.get(name, default)
-            return v is True or str(v).strip().lower() in ("true", "")
         style = ["width:%s" % (length_css(opts["width"]) if isinstance(opts.get("width"), str)
                                and length_css(opts["width"]) else "100%")]
         if isinstance(opts.get("height"), str) and length_css(opts["height"]):
@@ -333,6 +338,12 @@ class CommandsMixin:
                 attrs += ' poster="%s"' % html.escape(img)
             else:
                 warn("video poster not found: %s" % poster)
+        elif os.path.isfile(os.path.join(self.root, found)):
+            auto = video_poster.poster_path(found)     # figures/flow.poster.jpg
+            if video_poster.enabled:
+                auto = video_poster.make_poster(found, self.root, opts.get("start")) or auto
+            if os.path.isfile(os.path.join(self.root, auto)):
+                attrs += ' poster="%s"' % html.escape(auto)
         times = {}
         for k in ("start", "end"):
             v = opts.get(k)
@@ -355,6 +366,52 @@ class CommandsMixin:
             attrs += " muted"
         return '<video class="video" src="%s" style="%s"%s></video>' % (
             html.escape(src), ";".join(style), attrs)
+
+
+    def youtube(self, vid, opts, flag):
+        """\\slidevideo{youtu.be/ID}: a facade (poster, play button, link) that
+        deck.js turns into a youtube-nocookie <iframe> when it is played, so
+        the page makes no request to YouTube before then."""
+        style = ["width:%s" % (length_css(opts["width"]) if isinstance(opts.get("width"), str)
+                               and length_css(opts["width"]) else "100%")]
+        if isinstance(opts.get("height"), str) and length_css(opts["height"]):
+            style.append("height:%s" % length_css(opts["height"]))
+        else:
+            style.append("aspect-ratio:16/9")
+        attrs = ' data-yt="%s"' % vid
+        times = {}
+        for k in ("start", "end"):
+            v = opts.get(k)
+            if isinstance(v, str) and v.strip():
+                try:
+                    times[k] = str(int(round(float(v))))        # YouTube takes whole seconds
+                except ValueError:
+                    warn("\\slidevideo: %s=%s is not a number of seconds" % (k, v))
+                    continue
+                attrs += ' data-%s="%s"' % (k, times[k])
+        for name, attr in (("autoplay", "data-autoplay"), ("loop", "data-loop"),
+                           ("muted", "data-muted")):
+            if flag(name, False):
+                attrs += " " + attr
+        if not flag("controls", True):
+            attrs += " data-nocontrols"
+        poster = opts.get("poster")
+        img = None
+        if isinstance(poster, str) and poster.strip():
+            img = resolve_image(self.expand(poster).strip(), self.root)
+            if not img:
+                warn("video poster not found: %s" % poster)
+        else:
+            thumb = video_poster.yt_thumb_path(vid)
+            if video_poster.enabled:
+                thumb = video_poster.fetch_thumb(vid, self.root) or thumb
+            if os.path.isfile(os.path.join(self.root, thumb)):
+                img = thumb
+        link = "https://youtu.be/%s" % vid + ("?t=" + times["start"] if "start" in times else "")
+        return ('<div class="video yt" style="%s"%s>%s<span class="yt-play"></span>'
+                '<a class="yt-link" href="%s" target="_blank" rel="noopener">youtu.be/%s</a></div>'
+                % (";".join(style), attrs,
+                   '<img src="%s" alt="">' % html.escape(img) if img else "", link, vid))
 
 
 SHAPES = ("rect", "ellipse", "circle", "line", "arrow", "text", "axes")

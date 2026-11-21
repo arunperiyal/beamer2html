@@ -928,12 +928,26 @@
 % In the PDF: the poster -- or a box with the file name -- linking to the
 % video; with \usepackage{multimedia}, a \movie instead, which plays in the
 % PDF viewers that support it (Okular, ...).
+% Without poster=, name.poster.jpg next to the video is used when there is one
+% (`beamer2html --posters` takes it from the video's first frame, or from
+% start=).
+%   \slidevideo[width=0.7\linewidth, start=30]{https://youtu.be/dQw4w9WgXcQ}
+% A YouTube video (youtu.be/ID, youtube.com/watch?v=ID, /embed/ID, /shorts/ID,
+% youtube:ID): in the HTML deck a player that loads YouTube only when played
+% (needs the internet); in the PDF the poster -- html/cache/yt-ID.jpg from
+% `beamer2html --posters`, or a box with youtu.be/ID -- as a link to it.
+% Write _ and & as they are in the address (not \_). Options: width, height,
+% poster, start, end, autoplay, loop, muted, controls (the PDF uses only the
+% first three and start).
 \ExplSyntaxOn
 \dim_new:N \l__tt_video_w_dim
 \dim_new:N \l__tt_video_h_dim
 \box_new:N \l__tt_video_box
 \clist_new:N \l__tt_video_movie_clist
 \tl_new:N \l__tt_video_file_tl
+\str_new:N \l__tt_video_url_str
+\seq_new:N \l__tt_video_seq
+\bool_new:N \l__tt_video_yt_bool
 \keys_define:nn { tt / video }
   {
     width    .tl_set:N   = \l__tt_video_width_tl,
@@ -960,10 +974,39 @@
     \group_begin:
     \keys_set:nn { tt / video } {#2}
     \tl_set:Nn \l__tt_video_file_tl {#3}           % the extension may be left out
-    \clist_map_inline:nn { .mp4, .webm, .m4v, .mov, .ogv }
+    \str_set:Nn \l_tmpa_str {#3}
+    \bool_set_false:N \l__tt_video_yt_bool
+    \regex_extract_once:nVNT
+      { (?: youtu\.be/ | [?&]v= | embed/ | shorts/ | live/ | youtube: ) ( [A-Za-z0-9_-]{11} ) }
+      \l_tmpa_str \l__tt_video_seq
+      {                                              % a YouTube address: only a link
+        \bool_set_true:N \l__tt_video_yt_bool
+        \tl_set:Nx \l__tt_video_file_tl { youtu.be/ \seq_item:Nn \l__tt_video_seq { 2 } }
+        \str_set:Nx \l__tt_video_url_str
+          { https://youtu.be/ \seq_item:Nn \l__tt_video_seq { 2 } }
+        \tl_if_empty:NF \l__tt_video_start_tl
+          { \str_put_right:Nx \l__tt_video_url_str { ?t= \fp_eval:n { round ( \l__tt_video_start_tl ) } } }
+        \tl_if_empty:NT \l__tt_video_poster_tl     % html/cache/yt-ID.jpg (beamer2html --posters)
+          {
+            \tl_set:Nx \l_tmpa_tl { html/cache/yt- \seq_item:Nn \l__tt_video_seq { 2 } .jpg }
+            \exp_args:NV \file_if_exist:nT \l_tmpa_tl
+              { \tl_set_eq:NN \l__tt_video_poster_tl \l_tmpa_tl }
+          }
+      }
+    \bool_if:NF \l__tt_video_yt_bool
       {
-        \file_if_exist:nT { #3 ##1 }
-          { \tl_set:Nn \l__tt_video_file_tl { #3 ##1 } \clist_map_break: }
+        \clist_map_inline:nn { .mp4, .webm, .m4v, .mov, .ogv }
+          {
+            \file_if_exist:nT { #3 ##1 }
+              { \tl_set:Nn \l__tt_video_file_tl { #3 ##1 } \clist_map_break: }
+          }
+        \tl_if_empty:NT \l__tt_video_poster_tl     % name.poster.jpg (beamer2html --posters)
+          {
+            \tl_set_eq:NN \l_tmpa_tl \l__tt_video_file_tl
+            \regex_replace_once:nnN { \.[A-Za-z0-9]+ \Z } { .poster.jpg } \l_tmpa_tl
+            \exp_args:NV \file_if_exist:nT \l_tmpa_tl
+              { \tl_set_eq:NN \l__tt_video_poster_tl \l_tmpa_tl }
+          }
       }
     \IfNoValueTF {#1}
       { \__tt_video:V \l__tt_video_file_tl }
@@ -1001,6 +1044,13 @@
                                    keepaspectratio ] { \l__tt_video_poster_tl } }
           }
       }
+    \bool_if:NTF \l__tt_video_yt_bool                % YouTube: a link to it
+      {
+        \use:e
+          { \exp_not:N \href { \exp_not:V \l__tt_video_url_str } }
+          { \box_use:N \l__tt_video_box }
+      }
+      {
     \cs_if_exist:NTF \movie                         % multimedia: play in the PDF
       {
         \clist_clear:N \l__tt_video_movie_clist
@@ -1028,6 +1078,7 @@
         \use:e                                       % needs a real one to see run:
           { \exp_not:N \href { run \c_colon_str \exp_not:n {#1} } }
           { \box_use:N \l__tt_video_box }
+      }
       }
   }
 \cs_generate_variant:Nn \__tt_video:n { V }

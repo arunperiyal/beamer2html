@@ -25,6 +25,7 @@ beamer2html main.tex -o talk.html
 beamer2html --pack talk.zip       # also: zip for the presenting computer
 beamer2html --pack --compress     # ... with the images as smaller WebP
 beamer2html --pack --slide-range 20:30,32:35  # ... only these slides
+beamer2html --posters             # video posters: first frames (ffmpeg), YouTube thumbnails
 beamer2html --watch               # rebuild on every change (like latexmk -pvc)
 ```
 
@@ -175,7 +176,18 @@ Ctrl+P → Save as PDF gives a static backup, one page per slide.
   `controls`, `start` / `end` in seconds; `\slidevideo<2->` for a step). It
   pauses when you leave the slide. In the PDF it is the poster, or a box with
   the file name, linking to the video — or with `\usepackage{multimedia}` a
-  `\movie` that plays in viewers that support it (Okular, …)
+  `\movie` that plays in viewers that support it (Okular, …).
+  Without `poster=`, `beamer2html --posters` takes the first frame (or the one at
+  `start=`) with ffmpeg into `name.poster.jpg` next to the video; the deck and the
+  PDF use it (run it once, then build the PDF; without ffmpeg it only warns).
+  A YouTube address works too: `\slidevideo[width=0.8\linewidth, start=30]{https://youtu.be/ID}`
+  (also `youtube.com/watch?v=ID`, `/embed/ID`, `/shorts/ID`, `youtube:ID`; write `_` and `&`
+  as they are). The deck shows a poster with a play button and loads YouTube
+  (youtube-nocookie.com) only when it is played, so it needs the internet then and
+  `--pack` packs no video. `start`, `end`, `autoplay`, `loop`, `muted`, `controls` apply;
+  it pauses when you leave the slide. In the PDF it is a link, with the thumbnail
+  that `--posters` downloads once to `html/cache/yt-ID.jpg` (the only time the tool uses
+  the network) or your `poster=`
 - plots: `\begin{slideplot}[options] \plotline[x=time, y=lift, label=..]{data.csv}
   … \end{slideplot}` draws lines from data files (CSV or space-separated
   columns, optional header row; columns by name or by number from 1). In the
@@ -245,6 +257,7 @@ Not supported: commands with arguments defined in the document, `\alert<…>`.
 | `vocabulary.py`, `parsing.py`, `units.py`, `source.py`, `images.py`, `bibliography.py`, `page.py`, `log.py` | helpers |
 | `assets.py` | installs `assets/` and `latex/` into projects |
 | `pack.py` | `--pack`: zip of the deck and the files it uses; `--compress`: images as WebP; `--slide-range`: some slides only |
+| `video_poster.py` | `--posters`: video first frames (ffmpeg), YouTube thumbnails, YouTube address parsing |
 | `watch.py` | `--watch`: rebuild on change (the page side is in `deck.js`) |
 | `assets/` | browser side: `deck.js`, `deck.css`, MathJax 4.1 with its Termes and New Computer Modern fonts (all Apache-2.0, see `vendor/mathjax/LICENSE`) |
 | `latex/beamer2html.sty` | the beamer templates |
